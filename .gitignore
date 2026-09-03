@@ -1,0 +1,20 @@
+# Isolated per-run workspaces created by scripts/ipb_workspace.py
+.scratch/
+__pycache__/
+*.pyc
+
+# Test results (too large, keep only summary)
+results/
+.tmp_workspaces/
+.tmp/
+
+# Workspace directories (contain test runs and git repos)
+tasks/*/workspace/
+
+# Environment
+.env
+ipb_py310_env/
+
+# Logs
+*.log
+slurm_outputs/
