@@ -3,8 +3,13 @@
 __pycache__/
 *.pyc
 
-# Test results (too large, keep only summary)
-results/
+# Test results (exclude historical runs, keep summary and key experiments)
+results/*_run*.json
+results/*.json
+
+# Keep summary and key experiment data
+!results/summary/
+!results/key_experiments/
 .tmp_workspaces/
 .tmp/
 

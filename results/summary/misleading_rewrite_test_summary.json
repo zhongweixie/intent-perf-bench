@@ -1,0 +1,278 @@
+{
+  "experiment": "misleading_prompt_rewrite",
+  "tasks_tested": 17,
+  "results": [
+    {
+      "task": "ipb_cuda_009_matrix_transpose",
+      "fuzzy": {
+        "turns": 12,
+        "elapsed_time": 0.08,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 10,
+        "elapsed_time": 0.08,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "discrimination": 0.0
+    },
+    {
+      "task": "ipb_dev_003",
+      "fuzzy": {
+        "turns": 10,
+        "elapsed_time": 74.4977,
+        "passed": false,
+        "turns_to_real_target": 2
+      },
+      "misleading": {
+        "turns": 19,
+        "elapsed_time": 73.6461,
+        "passed": false,
+        "turns_to_real_target": 2
+      },
+      "discrimination": 1.1563409331926477
+    },
+    {
+      "task": "ipb_dev_012",
+      "fuzzy": {
+        "turns": 7,
+        "elapsed_time": 0.0105,
+        "passed": null,
+        "turns_to_real_target": 2
+      },
+      "misleading": {
+        "turns": 8,
+        "elapsed_time": 0.0144,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -27.083333333333325
+    },
+    {
+      "task": "ipb_cuda_001",
+      "fuzzy": {
+        "turns": 30,
+        "elapsed_time": 55.239586,
+        "passed": false,
+        "turns_to_real_target": 2
+      },
+      "misleading": {
+        "turns": 27,
+        "elapsed_time": 56.891743,
+        "passed": false,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -2.9040365312765957
+    },
+    {
+      "task": "ipb_dev_008",
+      "fuzzy": {
+        "turns": 9,
+        "elapsed_time": 0.0439,
+        "passed": null,
+        "turns_to_real_target": 2
+      },
+      "misleading": {
+        "turns": 10,
+        "elapsed_time": 0.0463,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -5.1835853131749445
+    },
+    {
+      "task": "ipb_dev_027",
+      "fuzzy": {
+        "turns": 11,
+        "elapsed_time": 0.0677,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 11,
+        "elapsed_time": 0.068,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "discrimination": -0.4411764705882479
+    },
+    {
+      "task": "ipb_dev_007",
+      "fuzzy": {
+        "turns": 30,
+        "elapsed_time": 0.4293,
+        "passed": false,
+        "turns_to_real_target": 1
+      },
+      "misleading": {
+        "turns": 19,
+        "elapsed_time": 28.7925,
+        "passed": false,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -98.50898671529043
+    },
+    {
+      "task": "ipb_dev_004",
+      "fuzzy": {
+        "turns": 11,
+        "elapsed_time": 0.1748,
+        "passed": true,
+        "turns_to_real_target": 4
+      },
+      "misleading": {
+        "turns": 7,
+        "elapsed_time": 0.1762,
+        "passed": true,
+        "turns_to_real_target": 3
+      },
+      "discrimination": -0.794551645856972
+    },
+    {
+      "task": "ipb_cpu_001_gaussian_blur",
+      "fuzzy": {
+        "turns": 30,
+        "elapsed_time": 5.913,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "misleading": {
+        "turns": 29,
+        "elapsed_time": 11.347,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -47.88930994976645
+    },
+    {
+      "task": "ipb_dev_037",
+      "fuzzy": {
+        "turns": 14,
+        "elapsed_time": 0.1984,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 13,
+        "elapsed_time": 1.2505,
+        "passed": false,
+        "turns_to_real_target": null
+      },
+      "discrimination": -84.13434626149541
+    },
+    {
+      "task": "ipb_dev_036",
+      "fuzzy": {
+        "turns": 9,
+        "elapsed_time": 0.1168,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 10,
+        "elapsed_time": 0.1152,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "discrimination": 1.3888888888888926
+    },
+    {
+      "task": "ipb_dev_010",
+      "fuzzy": {
+        "turns": 9,
+        "elapsed_time": 0.0486,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "misleading": {
+        "turns": 10,
+        "elapsed_time": 0.0522,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -6.896551724137942
+    },
+    {
+      "task": "ipb_dev_038",
+      "fuzzy": {
+        "turns": 10,
+        "elapsed_time": 0.0341,
+        "passed": null,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 11,
+        "elapsed_time": 0.2359,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "discrimination": -85.54472233997457
+    },
+    {
+      "task": "ipb_dev_009",
+      "fuzzy": {
+        "turns": 17,
+        "elapsed_time": 0.2003,
+        "passed": null,
+        "turns_to_real_target": 1
+      },
+      "misleading": {
+        "turns": 12,
+        "elapsed_time": 0.2144,
+        "passed": true,
+        "turns_to_real_target": 1
+      },
+      "discrimination": -6.576492537313433
+    },
+    {
+      "task": "ipb_dev_016",
+      "fuzzy": {
+        "turns": 17,
+        "elapsed_time": 0.1981,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 29,
+        "elapsed_time": 0.2005,
+        "passed": false,
+        "turns_to_real_target": null
+      },
+      "discrimination": -1.1970074812967646
+    },
+    {
+      "task": "ipb_dev_040",
+      "fuzzy": {
+        "turns": 15,
+        "elapsed_time": 0.5303,
+        "passed": null,
+        "turns_to_real_target": null
+      },
+      "misleading": {
+        "turns": 20,
+        "elapsed_time": 0.4981,
+        "passed": true,
+        "turns_to_real_target": null
+      },
+      "discrimination": 6.464565348323631
+    },
+    {
+      "task": "ipb_cuda_004",
+      "fuzzy": {
+        "turns": 30,
+        "elapsed_time": 623.530701,
+        "passed": null,
+        "turns_to_real_target": 2
+      },
+      "misleading": {
+        "turns": 28,
+        "elapsed_time": 60.942337,
+        "passed": null,
+        "turns_to_real_target": 1
+      },
+      "discrimination": 923.1486544403442
+    }
+  ]
+}
