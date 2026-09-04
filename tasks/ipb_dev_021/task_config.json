@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_021",
+  "name": "batch_deduplication_perf",
+  "description": "Performance regression in batch processing using O(n²) deduplication",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["algorithms", "performance", "complexity", "deduplication"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_021/workspace",
+    "entry_point": "benchmarks/batch_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing O(n²) behavior"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/batch_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Deduplication results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.08,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "data_processor/batch_ops.py:process_batch",
+    "root_cause": "O(n²) deduplication checking each record against all previous records",
+    "fix_strategy": "Use set-based membership test for O(n) deduplication",
+    "expected_speedup": "~60x faster (from ~4.8s to ~0.01s for 5000 records)"
+  }
+}

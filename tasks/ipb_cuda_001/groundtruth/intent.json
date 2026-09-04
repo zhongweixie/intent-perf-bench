@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_cuda_001",
+  "level": "L2",
+  "source": {
+    "benchmark": "autolab",
+    "instance_id": "huffman_canonical_decode_cuda",
+    "provenance": "autolab-cuda"
+  },
+  "primary_workload": "huffman_decode --benchmark: decode 2048 independent canonical Huffman bitstreams of 65536 bytes each on GPU; time the kernel only (CUDA events)",
+  "primary_metric": "kernel-time-ms",
+  "threshold": 5.0,
+  "threshold_source": "workspace/benchmarks/bench.sh: threshold=11.2ms (= baseline 56.0ms / 5.0)",
+  "primary_targets": [
+    {
+      "file": "solve.cu",
+      "symbols": ["huffman_decode"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Any modification to solve.cu that replaces the bit-by-bit decoder with an LUT-based approach achieving >= 5x speedup (median <= 11.2ms) while passing --verify correctness check",
+      "file": "solve.cu",
+      "acceptance_criterion": "correctness_pass AND median_ms <= 11.2"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "cudaMemcpy HtoD/DtoH overhead",
+      "files": ["main.cu"],
+      "note": "Profiler shows high cudaMemcpy time, but this is a fixed cost (256 MB input, 128 MB output for 2048 streams); eliminating it entirely would save ~50ms API time but NOT the 56ms kernel time reported as time_ms."
+    }
+  ],
+  "visible_evidence": [
+    {
+      "path": "workspace/baseline_perf.log",
+      "role": "benchmark-evidence"
+    },
+    {
+      "path": "workspace/current_perf.log",
+      "role": "benchmark-evidence"
+    },
+    {
+      "path": "workspace/profiler_output.txt",
+      "role": "distractor"
+    },
+    {
+      "path": "workspace/git.log",
+      "role": "regression-history"
+    }
+  ],
+  "bench_type": "cuda",
+  "bench_script": "workspace/benchmarks/bench.sh",
+  "regression_pattern": "LUT→bit-by-bit kernel algorithm regression",
+  "misleading_concept": "cudaMemcpy bandwidth overhead",
+  "misleading_counterfactual": "Reducing HtoD/DtoH transfers does not affect the time_ms measurement (which uses CUDA events to time the kernel only, not the transfers). The kernel itself is the bottleneck."
+}

@@ -1,0 +1,88 @@
+{
+  "task_id": "ipb_dev_002",
+  "level": "L3",
+  "source": {
+    "benchmark": "synthetic",
+    "instance_id": null,
+    "provenance": "hand-crafted",
+    "inspiration": "groupby.apply vs groupby.agg anti-pattern; pattern class present in pandas-dev__pandas-45247 and pandas-dev__pandas-56061 from swefficiency"
+  },
+  "primary_workload": "daily_report.py: load 3M transaction rows, compute per-store KPIs via compute_regional_summary(), generate dashboard summary",
+  "primary_metric": "compute_regional_summary median wall time",
+  "threshold": 1.5,
+  "threshold_source": "workspace/.github/workflows/performance.yml",
+  "primary_targets": [
+    {
+      "file": "scripts/daily_report.py",
+      "symbols": ["compute_regional_summary"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Replace groupby.apply(_store_kpis) with groupby.agg(named_aggregations) achieving >= 1.5x speedup on compute_regional_summary",
+      "file": "scripts/daily_report.py",
+      "symbols": ["compute_regional_summary"],
+      "acceptance_criterion": "correctness_pass AND speedup >= threshold AND main_perf_gain_from_avoiding_per_group_python_overhead"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "Parquet I/O / data loading",
+      "files": ["scripts/daily_report.py:load_transactions"],
+      "rationale": "Misleading variant suggests data migration to Parquet caused the slowdown. Optimizing load_transactions() has zero effect on compute_regional_summary timing (workload measures only the aggregation function)."
+    }
+  ],
+  "visible_evidence": [
+    {
+      "path": "workspace/scripts/daily_report.py",
+      "role": "primary-target — contains the slow compute_regional_summary function"
+    },
+    {
+      "path": "workspace/benchmarks/report_bench.py",
+      "role": "benchmark — measures compute_regional_summary timing and reports PASS/FAIL"
+    },
+    {
+      "path": "workspace/profiler_output.txt",
+      "role": "profiler-evidence — cProfile showing _store_kpis called 1000× and Series.__init__ 2001×"
+    },
+    {
+      "path": "workspace/git.log",
+      "role": "regression-evidence — commit a3f2c89 on 2026-07-18 changed groupby.agg to groupby.apply"
+    },
+    {
+      "path": "workspace/docs/perf_history.md",
+      "role": "perf-history — timeline showing 0.095 s → 0.717 s jump at a3f2c89"
+    },
+    {
+      "path": "workspace/.github/workflows/performance.yml",
+      "role": "acceptance-threshold — defines 1.5× baseline (0.0952 s) = 0.1428 s target"
+    },
+    {
+      "path": "workspace/current_perf.log",
+      "role": "current-timing — 0.527 s median, FAIL"
+    },
+    {
+      "path": "workspace/baseline_perf.log",
+      "role": "baseline-timing — 0.068 s median, PASS (pre-regression)"
+    }
+  ],
+  "required_investigation_steps": [
+    "run_benchmark_or_reproducer",
+    "read_profiler_output",
+    "read_git_log",
+    "identify_regression_commit",
+    "read_target_function",
+    "disprove_misdiagnosis_if_misled"
+  ],
+  "misdiagnosis_counterfactual": {
+    "component": "load_transactions (Parquet I/O)",
+    "component_share_of_workload": 0.0,
+    "note": "The benchmark workload passes a pre-loaded DataFrame to compute_regional_summary. Optimising load_transactions() has zero effect on the measured metric. Even if the caller used --parquet and I/O were eliminated entirely, compute_regional_summary would still take 0.527 s (7.8× over threshold).",
+    "maximum_possible_speedup": 1.0,
+    "can_meet_threshold": false
+  },
+  "correctness_contract": {
+    "description": "compute_regional_summary must return a DataFrame indexed by store_id with columns [total_revenue, order_count, avg_order_value, total_units, return_rate]. Values must be numerically equivalent (rtol=1e-5). Dtype differences (e.g. float64 vs int64 for order_count) are acceptable.",
+    "reference_call": "compute_regional_summary(load_transactions())"
+  }
+}

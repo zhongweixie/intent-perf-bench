@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_015",
+  "name": "log_aggregation_perf",
+  "description": "Performance regression in log aggregation pipeline using iterative DataFrame concat",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["pandas", "performance", "profiling", "dataframe"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_015/workspace",
+    "entry_point": "benchmarks/log_agg_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data and explicit guidance"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/log_agg_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Aggregation results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.40,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "log_aggregator/aggregator.py:aggregate_by_window",
+    "root_cause": "Iterative pd.concat in loop creates O(n²) copying overhead",
+    "fix_strategy": "Batch aggregation: collect all window stats in list, single concat at end",
+    "expected_speedup": "~10x faster (from ~3.6s to ~0.3s)"
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cpu_002_sha256_throughput",
+  "metric_unit": "ms",
+  "baseline_median_ms": 2042.258,
+  "baseline_samples_ms": [
+    2041.426,
+    2108.311,
+    2117.387,
+    1978.204,
+    2042.258
+  ],
+  "baseline_cv": 0.0277,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "69c9f64",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "f9bc12b",
+  "reference_median_ms": 372.294,
+  "reference_samples_ms": [
+    403.458,
+    372.294,
+    327.489,
+    331.591,
+    379.663
+  ],
+  "reference_speedup": 5.486,
+  "threshold_ms": 1040.2796,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-126",
+  "measured_at": "2026-08-29T18:03:31+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

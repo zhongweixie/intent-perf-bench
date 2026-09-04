@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cpu_001_gaussian_blur",
+  "metric_unit": "ms",
+  "baseline_median_ms": 100.509,
+  "baseline_samples_ms": [
+    103.695,
+    102.899,
+    100.509,
+    96.771,
+    97.432
+  ],
+  "baseline_cv": 0.0311,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "b9ba90c",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "8dddf45",
+  "reference_median_ms": 8.999,
+  "reference_samples_ms": [
+    9.041,
+    9.036,
+    8.899,
+    8.921,
+    8.999
+  ],
+  "reference_speedup": 11.169,
+  "threshold_ms": 45.603,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-126",
+  "measured_at": "2026-08-29T19:54:04+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py; commits rewritten when solve_optimized.c was purged from workspace history (the file was never in SRCS, so the timings are unaffected)"
+}

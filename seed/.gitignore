@@ -1,0 +1,15 @@
+# 参考仓库（大型 git 仓库，不提交）
+reference_repos/
+
+# HuggingFace 数据集缓存
+~/.cache/huggingface/
+.cache/
+
+# 大型数据文件
+*.parquet
+*.arrow
+*.pkl
+*.h5
+
+# 候选任务 JSONL（可提交，但可能较大）
+# swefficiency_candidates.jsonl

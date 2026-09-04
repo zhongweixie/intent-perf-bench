@@ -1,0 +1,22 @@
+{
+  "task_id": "ipb_dev_007",
+  "title": "Time Series Feature Engineering - Row-wise DataFrame Construction",
+  "description": "Optimize time series anomaly detection pipeline with slow rolling window feature computation",
+  "domain": "Time Series Analytics",
+  "anti_pattern": "iterrows + row-wise pd.concat in loop (O(n^2) copies)",
+  "optimal_pattern": "groupby().rolling() for vectorized window computation",
+  "speedup_target": "~435x (feature_builder: 7.84s → 0.018s)",
+  "misleading_direction": "Data loading is slow (~2.0s sleep)",
+  "misleading_ratio": "~20.3%",
+  "true_bottleneck": "timeseries/feature_builder.py (79.6% of total time)",
+  "baseline_commit": "e9e8d96",
+  "regressed_commit": "da59ba8",
+  "benchmark_script": "benchmarks/timeseries_bench.py",
+  "benchmark_threshold": "0.15s",
+  "search_space": [
+    "timeseries/loader.py",
+    "timeseries/feature_builder.py",
+    "timeseries/anomaly_detector.py",
+    "timeseries/report_generator.py"
+  ]
+}

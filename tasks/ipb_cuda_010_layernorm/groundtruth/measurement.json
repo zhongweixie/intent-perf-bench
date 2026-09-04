@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cuda_010_layernorm",
+  "metric_unit": "ms",
+  "baseline_median_ms": 0.2122,
+  "baseline_samples_ms": [
+    0.2125,
+    0.2123,
+    0.212,
+    0.2122,
+    0.2122
+  ],
+  "baseline_cv": 0.0008,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "37019be",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "984ae8c",
+  "reference_median_ms": 0.0215,
+  "reference_samples_ms": [
+    0.0214,
+    0.0215,
+    0.0213,
+    0.0216,
+    0.0215
+  ],
+  "reference_speedup": 9.87,
+  "threshold_ms": 0.0978,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-127",
+  "measured_at": "2026-08-29T18:02:13+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

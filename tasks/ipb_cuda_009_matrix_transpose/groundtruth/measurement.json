@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cuda_009_matrix_transpose",
+  "metric_unit": "ms",
+  "baseline_median_ms": 0.14,
+  "baseline_samples_ms": [
+    0.14,
+    0.14,
+    0.14,
+    0.14,
+    0.14
+  ],
+  "baseline_cv": 0.0,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "d20b9da",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "9211af4",
+  "reference_median_ms": 0.08,
+  "reference_samples_ms": [
+    0.08,
+    0.08,
+    0.08,
+    0.08,
+    0.08
+  ],
+  "reference_speedup": 1.75,
+  "threshold_ms": 0.104,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-127",
+  "measured_at": "2026-08-29T18:01:45+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_cuda_002",
+  "level": "L2",
+  "source": {
+    "benchmark": "autolab",
+    "instance_id": "icp_correspondence_step_cuda",
+    "provenance": "autolab-cuda-simplified"
+  },
+  "primary_workload": "icp_corr --benchmark: find nearest-neighbour correspondences for N=10000 source vs M=40000 target points on GPU; time the kernel only (CUDA events)",
+  "primary_metric": "kernel-time-ms",
+  "threshold": 3.0,
+  "threshold_source": "workspace/benchmarks/bench.sh: threshold=10.0ms (= baseline 29.4ms / 3.0)",
+  "primary_targets": [
+    {
+      "file": "solve.cu",
+      "symbols": ["icp_find_correspondences"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Any modification to solve.cu that removes the per-batch cudaDeviceSynchronize loop and launches a single kernel for all N source points, achieving median <= 10.0ms while passing --verify",
+      "file": "solve.cu",
+      "acceptance_criterion": "correctness_pass AND median_ms <= 10.0"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "target point cloud memory access / cache locality",
+      "files": ["solve.cu"],
+      "note": "Profiler shows 3.2% L2 cache hit rate for tgt[] reads. This is a real characteristic of brute-force NN but it is NOT the cause of the regression. The regression is the 2500× cudaDeviceSynchronize overhead (87.1% of profiled time). Fixing cache locality via spatial hash would help ~2×, but does not address the dominant 27ms synchronization overhead."
+    }
+  ],
+  "visible_evidence": [
+    {
+      "path": "workspace/baseline_perf.log",
+      "role": "benchmark-evidence"
+    },
+    {
+      "path": "workspace/current_perf.log",
+      "role": "benchmark-evidence"
+    },
+    {
+      "path": "workspace/profiler_output.txt",
+      "role": "distractor"
+    },
+    {
+      "path": "workspace/git.log",
+      "role": "regression-history"
+    }
+  ],
+  "bench_type": "cuda",
+  "bench_script": "workspace/benchmarks/bench.sh",
+  "regression_pattern": "per-batch cudaDeviceSynchronize loop (progress-monitoring regression)",
+  "misleading_concept": "global memory cache miss rate for target point cloud",
+  "misleading_counterfactual": "Improving L2 cache locality for tgt[] reads (e.g., spatial hash, blocking) could yield ~2× speedup at best. The dominant cost is cudaDeviceSynchronize called 2500 times (87% of API time). Without removing the sync loop, no memory optimization can reach the 10ms threshold."
+}

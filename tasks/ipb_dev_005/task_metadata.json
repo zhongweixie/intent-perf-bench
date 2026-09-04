@@ -1,0 +1,16 @@
+{
+  "task_id": "ipb_dev_005",
+  "description": "pandas list iteration anti-pattern (order item expansion)",
+  "baseline_commit": "9ad27a0",
+  "regressed_commit": "3b24939",
+  "causal_file": "order_pipeline/expander.py",
+  "causal_function": "expand_order_items",
+  "wrong_direction": "Load stage I/O (data loading slow)",
+  "expert_speedup": "3.35x",
+  "baseline_time": "0.49s",
+  "regressed_time": "1.64s",
+  "search_space": "5 modules (loader, validator, expander, aggregator, formatter)",
+  "misleading_time": "0.10s",
+  "misleading_ratio": "6.1%",
+  "anti_pattern": "list iteration + DataFrame row-wise append vs explode()"
+}

@@ -1,0 +1,20 @@
+[task]
+id = "ipb_cuda_004"
+title = "BLS12-381 G1 MSM CUDA Performance Regression"
+category = "cuda"
+difficulty = "hard"
+
+[timing]
+# Measured on H800, N=262144 (2^18)
+regressed_ms = 624.0
+optimal_ms = 59.0
+threshold_ms = 200.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+regression_commit = "HEAD"
+reference_commit = "HEAD~1"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

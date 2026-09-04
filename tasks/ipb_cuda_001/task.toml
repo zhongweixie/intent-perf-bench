@@ -1,0 +1,29 @@
+[task]
+id = "ipb_cuda_001"
+title = "Huffman Decode CUDA Performance Regression"
+category = "cuda"
+difficulty = "medium"
+
+[timing]
+# Measured on H800, K=2048 streams, 65536 bytes per stream
+regressed_ms = 124.3
+optimal_ms = 5.7
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+regression_commit = "HEAD"
+reference_commit = "7668799"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+# 变体区分度：候选，暂不可用作证据。
+# 最新一轮 fuzzy 8.63ms / misleading 19.56ms / exact 21.15ms（2.45x），但这批运行
+# 早于 nvcc PATH 修复 —— 当时 agent 的 bash 里没有 nvcc，根本无法编译，数字反映的是
+# 环境缺陷而非模型能力。需在修复后的 harness 上重跑才能定性。
+[differentiation]
+status = "candidate_stale"
+observed_ratio = 2.45
+measured_before_nvcc_fix = true
+needs_rerun = true

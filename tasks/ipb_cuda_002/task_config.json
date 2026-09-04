@@ -1,0 +1,23 @@
+{
+  "task_id": "ipb_cuda_002",
+  "title": "ICP Correspondence Performance Regression (CUDA)",
+  "type": "cuda",
+  "domain": "point_cloud_registration",
+  "regressed_commit": "HEAD",
+  "baseline_commit": "HEAD~1",
+  "threshold_ms": 150.0,
+  "expected_regressed_ms": 543.0,
+  "expected_fixed_ms": 65.0,
+  "speedup_ratio": 8.4,
+  "benchmark_command": "./icp_corr --benchmark",
+  "verify_command": "./icp_corr --verify",
+  "build_command": "make clean && make",
+  "cuda_arch": "sm_90",
+  "workload": {
+    "N_source": 200000,
+    "M_target": 500000
+  },
+  "regression_type": "batched_synchronization",
+  "distractor": "memory_allocation_patterns",
+  "true_bottleneck": "cudaDeviceSynchronize_in_loop"
+}

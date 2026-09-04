@@ -1,0 +1,37 @@
+{
+  "task_id": "ipb_cuda_004",
+  "level": "L2",
+  "source": {
+    "benchmark": "autolab",
+    "instance_id": "msm_pippenger_bls12_381_cuda",
+    "provenance": "autolab-cuda"
+  },
+  "primary_workload": "msm_bls12381 --benchmark: Pippenger G1 MSM on BLS12-381, N=262144 points, time the kernel only (CUDA events)",
+  "primary_metric": "kernel-time-ms",
+  "threshold": 3.4,
+  "threshold_source": "threshold_ms=200ms; baseline ~59ms; threshold_speedup=624/200=3.1",
+  "primary_targets": [
+    {
+      "file": "solve.cu",
+      "symbols": ["msm_bls12_381_g1", "chunk_accumulate_window_kernel"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Any modification to solve.cu that replaces the per-window sequential loop (NUM_WINDOWS=32 iterations each with cudaDeviceSynchronize) with a single parallel launch covering all windows at once, achieving median <= 200ms while passing --verify",
+      "file": "solve.cu",
+      "acceptance_criterion": "correctness_pass AND median_ms <= 200.0"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "cudaMemsetAsync workspace initialization overhead",
+      "files": ["solve.cu"],
+      "note": "The cudaMemsetAsync call initializes ~908MB of bucket buffer, which takes ~10-20ms. This is real overhead but NOT the cause of the regression. The regression is the per-window sequential loop with NUM_WINDOWS=32 iterations each followed by cudaDeviceSynchronize, causing 32x more compute time than the parallel launch. Eliminating cudaMemsetAsync (e.g., persistent workspace) would save at most ~20ms, not the ~565ms regression."
+    }
+  ],
+  "bench_type": "cuda",
+  "regression_pattern": "per-window sequential accumulation with cudaDeviceSynchronize (progress-monitoring regression)",
+  "misleading_concept": "cudaMemsetAsync workspace re-initialization overhead (~908MB per call)",
+  "misleading_counterfactual": "Eliminating or reducing cudaMemsetAsync would save ~10-20ms at most. The dominant cost is 32 sequential kernel launches (one per scalar window) each followed by cudaDeviceSynchronize, serializing work that could run in parallel. Without converting back to a single parallel launch, no memset optimization can reach 200ms."
+}

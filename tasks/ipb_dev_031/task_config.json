@@ -1,0 +1,57 @@
+{
+  "task_id": "ipb_dev_031",
+  "name": "log_level_regex_validation",
+  "description": "Performance regression from adding unnecessary regex validation per log entry",
+  "category": "performance",
+  "difficulty": "easy",
+  "tags": ["regex", "validation", "log-processing", "unnecessary-work"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_031/workspace",
+    "entry_point": "benchmarks/log_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing 200k regex match calls"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/log_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Level count results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.025,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "log_analyzer/analyzer.py:count_error_types",
+    "root_cause": "Unnecessary regex match on every log entry (200k × pattern.match()) when simple dict accumulation suffices",
+    "fix_strategy": "Remove redundant regex validation - just accumulate counts with dict.get()",
+    "expected_speedup": "~2.8x faster (from ~0.042s to ~0.015s)",
+    "misleading_note": "No misleading variant possible: frozenset replacement for a fixed-set regex is immediately obvious to any Python developer (Python 101 knowledge)"
+  }
+}

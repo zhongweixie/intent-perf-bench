@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_018",
+  "name": "json_deduplication_nested_loop",
+  "description": "Performance regression from O(n²) nested loop deduplication instead of O(n) dict-based approach",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["python", "performance", "deduplication", "nested-loop"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_018/workspace",
+    "entry_point": "benchmarks/json_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing O(n²) nested loop bottleneck"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/json_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Deduplication results must match baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.40,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "json_processor/merger.py:merge_records",
+    "root_cause": "O(n²) nested loop: for each of 20k records, scans growing unique list to check for duplicate ID",
+    "fix_strategy": "Use dict for O(n) deduplication: unique[record_id] = record, then return list(unique.values())",
+    "expected_speedup": "~100x faster in Stage 3 (from ~8.4s to ~0.002s)"
+  }
+}

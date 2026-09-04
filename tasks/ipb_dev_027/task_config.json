@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_027",
+  "name": "regex_overkill",
+  "description": "Performance regression from using regex when simple string operations suffice",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["regex", "string-operations", "text-processing", "optimization"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_027/workspace",
+    "entry_point": "benchmarks/text_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing regex compilation overhead"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/text_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Pattern counts unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.080,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "text_processor/analyzer.py:count_patterns",
+    "root_cause": "Using re.findall() for literal string matching when str.count() suffices (250k regex compilations + matches vs 250k simple string scans)",
+    "fix_strategy": "Replace re.findall() with str.count() for literal pattern matching",
+    "expected_speedup": "~3x faster (from ~0.23s to ~0.07s)"
+  }
+}

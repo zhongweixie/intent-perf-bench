@@ -1,0 +1,19 @@
+[task]
+id = "ipb_cpu_003_vliw_scheduler"
+title = "VLIW Instruction Scheduler Performance Regression"
+category = "cpu"
+difficulty = "hard"
+
+[timing]
+regressed_ms = 4080.0
+optimal_ms = 1200.0
+threshold_ms = 2500.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./solve"
+
+[variants]
+exact = "variants/exact.md"
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

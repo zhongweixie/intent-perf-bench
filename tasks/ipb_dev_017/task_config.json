@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_017",
+  "name": "csv_processing_repeated_filtering",
+  "description": "Performance regression from repeated list comprehension filtering instead of single-pass aggregation",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["python", "performance", "list-comprehension", "aggregation"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_017/workspace",
+    "entry_point": "benchmarks/csv_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing repeated filtering overhead"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/csv_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Aggregation results must match baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.21,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "csv_processor/analyzer.py:analyze_data",
+    "root_cause": "Repeated list comprehension filtering over 100k records for each category/status instead of single-pass dict accumulation",
+    "fix_strategy": "Single-pass aggregation: iterate once, accumulate counts in dictionaries",
+    "expected_speedup": "~2x faster in Stage 2 (from ~0.075s to ~0.034s)"
+  }
+}

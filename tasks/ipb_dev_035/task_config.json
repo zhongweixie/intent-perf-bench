@@ -1,0 +1,63 @@
+{
+  "task_id": "ipb_dev_035",
+  "name": "pricing_engine_iterrows",
+  "description": "Performance regression from replacing vectorized pandas operations with iterrows() row-by-row calculation",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["pandas", "iterrows", "vectorization", "dataframe"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_035/workspace",
+    "entry_point": "benchmarks/pricing_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "workspace/variants/system_prompt_exact.md",
+      "user_prompt_file": "workspace/variants/user_prompt.md",
+      "description": "Provides profiling data showing 50k iterrows() calls as bottleneck"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "workspace/variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "workspace/variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    },
+    {
+      "name": "misleading",
+      "system_prompt_file": "workspace/variants/system_prompt_misleading.md",
+      "user_prompt_file": "workspace/variants/user_prompt.md",
+      "description": "Suggests DataFrame.apply() as the fix for iterrows() (real fix: vectorized column operations)"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/pricing_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Final price values unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.20,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "pricing_engine/calculator.py:calculate_order_totals",
+    "root_cause": "df.iterrows() creates a full pandas Series object for every row — 50k Series allocations dominate the runtime",
+    "misleading_fix": "Replace iterrows() with df.apply(lambda r: ..., axis=1) → ~0.38s, 70% improvement, still FAILS threshold 0.20s",
+    "correct_fix": "Vectorized column arithmetic: df['base_price']*df['quantity']*... → ~0.0005s, PASS",
+    "expected_speedup": "~2500x vs iterrows baseline"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "task_id": "ipb_dev_010",
+  "description": "Product recommendation pipeline - nested iterrows anti-pattern",
+  "anti_pattern": "Nested iterrows() for cross-product score computation",
+  "baseline_approach": "Vectorized cross-join + np.where column arithmetic",
+  "domain": "Recommender System",
+  "speedup_factor": 41,
+  "misleading_direction": "Network/API data fetching is slow (~0.69s)",
+  "misleading_ratio_percent": 19.8,
+  "actual_bottleneck": "recommender/scorer.py - nested iterrows",
+  "baseline_commit": "5ad46ec",
+  "regressed_commit": "2c99539",
+  "benchmark_threshold": 0.20,
+  "data_scale": "500 users x 200 products"
+}

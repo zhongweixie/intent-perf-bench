@@ -1,0 +1,43 @@
+{
+  "task_id": "ipb_cuda_003",
+  "level": "L2",
+  "source": {
+    "benchmark": "autolab",
+    "instance_id": "ntt_butterfly_cuda",
+    "provenance": "autolab-cuda"
+  },
+  "primary_workload": "ntt_butterfly --benchmark: forward NTT (Cooley-Tukey) over Goldilocks prime for batch=512 rows of n=16384 elements on GPU; time the kernel only (CUDA events)",
+  "primary_metric": "kernel-time-ms",
+  "threshold": 1.6,
+  "threshold_source": "threshold_ms=80ms; baseline ~50ms; threshold_speedup=50/80 (well below baseline)",
+  "primary_targets": [
+    {
+      "file": "solve.cu",
+      "symbols": ["ntt_forward_cuda"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Any modification to solve.cu that removes the per-row sequential loop with cudaDeviceSynchronize and replaces it with a single 2D-grid launch covering all batch rows at once, achieving median <= 80ms while passing --verify",
+      "file": "solve.cu",
+      "acceptance_criterion": "correctness_pass AND median_ms <= 80.0"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "twiddle factor CPU/GPU precomputation",
+      "files": ["solve.cu"],
+      "note": "mod_pow_dev() is called per-thread in butterfly_stage_kernel, which is indeed redundant arithmetic. However this is NOT the cause of the regression. The regression is the per-row sequential loop with cudaDeviceSynchronize that serializes batch=512 rows through (1 + log_n=14) sync points each, destroying GPU occupancy. Precomputing a twiddle table would yield a modest ~2x kernel arithmetic speedup but cannot reach the 80ms threshold without removing the sync loop."
+    }
+  ],
+  "visible_evidence": [
+    {
+      "path": "workspace/solve.cu",
+      "role": "regression-source"
+    }
+  ],
+  "bench_type": "cuda",
+  "regression_pattern": "per-row sequential loop with cudaDeviceSynchronize (progress-monitoring regression)",
+  "misleading_concept": "redundant per-thread twiddle factor recomputation via mod_pow_dev()",
+  "misleading_counterfactual": "Precomputing twiddle factors into a device table reduces arithmetic per butterfly but the dominant cost is (512 rows) x (1+14 stages) x cudaDeviceSynchronize = 7680 host-GPU round trips. Without removing the sync loop, no twiddle optimization can reach 80ms."
+}

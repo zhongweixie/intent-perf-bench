@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cuda_007_kmeans_clustering",
+  "metric_unit": "ms",
+  "baseline_median_ms": 43.32,
+  "baseline_samples_ms": [
+    43.32,
+    43.31,
+    43.32,
+    43.32,
+    43.32
+  ],
+  "baseline_cv": 0.0001,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "53a47b4",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "438cd98",
+  "reference_median_ms": 38.99,
+  "reference_samples_ms": [
+    39.02,
+    38.99,
+    38.99,
+    38.99,
+    39.02
+  ],
+  "reference_speedup": 1.111,
+  "threshold_ms": 40.722,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": true,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-127",
+  "measured_at": "2026-08-29T18:00:55+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

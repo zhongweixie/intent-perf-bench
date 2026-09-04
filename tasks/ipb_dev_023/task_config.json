@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_023",
+  "name": "graph_recursion_depth",
+  "description": "RecursionError in graph DFS due to recursive implementation on large graphs",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["graph", "recursion", "dfs", "stack-overflow"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_023/workspace",
+    "entry_point": "benchmarks/network_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data and explicit error traces"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/network_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Connected component results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.12,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "network_analysis/analyzer.py:find_connected_components",
+    "root_cause": "Recursive DFS hits Python's recursion limit on large connected components",
+    "fix_strategy": "Convert to iterative DFS using explicit stack",
+    "expected_outcome": "No RecursionError, benchmark passes"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "task_id": "ipb_dev_012",
+  "description": "Churn prediction pipeline - apply(axis=1) anti-pattern",
+  "baseline_commit": "7081cd6",
+  "regressed_commit": "014f17a",
+  "causal_file": "churn/predictor.py",
+  "misleading_direction": "Database query slow (~48ms)",
+  "misleading_ratio": "~23%",
+  "anti_pattern": "apply(axis=1) vs vectorized operations"
+}

@@ -1,0 +1,31 @@
+diff --git a/scripts/daily_report.py b/scripts/daily_report.py
+index a3f2c89..fix0001 100644
+--- a/scripts/daily_report.py
++++ b/scripts/daily_report.py
+@@ -42,17 +42,14 @@ def compute_regional_summary(df: pd.DataFrame) -> pd.DataFrame:
+     """Compute per-store KPIs for the daily operations report.
+
+     Returns a DataFrame indexed by store_id with columns:
+-    total_revenue, order_count, avg_order_value, total_units, return_rate
+-
+-    Refactored in commit a3f2c89 to use apply() for cleaner, more
+-    extensible code.  Previously used individual .agg() calls.
++    total_revenue, order_count, avg_order_value, total_units, return_rate.
+     """
+-    def _store_kpis(group: pd.DataFrame) -> pd.Series:
+-        return pd.Series({
+-            "total_revenue":   group["amount"].sum(),
+-            "order_count":     len(group),
+-            "avg_order_value": group["amount"].mean(),
+-            "total_units":     group["units"].sum(),
+-            "return_rate":     group["returned"].mean(),
+-        })
+-
+-    return df.groupby("store_id").apply(_store_kpis)
++    return df.groupby("store_id").agg(
++        total_revenue   =("amount",   "sum"),
++        order_count     =("amount",   "count"),
++        avg_order_value =("amount",   "mean"),
++        total_units     =("units",    "sum"),
++        return_rate     =("returned", "mean"),
++    )

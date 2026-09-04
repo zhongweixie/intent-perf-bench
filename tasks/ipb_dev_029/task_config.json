@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_029",
+  "name": "json_deserialize_per_extraction",
+  "description": "Performance regression from unnecessary JSON serialize/deserialize per extraction call",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["json", "serialization", "unnecessary-copy", "extraction"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_029/workspace",
+    "entry_point": "benchmarks/json_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing json.dumps/loads overhead"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/json_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Extraction results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.080,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "json_processor/parser.py:extract_nested_values",
+    "root_cause": "Unnecessary json.dumps + json.loads per object (60k roundtrips for 3 extractions × 20k objects)",
+    "fix_strategy": "Remove redundant serialize/deserialize - dict.get() traversal does not mutate the object",
+    "expected_speedup": "~33x faster (from ~0.42s to ~0.013s)"
+  }
+}

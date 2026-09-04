@@ -1,0 +1,1 @@
+The log analysis pipeline has become slower. Can you investigate and fix the performance issue?

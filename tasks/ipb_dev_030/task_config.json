@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_030",
+  "name": "event_aggregate_per_type_scan",
+  "description": "Performance regression from scanning full event list per type instead of single-pass aggregation",
+  "category": "performance",
+  "difficulty": "easy",
+  "tags": ["aggregation", "groupby", "single-pass", "repeated-scan"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_030/workspace",
+    "entry_point": "benchmarks/event_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing repeated list comprehension per type"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/event_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Aggregation results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.15,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "event_processor/processor.py:aggregate_by_type",
+    "root_cause": "Scans 100k events 10 times (once per type) instead of single-pass dict accumulation",
+    "fix_strategy": "Single-pass dict accumulation: one loop over all events, accumulate per type",
+    "expected_speedup": "~1.5x faster (from ~0.16s to ~0.11s)"
+  }
+}

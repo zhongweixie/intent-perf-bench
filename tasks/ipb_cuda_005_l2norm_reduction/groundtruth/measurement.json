@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cuda_005_l2norm_reduction",
+  "metric_unit": "ms",
+  "baseline_median_ms": 0.0078,
+  "baseline_samples_ms": [
+    0.0078,
+    0.0076,
+    0.0078,
+    0.0076,
+    0.0078
+  ],
+  "baseline_cv": 0.0132,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "0b27b3b",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "5386ec2",
+  "reference_median_ms": 0.007,
+  "reference_samples_ms": [
+    0.0071,
+    0.0069,
+    0.0069,
+    0.0071,
+    0.007
+  ],
+  "reference_speedup": 1.112,
+  "threshold_ms": 0.0073,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": true,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-127",
+  "measured_at": "2026-08-29T18:00:26+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

@@ -1,0 +1,27 @@
+[task]
+id = "ipb_cuda_008_conv1d_shared"
+title = "1D Convolution Shared Memory Performance Regression"
+category = "cuda"
+difficulty = "hard"
+classification = "performance"
+
+[timing]
+# 实测值 (H800)
+regressed_ms = 12.99
+optimal_ms = 8.92
+threshold_ms = 0.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "make clean && make && ./conv1d_test"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+[metadata]
+source = "ComputeEval CUDA/231"
+tags = ["convolution", "shared-memory", "tiling", "halo", "ml", "cnn"]
+# 标记为 trivial: 优化方向明显，不容易被 misleading prompt 误导
+# Fuzzy: 8.61ms, Misleading: 9.17ms (差异很小，都能找到正确优化)
+trivial_misleading = true

@@ -1,0 +1,48 @@
+[metadata]
+classification = "trivial_control"
+id = "ipb_cuda_006_hierarchical_reduction"
+name = "Hierarchical Reduction (sum)"
+category = "cuda"
+difficulty = "medium"
+estimated_time_minutes = 30
+
+[description]
+summary = "Optimize a CUDA kernel that sums a large vector via per-block hierarchical reduction"
+details = """
+A near-duplicate of ipb_cuda_005_l2norm_reduction: the injected regression is
+the same redundant __syncthreads() per reduction iteration, down to the same
+source comments.  This variant drops the `square` flag and renames the kernel
+k_l2Norm -> k_reduce, so it computes a plain sum rather than a norm.
+
+Retained as a trivial control, not as a scored task.  See [performance].
+"""
+
+[performance]
+# Measured on an H800 node, 5 repeats per config in one srun allocation.
+# The original "4-7x" claim (baseline 0.8 ms / regression 4.5 ms) was copied
+# from ipb_cuda_005 and was never measured; it is wrong by ~600x.
+# At n=2^20 with 256 threads/block the kernel is memory-bandwidth bound and
+# finishes in single-digit microseconds, so a block-level barrier costs almost
+# nothing.  Independently reproduces the 1.11x recorded in ipb_cuda_005.
+regression_time_ms = 0.00730   # 2 syncs/iter, median of 5
+baseline_time_ms = 0.00670     # 1 sync/iter,  median of 5
+measured_speedup = "1.10x"
+scorable = false
+
+[git]
+baseline_commit = "009992b"
+optimal_commit = "e4d11b1"
+
+[evaluation]
+# The Makefile builds ./reduce_benchmark; the previous ./l2norm_benchmark here
+# was copied from ipb_cuda_005 and does not exist in this workspace.
+verify_command = "./reduce_benchmark --verify"
+benchmark_command = "srun -p llm-debug --qos=llm_debug --gres=gpu:1 ./reduce_benchmark --benchmark"
+
+# No variants are defined on purpose.  Both fuzzy and misleading prompts would
+# converge on "there is nothing meaningful to optimize here", so this task
+# cannot separate models.  Its output format ("Average time: X ms") is also not
+# one that run_agent.py's CUDA branch parses, so elapsed_time would be None.
+[differentiation]
+status = "not_applicable"
+reason = "regression is only 1.10x; duplicate of ipb_cuda_005_l2norm_reduction"

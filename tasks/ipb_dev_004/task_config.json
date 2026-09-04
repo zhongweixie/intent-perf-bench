@@ -1,0 +1,38 @@
+{
+  "task_id": "ipb_dev_004",
+  "name": "pandas DataFrame.apply() anti-pattern in analytics aggregator",
+  "description": "Performance regression caused by refactoring vectorized operations into row-wise apply() calls",
+  "workspace_dir": "tasks/ipb_dev_004/workspace",
+  "benchmark_command": "python3 benchmarks/analytics_bench.py",
+  "speedup": 4.9,
+  "stage3_speedup": 297,
+  "regressed_commit": "20a477d",
+  "baseline_commit": "e405d44",
+  "causal_files": [
+    "analytics/aggregator.py"
+  ],
+  "evidence_files": {
+    "exact": ["profiler_output.txt", "benchmark_output.txt", "git.log"],
+    "fuzzy": ["benchmark_output.txt", "git.log"],
+    "misleading": ["benchmark_output.txt", "git.log"],
+    "target_known": ["benchmark_output.txt", "git.log"]
+  },
+  "misleading_direction": {
+    "fake_bottleneck": "Stage 1 (data loading I/O)",
+    "real_bottleneck": "Stage 3 (metrics calculation)",
+    "fake_time_ratio": 0.19,
+    "real_time_ratio": 0.79,
+    "credibility": "medium - I/O time looks significant but is actually expected"
+  },
+  "search_space": {
+    "total_modules": 6,
+    "total_functions": 25,
+    "target_module": "analytics/aggregator.py",
+    "target_function": "calculate_derived_metrics"
+  },
+  "difficulty": {
+    "search_space_size": "medium (6 modules)",
+    "evidence_indirectness": "medium (profiler points to module but not specific pattern)",
+    "misleading_credibility": "medium (19% I/O time)"
+  }
+}

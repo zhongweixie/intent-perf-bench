@@ -1,0 +1,19 @@
+[task]
+id = "ipb_cpu_002_flash_attention"
+title = "Flash Attention CPU Performance Regression"
+category = "cpu"
+difficulty = "trivial"
+classification = "trivial"
+
+[timing]
+regressed_ms = 1778.630
+optimal_ms = 225.243
+threshold_ms = 700.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./attn --verify"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

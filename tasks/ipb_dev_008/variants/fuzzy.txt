@@ -1,0 +1,3 @@
+The log formatting pipeline has been running slower than before. Something changed recently and now it takes much longer to process the same amount of data.
+
+Could you look into what's causing the slowdown and fix it? The benchmark (benchmarks/log_format_bench.py) should pass after your changes.

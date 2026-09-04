@@ -1,0 +1,44 @@
+[task]
+id = "ipb_cuda_009_matrix_transpose"
+title = "Matrix Transpose Bank Conflict Performance Regression"
+category = "cuda"
+difficulty = "hard"
+classification = "performance"
+
+[timing]
+# 实测值 (H800, 4096x4096 matrix)
+regressed_ms = 0.14
+optimal_ms = 0.08
+threshold_ms = 0.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "make clean && make && ./transpose_test"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+[metadata]
+source = "Custom IPB CUDA Task"
+tags = ["matrix-transpose", "shared-memory", "bank-conflict", "coalescing"]
+classification = "trivial_control"
+
+# 变体区分度：无效 (trivial)
+# 测试日期：2026-08-24
+# 原设计：misleading 引导 global memory coalescing，真实瓶颈是 bank conflict
+# 实测结果：即使加强 misleading（假 profiler 数据 + 明确否定 shared memory 问题），
+# 模型仍在 10 轮内找到 padding 方案并优化至 0.08ms (= reference)。
+# 根本原因：baseline 代码注释和 tile[TILE_DIM][TILE_DIM] 声明过于明显，
+# 模型一看就知道加 +1 padding，misleading prompt 无法对抗代码本身的提示。
+[differentiation]
+status = "not_applicable"
+reason = "misleading cannot override obvious cues in baseline code (comments + array decl)"
+test_date = "2026-08-24"
+model = "claude-opus-5"
+fuzzy_ms = 0.08
+fuzzy_passed = true
+misleading_ms = 0.08
+misleading_passed = true
+misleading_v2_tested = true
+# 尝试过加强版 misleading（假 profiler 数据、明确否定 shared memory），仍无效

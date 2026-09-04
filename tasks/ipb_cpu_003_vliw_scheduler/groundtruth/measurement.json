@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cpu_003_vliw_scheduler",
+  "metric_unit": "cycles",
+  "baseline_median_ms": 4080.0,
+  "baseline_samples_ms": [
+    4080.0,
+    4080.0,
+    4080.0,
+    4080.0,
+    4080.0
+  ],
+  "baseline_cv": 0.0,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "a2ed594",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "0eef57a",
+  "reference_median_ms": 1200.0,
+  "reference_samples_ms": [
+    1200.0,
+    1200.0,
+    1200.0,
+    1200.0,
+    1200.0
+  ],
+  "reference_speedup": 3.4,
+  "threshold_ms": 2352.0,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-126",
+  "measured_at": "2026-08-29T18:03:32+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

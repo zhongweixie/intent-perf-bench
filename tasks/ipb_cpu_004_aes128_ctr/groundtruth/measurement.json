@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cpu_004_aes128_ctr",
+  "metric_unit": "ms",
+  "baseline_median_ms": 4414.466,
+  "baseline_samples_ms": [
+    4367.964,
+    4414.466,
+    4474.099,
+    4538.803,
+    4384.005
+  ],
+  "baseline_cv": 0.0159,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "ba95f91",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "586a447",
+  "reference_median_ms": 95.697,
+  "reference_samples_ms": [
+    101.025,
+    89.308,
+    101.758,
+    95.697,
+    89.992
+  ],
+  "reference_speedup": 46.13,
+  "threshold_ms": 1823.2046,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-126",
+  "measured_at": "2026-08-29T18:06:47+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

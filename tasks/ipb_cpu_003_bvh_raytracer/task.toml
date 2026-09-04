@@ -1,0 +1,19 @@
+[task]
+id = "ipb_cpu_003_bvh_raytracer"
+title = "BVH Ray Tracer CPU Performance Regression"
+category = "cpu"
+difficulty = "trivial"
+classification = "trivial"
+
+[timing]
+regressed_ms = 8491.951
+optimal_ms = 247.793
+threshold_ms = 1000.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./solve --verify"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

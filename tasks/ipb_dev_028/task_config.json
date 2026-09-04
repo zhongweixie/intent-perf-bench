@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_028",
+  "name": "list_membership_check",
+  "description": "Performance regression from using list membership check instead of set for O(n²) deduplication",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["list-vs-set", "membership-test", "deduplication", "algorithmic-complexity"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_028/workspace",
+    "entry_point": "benchmarks/merge_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing O(n²) nested loop behavior"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, pipeline extremely slow or hangs"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/merge_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Deduplicated record count unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.25,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "data_merger/merger.py:deduplicate_records",
+    "root_cause": "Nested loop with linear search through unique_records list for duplicate detection creates O(n²) complexity (150k records × avg 75k comparisons = 11.25 billion operations)",
+    "fix_strategy": "Use set to track seen IDs for O(1) membership test instead of O(n) list iteration",
+    "expected_speedup": ">2000x faster (from >10000s to ~0.02s)"
+  }
+}

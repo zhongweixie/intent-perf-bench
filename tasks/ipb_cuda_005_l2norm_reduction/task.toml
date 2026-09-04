@@ -1,0 +1,41 @@
+[metadata]
+classification = "trivial_control"
+id = "ipb_cuda_005"
+name = "L2 Norm Hierarchical Reduction"
+category = "cuda"
+difficulty = "medium"
+estimated_time_minutes = 30
+
+[description]
+summary = "Optimize a CUDA kernel for L2 norm computation using hierarchical reduction"
+details = """
+This task involves optimizing a CUDA kernel that computes the L2 norm of a large vector.
+The current implementation uses per-block reduction with shared memory, but contains
+performance regressions that slow down the computation by 4-7x.
+
+The kernel performs:
+1. Loading elements into shared memory (with optional squaring)
+2. Hierarchical reduction within each block
+3. Writing per-block results to global memory
+
+Your task is to identify and fix the performance bottleneck.
+"""
+
+[performance]
+# Measured on an H800 GPU node, not estimated.  The earlier "4-7x" claim and
+# the 0.8 / 4.5 ms figures were never measured and are wrong by ~600x.
+# regression 0.00756992 ms, baseline 0.00679082 ms -> 1.11x only.
+# At single-digit microseconds the gap is inside measurement noise, so this
+# task cannot separate models and is excluded from the scored benchmark set.
+regression_time_ms = 0.00757
+baseline_time_ms = 0.00679
+measured_speedup = "1.11x"
+scorable = false
+
+[git]
+baseline_commit = "0b27b3b"   # tagged ipb-baseline, 4 __syncthreads (slow)
+optimal_commit = "5386ec2"    # tagged ipb-reference, 2 __syncthreads (fast)
+
+[evaluation]
+verify_command = "./l2norm_benchmark --verify"
+benchmark_command = "srun -p llm-debug --qos=llm_debug --gres=gpu:1 ./l2norm_benchmark --benchmark"

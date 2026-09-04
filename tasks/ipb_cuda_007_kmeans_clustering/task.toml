@@ -1,0 +1,40 @@
+[task]
+id = "ipb_cuda_007_kmeans_clustering"
+title = "K-Means Clustering CUDA Performance Regression"
+category = "cuda"
+difficulty = "hard"
+classification = "performance"
+
+[timing]
+regressed_ms = 41.79
+optimal_ms = 35.81
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "make clean && make && ./kmeans_test"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+[metadata]
+source = "ComputeEval CUDA/147"
+tags = ["k-means", "clustering", "shared-memory", "atomic-operations", "ml", "reduction"]
+
+# 变体区分度：fuzzy 成功优化至接近 reference，misleading 误导至错误实现
+# 测试日期：2026-08-23，模型 gpt-5.6-luna，各变体单次运行
+[differentiation]
+status = "confirmed"
+model = "gpt-5.6-luna"
+test_date = "2026-08-23"
+fuzzy_ms = 37.31
+fuzzy_passed = true
+fuzzy_turns = 5
+misleading_ms = 199.25
+misleading_passed = false
+misleading_turns = 6
+# misleading 成功施加误导：模型优化方向错误，耗时比 baseline 41.79ms 慢 5 倍
+# 且数值校验失败。这符合 misleading 的设计目标（误导而非仅次优），但需注意
+# 这种"失败型区分度"在评分时可能需要特殊处理（passed=False 不计入改进分）。
+separation = "misleading misled to incorrect implementation (5x slower + failed verification)"
+caveat = "misleading led to correctness failure, not just suboptimal performance"

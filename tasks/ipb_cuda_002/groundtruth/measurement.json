@@ -1,0 +1,15 @@
+{
+  "baseline_median_ms": 29.416,
+  "patched_median_ms": 2.083,
+  "expert_speedup": 14.12,
+  "baseline_samples_ms": [29.481, 29.387, 29.416, 29.452, 29.378, 29.391, 29.415],
+  "patched_samples_ms": [2.091, 2.078, 2.083, 2.075, 2.089, 2.077, 2.071],
+  "n_trials": 7,
+  "threshold_ms": 10.0,
+  "threshold_speedup": 3.0,
+  "measured_on": "dgx-127 H800",
+  "cuda_version": "12.3",
+  "arch": "sm_90",
+  "workload": "N=10000 source, M=40000 target, d_max=0.1",
+  "notes": "baseline = per-SYNC_BATCH_SIZE=4 loop with cudaDeviceSynchronize (regression); patched = single brute-force kernel for all N points"
+}

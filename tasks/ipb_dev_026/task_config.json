@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_026",
+  "name": "set_to_list_membership",
+  "description": "Performance regression from replacing O(1) set membership with O(n) list iteration",
+  "category": "performance",
+  "difficulty": "easy",
+  "tags": ["set-vs-list", "membership-test", "data-structure", "validation"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_026/workspace",
+    "entry_point": "benchmarks/validation_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing list iteration overhead"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/validation_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Validation counts unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.025,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "validator/rules.py:check_constraints",
+    "root_cause": "Replaced O(1) set membership test with O(n) list iteration (200k records × 10 categories = 2M comparisons)",
+    "fix_strategy": "Convert valid_categories list back to set for O(1) membership testing",
+    "expected_speedup": "~2.7x faster (from ~0.04s to ~0.015s)"
+  }
+}

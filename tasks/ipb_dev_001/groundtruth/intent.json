@@ -1,0 +1,71 @@
+{
+  "task_id": "ipb_dev_001",
+  "level": "L3",
+  "source": {
+    "benchmark": "swefficiency",
+    "instance_id": "pandas-dev__pandas-38248",
+    "provenance": "legacy"
+  },
+  "primary_workload": "daily_report.py: load transaction records from parquet, filter active accounts, merge with reference table, compare transaction timestamps to deadline DatetimeArray column, compute time-window violations, render summary stats",
+  "primary_metric": "end-to-end-runtime",
+  "threshold": 1.5,
+  "threshold_source": "workspace/.github/workflows/performance.yml",
+  "primary_targets": [
+    {
+      "file": "repo/pandas/core/arrays/datetimelike.py",
+      "symbols": ["DatetimeLikeArrayMixin._cmp_method"]
+    }
+  ],
+  "acceptable_targets": [
+    {
+      "description": "Any modification to the DatetimeArray comparison path in datetimelike.py that achieves >= 1.5x speedup on the end-to-end workload with primary performance gain attributable to the comparison operation",
+      "file": "repo/pandas/core/arrays/datetimelike.py",
+      "symbols": [
+        "DatetimeLikeArrayMixin._cmp_method",
+        "DatetimeLikeArrayMixin.__lt__",
+        "DatetimeLikeArrayMixin.__le__",
+        "DatetimeLikeArrayMixin.__gt__",
+        "DatetimeLikeArrayMixin.__ge__"
+      ],
+      "acceptance_criterion": "correctness_pass AND end_to_end_speedup >= threshold AND main_perf_gain_from_comparison_path"
+    }
+  ],
+  "misdiagnosed_targets": [
+    {
+      "concept": "parquet deserialization",
+      "files": ["repo/pandas/io/parquet.py"]
+    }
+  ],
+  "visible_evidence": [
+    {
+      "path": "workspace/scripts/daily_report.py",
+      "role": "end-to-end-reproducer"
+    },
+    {
+      "path": "workspace/benchmarks/datetime_compare.py",
+      "role": "benchmark-evidence"
+    },
+    {
+      "path": "workspace/.github/workflows/performance.yml",
+      "role": "acceptance-threshold"
+    },
+    {
+      "path": "workspace/docs/perf_history.md",
+      "role": "distractor"
+    }
+  ],
+  "required_investigation_steps": [
+    "run_reproducer",
+    "profile_workload",
+    "read_benchmark",
+    "read_threshold_source",
+    "read_correctness_contract",
+    "disprove_misdiagnosis"
+  ],
+  "misdiagnosis_counterfactual": {
+    "component_share": 0.06,
+    "maximum_possible_speedup": 1.064,
+    "can_meet_threshold": false,
+    "note": "Eliminating parquet I/O entirely yields at most 1.064x speedup (below the 1.5x threshold). Actual bottleneck is DatetimeLikeArrayMixin._cmp_method (~71% of runtime). Verified by GH#37462 comment: i8 comparison is ~2x faster than M8/m8."
+  }
+}

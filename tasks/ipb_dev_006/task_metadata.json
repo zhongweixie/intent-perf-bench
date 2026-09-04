@@ -1,0 +1,19 @@
+{
+  "task_id": "ipb_dev_006",
+  "description": "pandas pd.concat in loop anti-pattern (log event enrichment)",
+  "baseline_commit": "bfa07ac",
+  "regressed_commit": "69bea72",
+  "causal_file": "log_pipeline/enricher.py",
+  "causal_function": "enrich_events",
+  "wrong_direction": "Load stage I/O (log data volume too large)",
+  "expert_speedup": "2.97x",
+  "baseline_time": "0.171s",
+  "regressed_time": "0.508s",
+  "bench_baseline": "0.072s",
+  "bench_regressed": "0.400s",
+  "bench_speedup": "5.6x",
+  "search_space": "5 modules (loader, parser, enricher, aggregator, reporter)",
+  "misleading_time": "0.093s",
+  "misleading_ratio": "18.3%",
+  "anti_pattern": "pd.concat inside loop (O(n^2) memory copies) vs single merge()"
+}

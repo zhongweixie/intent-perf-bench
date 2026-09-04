@@ -1,0 +1,21 @@
+{
+  "task_id": "ipb_dev_014",
+  "anti_pattern": "apply(axis=1) for customer segmentation (3 separate apply calls)",
+  "domain": "customer lifecycle analytics",
+  "bottleneck_stage": "Segment (Stage 2)",
+  "misleading_direction": "data loading slow",
+  "misleading_ratio_target": "15-20%",
+  "speedup_target": "5-10x",
+  "baseline_commit": "HEAD",
+  "regressed_commit": "HEAD~1",
+  "causal_files": [
+    "customer_analytics/segmenter.py"
+  ],
+  "wrong_direction_keywords": [
+    "loader.py",
+    "load_customers",
+    "data loading",
+    "stage 1",
+    "disk i/o"
+  ]
+}

@@ -1,0 +1,22 @@
+[task]
+id = "ipb_cuda_005_icp_correspondence"
+title = "ICP Correspondence CUDA Performance Regression"
+category = "cuda"
+difficulty = "hard"
+
+[timing]
+# Measured on an H800 GPU node (srun -p llm-debug), N=200000 M=500000.
+# baseline 65.406 / 65.453 ms, reference 0.295 / 0.294 ms -> 222x.
+# Both commits pass ./icp_corr --verify with identical err=4.005893e-01.
+regressed_ms = 65.406
+optimal_ms = 0.294
+threshold_ms = 20.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./icp_corr --verify"
+
+[variants]
+exact = "variants/exact.md"
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_032",
+  "name": "percentile_redundant_sort",
+  "description": "Performance regression from re-sorting the full values list once per percentile",
+  "category": "performance",
+  "difficulty": "easy",
+  "tags": ["sorting", "redundant-work", "percentile", "statistics"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_032/workspace",
+    "entry_point": "benchmarks/metric_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing 4 sorted() calls"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/metric_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Percentile values unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.10,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "metric_collector/collector.py:compute_percentiles",
+    "root_cause": "sorted() called once per percentile (4x) instead of once before the loop",
+    "fix_strategy": "Sort once before loop: sorted_values = sorted(values); then iterate percentiles",
+    "expected_speedup": "~4x faster (from ~0.114s to ~0.028s)"
+  }
+}

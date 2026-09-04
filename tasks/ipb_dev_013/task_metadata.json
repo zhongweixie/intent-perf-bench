@@ -1,0 +1,10 @@
+{
+  "task_id": "ipb_dev_013",
+  "description": "Inventory reorder pipeline - apply(axis=1) anti-pattern",
+  "baseline_commit": "1e941d8",
+  "regressed_commit": "efcad98",
+  "causal_file": "inventory/reorder_checker.py",
+  "misleading_direction": "Network I/O load stage (~0.73s)",
+  "misleading_ratio": "~16.5%",
+  "anti_pattern": "apply(axis=1) row-wise vs vectorized numpy operations"
+}

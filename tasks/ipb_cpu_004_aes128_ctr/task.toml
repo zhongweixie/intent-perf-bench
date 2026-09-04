@@ -1,0 +1,19 @@
+[task]
+id = "ipb_cpu_004_aes128_ctr"
+title = "AES-128 CTR Throughput CPU Performance Regression"
+category = "cpu"
+difficulty = "hard"
+
+[timing]
+regressed_ms = 5260.246
+optimal_ms = 107.689
+threshold_ms = 1000.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./solve"
+
+[variants]
+exact = "variants/exact.md"
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

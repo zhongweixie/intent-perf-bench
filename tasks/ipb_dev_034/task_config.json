@@ -1,0 +1,54 @@
+{
+  "task_id": "ipb_dev_034",
+  "name": "csv_validate_regex_vs_builtin",
+  "description": "Performance regression: re.match() called 800k times without pre-compilation; misleading fix (pre-compile) has effect but str.isdigit() is the correct solution",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["regex", "re.compile", "str.isdigit", "misleading", "csv-validation"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_034/workspace",
+    "entry_point": "benchmarks/validate_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    },
+    {
+      "name": "misleading",
+      "system_prompt_file": "variants/system_prompt_misleading.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Profiling shows re._compile overhead → agent led toward pre-compiling pattern (plausible but incomplete fix)"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/validate_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.070,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "csv_validator/validator.py:validate_fields",
+    "root_cause": "re.match(r'^\\d+$', field) called 800k times without pre-compilation; re._compile() overhead is 800k × ~0.4µs = ~320ms",
+    "misleading_fix": "Pre-compile pattern: _PATTERN = re.compile(r'^\\d+$'); bool(_PATTERN.match(field)) — reduces to 0.107s but still > threshold 0.070s",
+    "correct_fix": "Replace regex with str.isdigit() — pure C implementation, no regex engine overhead, reduces to 0.024s",
+    "expected_speedup_misleading": "~3x (0.307s → 0.107s)",
+    "expected_speedup_correct": "~13x (0.307s → 0.024s)"
+  }
+}

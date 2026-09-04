@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_020",
+  "name": "cache_lru_eviction_missing",
+  "description": "Performance regression from missing LRU eviction logic causing unbounded cache growth",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["cache", "lru", "memory", "algorithm"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_020/workspace",
+    "entry_point": "benchmarks/cache_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing cache growth beyond capacity"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/cache_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Cache hit/miss behavior unchanged, results correct"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.015,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "cache_manager/lru_cache.py:get/set methods",
+    "root_cause": "Removed move_to_end() and eviction logic, cache grows unbounded beyond capacity",
+    "fix_strategy": "Restore LRU maintenance: move_to_end() on get(), popitem(last=False) eviction on set()",
+    "expected_speedup": "Prevents memory bloat; maintains O(1) operations with bounded size"
+  }
+}

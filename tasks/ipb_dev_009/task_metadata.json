@@ -1,0 +1,22 @@
+{
+  "task_id": "ipb_dev_009",
+  "title": "Feature Engineering Pipeline - DataFrame Copy Anti-pattern",
+  "anti_pattern": "apply(axis=1) with row-wise feature functions",
+  "baseline_approach": "Vectorized operations with single assign()",
+  "domain": "ML feature engineering pipeline",
+  "speedup_factor": 16.5,
+  "misleading_direction": "Data loading from database is slow",
+  "misleading_ratio_percent": 13.2,
+  "actual_bottleneck": "feature_eng/builder.py - apply(axis=1) calls",
+  "causal_file": "feature_eng/builder.py",
+  "baseline_time_no_io": 0.19,
+  "regressed_time_no_io": 3.13,
+  "regressed_time_with_io": 3.85,
+  "misleading_component_time": 0.51,
+  "benchmark_threshold": 0.25,
+  "data_scale": "100,000 transactions",
+  "commits": {
+    "baseline": "b46aaff",
+    "regressed": "5d8e3b1"
+  }
+}

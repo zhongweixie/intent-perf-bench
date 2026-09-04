@@ -1,0 +1,22 @@
+{
+  "task_id": "ipb_dev_008",
+  "description": "Log formatting pipeline - string concatenation anti-pattern (repeated join in loop)",
+  "domain": "Log processing / Text formatting",
+  "anti_pattern": "Repeated join of entire list on each iteration instead of single join at end",
+  "baseline_commit": "d6d6faa",
+  "regressed_commit": "aab67f9",
+  "speedup": "160x",
+  "bottleneck_file": "log_formatter/formatter.py",
+  "bottleneck_function": "format_logs",
+  "misleading_direction": "JSON parsing/loading slow",
+  "misleading_file": "log_formatter/loader.py",
+  "misleading_ratio_percent": 15.3,
+  "benchmark_threshold_seconds": 0.30,
+  "data_size": "30,000 log entries",
+  "timing": {
+    "baseline_no_io": "0.04s",
+    "regressed_no_io": "6.4s",
+    "regressed_with_io": "8.0s",
+    "io_portion": "1.23s (15.3%)"
+  }
+}

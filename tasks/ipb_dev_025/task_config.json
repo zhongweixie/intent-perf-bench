@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_025",
+  "name": "redundant_membership_check",
+  "description": "Performance regression from redundant set membership checks in nested loop",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["set-operations", "redundant-check", "nested-loop", "groupby"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_025/workspace",
+    "entry_point": "benchmarks/data_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing nested loop overhead"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/data_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Statistics computation results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.040,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "data_processor/transformer.py:compute_statistics",
+    "root_cause": "Redundant 'if record['category'] in categories' check inside nested loop (50k × 10 unnecessary set lookups)",
+    "fix_strategy": "Remove redundant membership check - category is already validated by equality comparison",
+    "expected_speedup": "~2x faster (from ~0.06s to ~0.03s)"
+  }
+}

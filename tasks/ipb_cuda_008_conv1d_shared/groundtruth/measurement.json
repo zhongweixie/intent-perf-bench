@@ -1,0 +1,38 @@
+{
+  "schema": 3,
+  "task_id": "ipb_cuda_008_conv1d_shared",
+  "metric_unit": "ms",
+  "baseline_median_ms": 13.54,
+  "baseline_samples_ms": [
+    13.55,
+    13.54,
+    13.54,
+    13.53,
+    13.55
+  ],
+  "baseline_cv": 0.0006,
+  "baseline_ref": "ipb-baseline",
+  "baseline_commit": "42a2c67",
+  "reference_ref": "ipb-reference",
+  "reference_commit": "88ca597",
+  "reference_median_ms": 8.94,
+  "reference_samples_ms": [
+    8.94,
+    8.94,
+    8.94,
+    8.94,
+    8.93
+  ],
+  "reference_speedup": 1.515,
+  "threshold_ms": 10.78,
+  "threshold_basis": "baseline - 0.6 * (baseline - reference)",
+  "threshold_speedup": null,
+  "pass_fraction": 0.6,
+  "low_headroom": false,
+  "n_runs": 5,
+  "warmup": 2,
+  "measured_on": "dgx-127",
+  "measured_at": "2026-08-29T18:01:21+0800",
+  "host": "dgx-126",
+  "notes": "baseline = regressed state; measured via scripts/ipb_measure.py"
+}

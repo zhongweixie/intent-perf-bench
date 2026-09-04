@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_019",
+  "name": "query_filter_index_unused",
+  "description": "Performance regression from ignoring prebuilt index and scanning all records linearly",
+  "category": "performance",
+  "difficulty": "medium",
+  "tags": ["python", "indexing", "query-optimization", "filtering"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_019/workspace",
+    "entry_point": "benchmarks/query_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing full list scans despite index"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/query_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Query results must match baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.070,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "query_engine/filters.py:apply_filters",
+    "root_cause": "Index is built but not used: extracts all 50k records from index then scans linearly through them for each filter",
+    "fix_strategy": "Use index lookups: for category/status filters, fetch only matching subset from index[by_category][value] or index[by_status][value]",
+    "expected_speedup": "~15% faster (from ~0.072s to ~0.058s) by avoiding full list scans"
+  }
+}

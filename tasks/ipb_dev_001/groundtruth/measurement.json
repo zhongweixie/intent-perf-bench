@@ -1,0 +1,37 @@
+{
+  "baseline_median_s": 0.008002,
+  "patched_median_s": 0.003386,
+  "expert_speedup": 2.3632,
+  "baseline_cv": 0.0573,
+  "patched_cv": 0.3487,
+  "baseline_samples": [
+    0.009101,
+    0.00886,
+    0.008527,
+    0.008311,
+    0.007928,
+    0.007853,
+    0.008002,
+    0.007929,
+    0.007814
+  ],
+  "patched_samples": [
+    0.003386,
+    0.00335,
+    0.003383,
+    0.003328,
+    0.003354,
+    0.006102,
+    0.007533,
+    0.005901,
+    0.004712
+  ],
+  "n_runs": 9,
+  "warmup_runs": 3,
+  "measured_on": "dgx-126",
+  "numpy_version": "1.24.4",
+  "python_version": "3.8.20",
+  "method": "numpy-level M8 vs i8 comparison (GH#37462 patch core). pip pandas==1.1.3 has _ndarray=int64 (pre-regression), so monkey-patch cannot reproduce. base_commit stores _ndarray as datetime64[ns] after PR#37313; this measures the fundamental M8\u2192i8 speedup that the patch exploits.",
+  "WARNING": null,
+  "notes": "Accurate end-to-end measurement requires cloning pandas at 4c8d66ecfe2b13607afd254443979b1ff842b6c1 and building from source, or using the Docker image. Apptainer blocked by unpriv.link on Lustre."
+}

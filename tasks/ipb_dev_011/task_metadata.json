@@ -1,0 +1,16 @@
+{
+  "task_id": "ipb_dev_011",
+  "description": "Payment risk scoring pipeline - apply(axis=1) anti-pattern",
+  "baseline_commit": "7981510",
+  "regressed_commit": "affb9d7",
+  "causal_file": "payment/risk_scorer.py",
+  "causal_function": "compute_risk_scores",
+  "wrong_direction": "Data loading from payment processor API (simulated ~0.09s)",
+  "expert_speedup": "~19x",
+  "baseline_time": "~0.40s",
+  "regressed_time": "~0.43s",
+  "misleading_time": "0.086s",
+  "misleading_ratio": "~22%",
+  "anti_pattern": "apply(axis=1) row-wise scoring vs vectorized numpy operations",
+  "search_space": "3 modules (loader, risk_scorer, aggregator)"
+}

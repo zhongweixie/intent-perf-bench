@@ -1,0 +1,33 @@
+[task]
+id = "ipb_cuda_010_layernorm"
+title = "LayerNorm CUDA Multi-Dimensional Optimization"
+category = "cuda"
+difficulty = "hard"
+classification = "performance"
+
+[timing]
+regressed_ms = 0.211
+optimal_ms = 0.021
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "make clean && make && ./layernorm_test"
+
+[variants]
+exact = "variants/exact.md"
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+# 变体区分度：exact/fuzzy 都并行化了前两趟归约（warp shuffle）；misleading 听信
+# "瓶颈在第三趟归一化" 的提示去做 float4 向量化，没动真正的串行归约瓶颈。
+# 三份最终实现均通过数值校验，各重测 5 次（同一 srun 分配内，波动 <1%）。
+# 注意：agent 侧每变体只跑了 1 次，方向明确但还不是统计结论。
+[differentiation]
+status = "confirmed"
+model = "gpt-5.6-luna"
+agent_runs_per_variant = 1
+exact_ms = 0.0321
+fuzzy_ms = 0.0323
+misleading_ms = 0.0853
+misleading_penalty = 2.66   # misleading / exact
+exact_vs_fuzzy = "tie"      # 中位数差 0.0001ms < 配置内波动 0.0002ms

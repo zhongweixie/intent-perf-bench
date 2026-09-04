@@ -1,0 +1,19 @@
+[task]
+id = "ipb_cpu_004_hash_join"
+title = "Hash Join CPU Performance Regression"
+category = "cpu"
+difficulty = "trivial"
+classification = "trivial"
+
+[timing]
+regressed_ms = 71008.436
+optimal_ms = 56.563
+threshold_ms = 500.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./join --verify"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

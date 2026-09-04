@@ -1,0 +1,30 @@
+[task]
+id = "ipb_cuda_003"
+title = "NTT Butterfly CUDA Performance Regression"
+category = "cuda"
+difficulty = "medium"
+
+[timing]
+# Measured on H800, batch=512, n=16384
+regressed_ms = 320.0
+optimal_ms = 50.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+regression_commit = "HEAD"
+reference_commit = "cc822cb"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+# 变体区分度：候选，暂不可用作证据。
+# 最新一轮 misleading 5.78ms / fuzzy 49.26ms / exact 321.12ms，比值 55.55x —— 这个
+# 量级本身就可疑（misleading 反而最快），且整批早于 nvcc PATH 修复，当时 agent 无法
+# 编译。极可能是环境失败而非真实区分度。需重跑。
+[differentiation]
+status = "candidate_stale"
+observed_ratio = 55.55
+measured_before_nvcc_fix = true
+needs_rerun = true
+suspect = "misleading fastest + implausible spread; likely environment failure"

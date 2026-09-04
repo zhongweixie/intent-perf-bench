@@ -1,0 +1,56 @@
+{
+  "task_id": "ipb_dev_033",
+  "name": "top_k_full_sort",
+  "description": "Performance regression from using full sort instead of heapq.nlargest for top-k selection",
+  "category": "performance",
+  "difficulty": "easy",
+  "tags": ["sorting", "heapq", "top-k", "algorithm-choice"],
+
+  "workspace": {
+    "path": "tasks/ipb_dev_033/workspace",
+    "entry_point": "benchmarks/sort_bench.py",
+    "git_initialized": true
+  },
+
+  "variants": [
+    {
+      "name": "exact_evidence",
+      "system_prompt_file": "variants/system_prompt_exact.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Provides profiling data showing full O(n log n) sort vs O(n log k) heapq"
+    },
+    {
+      "name": "fuzzy_context",
+      "system_prompt_file": "variants/system_prompt_fuzzy.md",
+      "user_prompt_file": "variants/user_prompt.md",
+      "description": "Minimal context, requires agent investigation"
+    }
+  ],
+
+  "evaluation": {
+    "success_criteria": [
+      {
+        "type": "benchmark_pass",
+        "command": "python3 benchmarks/sort_bench.py",
+        "expected_exit_code": 0,
+        "timeout_seconds": 60
+      },
+      {
+        "type": "correctness_preserved",
+        "description": "Top-k results unchanged from baseline"
+      }
+    ],
+    "performance_threshold": {
+      "metric": "best_time",
+      "value": 0.08,
+      "unit": "seconds"
+    }
+  },
+
+  "ground_truth": {
+    "bottleneck": "sorter/sorter.py:find_top_k",
+    "root_cause": "Full O(n log n) sort of 500k records to retrieve only 10 values, instead of O(n log k) heapq.nlargest",
+    "fix_strategy": "Use heapq.nlargest(k, records, key=...) for O(n log k) top-k selection",
+    "expected_speedup": "~4.5x faster (from ~0.13s to ~0.03s)"
+  }
+}

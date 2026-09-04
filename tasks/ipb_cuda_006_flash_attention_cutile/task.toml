@@ -1,0 +1,43 @@
+[task]
+id = "ipb_cuda_006_flash_attention_cutile"
+title = "Flash Attention cuTile Performance Regression"
+category = "cuda"
+difficulty = "hard"
+classification = "performance"
+
+[timing]
+# 待实测后填入真实值
+regressed_ms = 0.0
+optimal_ms = 0.0
+threshold_ms = 0.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "PYTHONPATH=. python test/test_fmha.py"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+[metadata]
+source = "ComputeEval cutile/5"
+tags = ["cuda-tile", "flash-attention", "online-softmax", "ml", "transformer"]
+classification = "blocked"
+
+# 任务不可用原因（2026-08-24 验证）
+# 1. baseline 代码调用 ct.tid() API，但 cuTile 设计上不暴露 thread ID
+#    参考：https://docs.nvidia.com/cupti-python/execution.html
+#    "Tile programs explicitly describe block-level parallelism, but not thread-level parallelism"
+# 2. cuTile 是 tile-based 编程模型，只有 bid() 无 tid()，代码使用了不存在且违反设计原则的 API
+# 3. 修复需要完全重写 baseline 实现（不是简单修 bug），相当于重新设计任务
+# 4. 已尝试修复：
+#    - ✅ 修复 benchmark 输出格式（加 CUDA event timing + JSON）
+#    - ✅ 移除 ct.launch() 的 num_threads= keyword argument（cuTile 1.5.0 不支持）
+#    - ✅ 构建 Apptainer 容器（PyTorch 2.12 + cuTile 1.5.0）
+#    - ❌ 无法解决 ct.tid() 不存在的根本问题
+[blocked_reason]
+status = "unusable"
+reason = "baseline code uses ct.tid() API that does not exist in cuTile (violates tile-based design)"
+investigation_date = "2026-08-24"
+attempted_fixes = ["output format", "API compatibility", "container environment"]
+conclusion = "requires complete rewrite of baseline implementation"

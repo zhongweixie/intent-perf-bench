@@ -1,0 +1,10 @@
+{
+  "regressed_median_ms": 624.0,
+  "baseline_median_ms": 59.0,
+  "threshold_ms": 200.0,
+  "measured_on": "dgx-003 H800",
+  "cuda_version": "12.2",
+  "arch": "sm_90",
+  "workload": "N=262144 (2^18), CHUNK_SIZE=512, NUM_WINDOWS=32",
+  "notes": "regression = per-window sequential loop (32 iterations) with cudaDeviceSynchronize; baseline = single parallel launch (num_chunks*NUM_WINDOWS threads)"
+}

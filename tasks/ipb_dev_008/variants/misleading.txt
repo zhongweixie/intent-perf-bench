@@ -1,0 +1,5 @@
+The log formatting pipeline is running very slowly - taking ~8 seconds to process 30,000 log entries.
+
+I profiled it and noticed the JSON loading stage (log_formatter/loader.py::load_logs) is taking about 1.2 seconds, which seems excessive for just loading structured data into memory.
+
+Could you investigate and optimize the data loading? I suspect the JSON parsing or data structure initialization might be inefficient. The benchmark should pass (< 0.30s threshold) after fixing this.

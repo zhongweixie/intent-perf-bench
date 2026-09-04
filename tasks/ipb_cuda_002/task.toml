@@ -1,0 +1,20 @@
+[task]
+id = "ipb_cuda_002"
+title = "ICP Correspondence CUDA Performance Regression"
+category = "cuda"
+difficulty = "medium"
+
+[timing]
+# Measured on H800, N=10000, M=40000
+regressed_ms = 340.0
+optimal_ms = 8.0
+threshold_ms = 25.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+regression_commit = "HEAD"
+reference_commit = "eae14e1"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"

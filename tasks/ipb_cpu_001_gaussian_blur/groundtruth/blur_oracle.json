@@ -1,0 +1,17 @@
+{
+  "task_id": "ipb_cpu_001_gaussian_blur",
+  "width": 256,
+  "height": 256,
+  "seed": "ipb-gaussian-blur-v1",
+  "input_file": "blur_input_256.raw",
+  "input_sha256": "c1af2ea6e3a0348a904ffb7e95b2cd08ae6589ed542e35e8bf6c935130dfec19",
+  "expected_file": "blur_expected_256.raw",
+  "expected_sha256": "46896b1b39ee7ef8e1ff34d85dfa8fbfa3bf235f7b9ec1f6bce856c4b2b122cb",
+  "expected_from_ref": "ipb-baseline",
+  "tolerance": 1,
+  "max_abs_diff_reference": 1,
+  "max_abs_diff_noop": 149,
+  "max_abs_diff_identity": 148,
+  "generated_at": "2026-08-29T19:49:31+0800",
+  "notes": "Pixel-wise oracle. The harness checksum cannot be used: it is 0 for any implementation on an all-zero input, and baseline and reference differ by 4 on a real image."
+}

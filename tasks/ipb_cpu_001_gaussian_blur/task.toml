@@ -1,0 +1,18 @@
+[task]
+id = "ipb_cpu_001_gaussian_blur"
+title = "Gaussian Blur CPU Performance Regression"
+category = "cpu"
+difficulty = "hard"
+
+[timing]
+regressed_ms = 200.0
+optimal_ms = 9.007
+threshold_ms = 50.0
+
+[evaluation]
+benchmark_script = "benchmarks/bench.sh"
+verify_command = "./blur --verify"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
