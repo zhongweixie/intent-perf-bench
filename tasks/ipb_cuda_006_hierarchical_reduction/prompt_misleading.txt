@@ -1,0 +1,27 @@
+Fix a CUDA kernel that's not using shared memory efficiently.
+
+The kernel in `solve.cu` computes L2 norm but is slower than expected. The main issue is likely that it's not making full use of shared memory bandwidth.
+
+Your task:
+1. Examine the `k_l2Norm` kernel in `solve.cu`
+2. The kernel loads data into shared memory but the access pattern might not be optimal
+3. Consider: are threads accessing shared memory in a coalesced way? Are there bank conflicts?
+4. Try to optimize memory access patterns
+
+Files to check:
+- `solve.cu`: Main kernel implementation
+- `include/l2_norm.h`: Interface
+
+Common issues in shared memory kernels:
+- Bank conflicts when multiple threads access the same bank
+- Non-coalesced access patterns
+- Suboptimal tile sizes
+
+Build and verify:
+```bash
+make
+./l2norm_benchmark --verify
+./l2norm_benchmark --benchmark
+```
+
+Focus on optimizing the shared memory layout and access patterns in the reduction loop.

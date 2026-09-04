@@ -1,0 +1,330 @@
+# 高优先级任务详细分析
+
+
+## 任务: CUDA/91
+
+**算法核心**: 无法分析：在代码库中未找到 CUDA/91 (In-place matrix transpose) 对应的 include/transpose.h 文件。搜索范围包括 intent-perf-bench、ParEval-Repo、autolab、compute-eval 等所有 CUDA 相关目录，以及所有 include 目录和包含 "transpose" 关键词的文件，均未发现匹配的实现。
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: CUDA/131
+
+**算法核心**: 
+**核心计算**：使用 Ampere Tensor Core 的 `mma.sync.aligned.m16n8k8.row.col.f32.bf16.bf16.f32` PTX 指令进行矩阵乘法。计算 C = A × B，其中 A 是 M×K (row-major, bf16)，B 是 K×N (column-major, bf16)，C 是 M×N (row-major, f32)。
+
+**理论复杂度**：
+- 算术强度：O(M×N×K) FLOPs，每个 mma 指令执行 16×8×8 = 1024 次乘加运算
+- 内存访问：O(M×K + K×N + M×N) 元素
+- Tensor Core 吞吐量：Ampere A100 每个 SM 可达 312 TFLOPS (bf16)
+
+**Tiling 策略**：输出矩阵按 16×8 tile 分块，每个 thread block 处理一个 tile；K 维按 8 的倍数迭代，每次加载 A 的 16×8 tile 和 B 的 8×8 tile 到共享内存，累加到寄存器。
+
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: CUDA/27
+
+**算法核心**: 这是一个两层 hierarchical reduction 算法，通过 warp shuffle 指令和 shared memory 实现高效的线程块级归约求和。核心思想是：先在 warp 内部使用 shuffle 指令进行 O(log warpSize) = O(5) 步的归约（无需共享内存），然后使用第一个 warp 对所有 warp 的部分和进行第二层归约。理论复杂度：每个线程执行 O(log warpSize + log numWarps) = O(log blockDim) 次操作，数据移动最小化（仅 warp leaders 写一次共享内存）。
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: CUDA/56
+
+**算法核心**: 这是一个使用 Thrust 库的 transform_reduce 模式实现的单趟归约操作。核心是将两个操作融合：(1) 对每个元素取负（transform），(2) 对所有结果求和（reduce）。算法在逻辑上等价于 map(-x) 然后 sum，但通过 transform_reduce 融合避免了中间结果的物化。理论复杂度是 O(n) 时间，O(log n) 深度（并行归约树）。输入是 device_vector<int>，输出是标量 int。
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: flash_attention
+
+**算法核心**: **核心计算**: Scaled Dot-Product Attention: output = softmax(Q K^T / sqrt(d)) V
+
+**三个关键步骤**:
+1. 计算注意力分数矩阵 S[n×n]: S[i,j] = dot(Q[i], K[j]) / sqrt(d) - O(n²d) 时间
+2. 对每行做 softmax: P[i,j] = exp(S[i,j] - max_j(S[i])) / sum_j(exp(...)) - O(n²) 时间
+3. 加权求和输出: output[i] = sum_j P[i,j] * V[j] - O(n²d) 时间
+
+**理论复杂度**: O(n²d) 时间, O(n²) 空间（基线实现物化了完整的 n×n 矩阵）
+
+**Flash Attention 改进**: 通过分块计算和在线 softmax，将空间复杂度降到 O(n)，同时利用缓存层级提升实际性能
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: cudnn/105
+
+**算法核心**: Scaled Dot-Product Attention (SDPA) with sliding window and causal masking: O = softmax(Q @ K^T * scale) @ V. Combines two attention constraints: (1) sliding window - each query can only attend to keys within a fixed window_size distance, and (2) causal masking - each query can only attend to keys at earlier positions. The intersection of these constraints means position i can only attend to positions in range [max(0, i-window_size), i]. Uses cuDNN Graph API to construct a computation graph with BFLOAT16 I/O and FLOAT32 internal compute. Theoretical complexity: O(b * h * s_q * min(s_kv, window_size) * d) for QK^T matmul and attention computation, reduced from full O(b * h * s_q * s_kv * d) due to window constraint.
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: CUDA/189
+
+**算法核心**: 三层分层并行inclusive prefix sum：(1) Warp级使用shuffle指令在O(log warpSize)时间内对32个元素做intra-warp scan；(2) Block级将各warp总和存入shared memory，由warp 0对warp totals做scan；(3) Grid级将各block总和存入global memory，由block 0的单线程做sequential exclusive scan。支持grid-stride loop处理超大数组，使用cooperative groups实现grid-wide barrier。理论复杂度：O(log warpSize) + O(log warpsPerBlock) + O(gridDim.x)，其中grid-level的sequential scan是瓶颈（单线程O(n)）。
+
+**源文件**: N/A
+
+**变体数量**: 0
+
+### 变体详情（按欺骗性排序）:
+
+---
+
+
+## 任务: CUDA/131
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 4
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. 转置共享内存布局匹配列优先
+- **减速倍数**: 6-10×
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. 添加块级同步确保正确性
+- **减速倍数**: 8-12×
+- **欺骗性评分**: 8.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. 直接全局内存加载跳过共享内存
+- **减速倍数**: 12-18×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: CUDA/189
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. Block-level全warp并行scan
+- **减速倍数**: 3-6×
+- **欺骗性评分**: 8.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. Grid-level atomic累积
+- **减速倍数**: 15-20×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. Warp-level显式同步
+- **减速倍数**: 3-5×
+- **欺骗性评分**: 7.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: CUDA/56
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. 使用 thrust::accumulate 替代 thrust::reduce
+- **减速倍数**: 10-20×
+- **欺骗性评分**: 9.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. 分离 transform 和 reduce 操作
+- **减速倍数**: 5-10×
+- **欺骗性评分**: 8.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. 使用结构体包装的非设备函数对象
+- **减速倍数**: 3-6×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: CUDA/27
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. 非活动线程提前退出
+- **减速倍数**: 12-20×（在边界 block 中）
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. 过度同步的 warp 归约
+- **减速倍数**: 4-7×
+- **欺骗性评分**: 8.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. 原子操作替代第二层归约
+- **减速倍数**: 8-15×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: CUDA/91
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. 线程发散 - 同步后再做边界检查
+- **减速倍数**: 6-12×
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. Bank Conflict - 列优先访问共享内存
+- **减速倍数**: 5-8×
+- **欺骗性评分**: 8.5/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. 读后写依赖 - 先写回再从共享内存读取
+- **减速倍数**: 7-15×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: flash_attention
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. 输出累积的错误循环顺序 (j-k-i)
+- **减速倍数**: 12-18×
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. 列主序访问 K 矩阵
+- **减速倍数**: 6-12×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. 使用 exp() 而不是 expf() 处理 float
+- **减速倍数**: 4-7×
+- **欺骗性评分**: 7/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+## 任务: cudnn/105
+
+**算法核心**: N/A
+
+**源文件**: N/A
+
+**变体数量**: 5
+
+### 变体详情（按欺骗性排序）:
+
+#### 1. stats_always_generated
+- **减速倍数**: 1.3-1.5×
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 2. sequential_head_processing
+- **减速倍数**: 4-8×
+- **欺骗性评分**: 9/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+#### 3. graph_rebuild_per_call
+- **减速倍数**: 8-15×
+- **欺骗性评分**: 8/10
+- **原理**: N/A
+- **误导理由**: N/A
+
+---
+
+
+# 提取完成

@@ -24,3 +24,15 @@ ipb_py310_env/
 *.log
 slurm_outputs/
 seed/*.jsonl
+
+# Rebuildable test data (see workspace/REBUILD_DATA.md)
+tasks/ipb_dev_030/workspace/test_events.json
+tasks/ipb_dev_033/workspace/test_records.json
+tasks/ipb_dev_001/workspace/workspace/
+
+# Reference repositories (large, clone via SETUP.sh)
+seed/reference_repos/
+
+# Container images (distributed via Docker Hub)
+containers/*.sif
+ipb_workspaces_v1.0.tar.gz

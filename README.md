@@ -35,27 +35,57 @@ intent-perf-bench/
 
 ## 快速开始
 
+### 1. 克隆仓库
+
 ```bash
-# 1. 安装依赖
+git clone https://github.com/GenseeAI/intent-perf-bench.git
+cd intent-perf-bench
+```
+
+### 2. 下载任务工作区数据
+
+从 [GitHub Release v1.0](https://github.com/GenseeAI/intent-perf-bench/releases/tag/v1.0) 下载 `ipb_workspaces_v1.0.tar.gz` (711MB)：
+
+```bash
+# 下载并解压
+wget https://github.com/GenseeAI/intent-perf-bench/releases/download/v1.0/ipb_workspaces_v1.0.tar.gz
+tar -xzf ipb_workspaces_v1.0.tar.gz
+```
+
+### 3. 重建可生成数据 (3秒)
+
+```bash
+python3 tasks/ipb_dev_030/workspace/generate_data.py
+python3 tasks/ipb_dev_033/workspace/generate_data.py
+```
+
+### 4. 安装依赖
+
+**纯Python任务**:
+```bash
 pip install -r requirements.txt
+```
 
-# 2. 克隆参考仓库（评测 harness 参考，不含任务数据）
-bash SETUP.sh
+**CUDA任务** (需要GPU):
+```bash
+# 选项A: Docker (推荐)
+docker pull zwxie/codebench:pytorch-cutile-v1.0
 
-# 3. 筛选候选任务（从 HuggingFace 加载 SWE-fficiency）
-python scripts/01_select_candidates.py --output seed/swefficiency_candidates.jsonl
+# 选项B: Singularity (HPC环境)
+singularity pull docker://zwxie/codebench:pytorch-cutile-v1.0
+```
 
-# 4. 将一个种子任务转换为 IPB 格式
-python scripts/02_build_task.py --seed-id pandas__pandas-50741 --task-id ipb_dev_001
+详见 [CONTAINERS.md](CONTAINERS.md)
 
-# 5. 用 LLM 生成四个 prompt 变体
-python scripts/03_generate_variants.py --task-id ipb_dev_001
+### 5. 运行评测
 
-# 6. 测量 baseline 和 expert patch 性能
-python scripts/04_measure_baseline.py --task-id ipb_dev_001
+```bash
+# Python任务
+python evaluation/evaluate.py --task-id ipb_dev_001 --variant fuzzy
 
-# 7. 运行完整评测
-python evaluation/evaluate.py --task-id ipb_dev_001 --variant fuzzy --patch agent.diff
+# CUDA任务 (使用Docker)
+docker run --gpus all -v $(pwd):/workspace zwxie/codebench:pytorch-cutile-v1.0 \
+  python evaluation/evaluate.py --task-id ipb_cuda_001 --variant fuzzy
 ```
 
 ## 主指标
@@ -71,3 +101,30 @@ python evaluation/evaluate.py --task-id ipb_dev_001 --variant fuzzy --patch agen
 **继续做**：Exact 明显高于 Fuzzy，Fuzzy 明显高于 Misleading，阈值文件读取与完成率相关
 
 **暂停重做**：Exact 条件几乎无人成功，或所有模型都不经调查直接命中目标
+
+## 构建新任务 (可选)
+
+如果你想从SWE-fficiency等数据源构建新的IPB任务：
+
+```bash
+# 1. 克隆参考仓库
+bash SETUP.sh
+
+# 2. 筛选候选任务
+python scripts/01_select_candidates.py --output seed/candidates.jsonl
+
+# 3. 构建任务
+python scripts/02_build_task.py --seed-id <task-id> --task-id ipb_new_001
+
+# 4. 生成变体
+python scripts/03_generate_variants.py --task-id ipb_new_001
+
+# 5. 测量baseline
+python scripts/04_measure_baseline.py --task-id ipb_new_001
+```
+
+## 文档
+
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - 部署和发布指南
+- [CONTAINERS.md](CONTAINERS.md) - 容器环境说明
+- [docs/](docs/) - 详细设计文档和实验报告

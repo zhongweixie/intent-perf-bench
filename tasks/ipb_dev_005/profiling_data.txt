@@ -1,0 +1,18 @@
+=== Pipeline Stage Profiling (3 runs average) ===
+
+[1/5] Loading orders...
+      Loaded 30000 orders in 0.1015s
+
+[2/5] Validating orders...
+      Validated 30000 orders in 0.0312s
+
+[3/5] Expanding order items...
+      Expanded to 104938 detail rows in 1.2119s
+
+[4/5] Aggregating by region...
+      Aggregated to 4 regions in 0.0523s
+
+[5/5] Formatting output...
+      Formatted 4 rows in 0.0018s
+
+=== Total Pipeline Time: 1.3987s ===

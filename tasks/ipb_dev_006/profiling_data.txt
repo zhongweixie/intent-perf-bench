@@ -1,0 +1,18 @@
+=== Pipeline Stage Profiling (3 runs average) ===
+
+[1/5] Loading log events...
+      Loaded 80000 events in 0.1294s
+
+[2/5] Parsing events...
+      Parsed in 0.0142s
+
+[3/5] Enriching events with metadata...
+      Enriched 80000 events in 0.3381s
+
+[4/5] Aggregating by service and host...
+      Aggregated in 0.0194s
+
+[5/5] Formatting output...
+      Formatted in 0.0005s
+
+=== Total Pipeline Time: 0.5016s ===

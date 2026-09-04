@@ -1,8 +1,7 @@
 # Container Images
 
-## pytorch_cutile.sif
+## pytorch_cutile - PyTorch + CUDA + CuTile 环境
 
-**大小**: 9.1GB  
 **用途**: PyTorch + CUTLASS 集成环境，用于运行 CUDA kernel 优化任务
 
 ### 任务依赖
@@ -13,57 +12,56 @@
 - `ipb_cuda_008_conv1d_shared` - 1D Convolution with Shared Memory
 - `ipb_cuda_009_matrix_transpose` - Matrix Transpose
 - `ipb_cuda_010_layernorm` - Layer Normalization
-- 其他 CUDA kernel 优化任务
 
-### 构建方法
+### 快速开始 (推荐使用 Docker)
 
-**选项 1: 使用 Singularity Definition File**
+**选项 1: 从 Docker Hub 拉取** (推荐)
 
 ```bash
-# 如果你有 Singularity 定义文件
-sudo singularity build pytorch_cutile.sif pytorch_cutile.def
+# 拉取预构建镜像
+docker pull zwxie/codebench:pytorch-cutile-v1.0
+
+# 运行容器
+docker run --gpus all -it --rm \
+  -v $(pwd):/workspace \
+  zwxie/codebench:pytorch-cutile-v1.0 \
+  python evaluation/evaluate.py --task-id ipb_cuda_001
 ```
 
-**选项 2: 从 Docker 转换**
+**选项 2: 本地构建**
 
 ```bash
-# 从 Docker Hub 拉取并转换
-singularity pull docker://pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel
+# 从 Dockerfile 构建
+cd containers/
+docker build -t pytorch-cutile:local -f Dockerfile .
 
-# 或使用自定义 Dockerfile
-docker build -t pytorch_cutile:latest .
-singularity build pytorch_cutile.sif docker-daemon://pytorch_cutile:latest
+# 运行
+docker run --gpus all -it --rm \
+  -v $(pwd):/workspace \
+  pytorch-cutile:local bash
 ```
 
-**选项 3: 直接下载（如果有托管）**
+**选项 3: 转换为 Singularity (HPC 环境)**
 
 ```bash
-# 待补充：容器托管链接
-# wget https://example.com/pytorch_cutile.sif
+# 从 Docker Hub 转换
+singularity pull docker://zwxie/codebench:pytorch-cutile-v1.0
+
+# 使用
+singularity exec --nv pytorch-cutile-v1.0.sif python script.py
+
+# 在 SLURM 作业中使用
+srun --gres=gpu:1 singularity exec --nv pytorch-cutile-v1.0.sif \
+    python evaluation/evaluate.py --task ipb_cuda_001
 ```
 
 ### 环境说明
 
-容器包含：
+容器基于 `nvcr.io/nvidia/pytorch:26.04-py3`，包含：
 - **PyTorch**: 2.x (CUDA 支持)
 - **CUDA Toolkit**: 12.x
-- **CuTiLe**: NVIDIA CUTLASS Template Library
+- **CuTile**: 1.5.0 (NVIDIA CUTLASS Template Library)
 - **Python**: 3.10
-- **其他依赖**: numpy, scipy, pandas 等
-
-### 使用方法
-
-```bash
-# 以交互方式运行
-singularity shell --nv containers/pytorch_cutile.sif
-
-# 执行脚本
-singularity exec --nv containers/pytorch_cutile.sif python script.py
-
-# 在 SLURM 作业中使用
-srun --gres=gpu:1 singularity exec --nv containers/pytorch_cutile.sif \
-    python ipb_exec.py --task ipb_cuda_001
-```
 
 ### 不需要容器的任务
 

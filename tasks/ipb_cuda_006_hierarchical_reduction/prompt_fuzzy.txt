@@ -1,0 +1,24 @@
+Improve the performance of a CUDA reduction kernel.
+
+There's a kernel in `solve.cu` that computes something related to vector norms. The implementation seems correct but runs slower than expected.
+
+Your task:
+1. Look at the code in `solve.cu`
+2. Find what's making it slow
+3. Make it faster while keeping it correct
+
+Files:
+- `solve.cu`: The kernel you need to work on
+- `main.cu`: Testing code
+- `include/`: Headers
+
+The kernel does some kind of parallel reduction with shared memory. Multiple threads work together to compute a result for each block.
+
+Build:
+```bash
+make
+./l2norm_benchmark --verify
+./l2norm_benchmark --benchmark
+```
+
+Think about how threads coordinate and whether all synchronization is necessary.
