@@ -1,0 +1,30 @@
+# === 数据加载 ===
+datasets>=3.0.0
+huggingface_hub>=0.24.0
+
+# === 参考 benchmark harness ===
+swebench>=2.0.9
+
+# === 性能测量（CPU workload，CV 控制）===
+pyperf>=2.7.0
+pytest>=8.0.0
+pytest-benchmark>=4.0.0
+
+# === LLM 客户端（用于 variant 生成和 contamination probe）===
+anthropic>=0.40.0
+openai>=1.0.0
+
+# === Docker 管理（评测隔离环境）===
+python-on-whales>=0.70.0
+
+# === 数据分析 ===
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.13.0
+
+# === CLI / 工具 ===
+rich>=13.0.0
+tqdm>=4.66.0
+pydantic>=2.10.0
+typer>=0.12.0
+jsonschema>=4.23.0

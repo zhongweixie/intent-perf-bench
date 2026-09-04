@@ -1,0 +1,147 @@
+# Intent-Perf-Bench Task Validation Status
+# 记录每个任务的前提验证、区分度测试等状态
+# 更新时间：2026-08-24
+
+[ipb_cuda_005_icp_correspondence]
+baseline_ms = 14.24
+reference_ms = 13.75
+speedup = 1.04
+status = "trivial"
+classification = "trivial_control"
+differentiation_status = "confirmed_trivial"
+note = "加速比 < 1.1x，过于接近，无区分度"
+
+[ipb_cuda_005_l2norm_reduction]
+# 未完成 timing 验证
+status = "pending_validation"
+
+[ipb_cuda_006_hierarchical_reduction]
+baseline_ms = 4.50
+reference_ms = 4.09
+speedup = 1.10
+status = "trivial"
+differentiation_status = "confirmed_trivial"
+note = "加速比边缘，区分度已确认为 trivial"
+
+[ipb_cuda_006_flash_attention_cutile]
+status = "blocked"
+classification = "unusable"
+reason = "baseline code uses ct.tid() API that does not exist in cuTile"
+investigation_date = "2026-08-24"
+note = "代码违反 cuTile 设计原则（tile-based 无 thread-level 并行），需完全重写"
+
+[ipb_cuda_007_kmeans_clustering]
+baseline_ms = 41.79
+reference_ms = 35.81
+speedup = 1.17
+status = "valid"
+differentiation_status = "confirmed"
+differentiation_type = "misleading_to_failure"
+test_date = "2026-08-23 to 2026-08-24"
+model = "gpt-5.6-luna"
+fuzzy_ms = 37.31
+fuzzy_passed = true
+fuzzy_turns = 5
+misleading_ms = 199.25
+misleading_passed = false
+misleading_turns = 6
+note = "misleading 成功误导至错误实现（5x slower + failed），这是有效区分度"
+caveat = "misleading 导致 passed=False，评分时需特殊处理"
+
+[ipb_cuda_008_conv1d_shared]
+baseline_ms = 13.03
+reference_ms = 8.84
+speedup = 1.47
+status = "trivial"
+classification = "trivial_control"
+differentiation_status = "confirmed_trivial"
+test_date = "2026-08-23 to 2026-08-24"
+model = "gpt-5.6-luna"
+fuzzy_ms = 8.61
+fuzzy_passed = true
+misleading_ms_range = "8.35-9.17"
+misleading_passed = true
+note = "加速比边缘（1.47x），fuzzy/misleading 均接近 reference，无区分度"
+caveat = "成功率低（fuzzy 1/7, misleading 2/8），可能有稳定性问题"
+
+[ipb_cuda_009_matrix_transpose]
+baseline_ms = 0.14
+reference_ms = 0.08
+speedup = 1.75
+status = "trivial"
+classification = "trivial_control"
+differentiation_status = "not_applicable"
+test_date = "2026-08-24"
+model = "claude-opus-5"
+fuzzy_ms = 0.08
+fuzzy_passed = true
+misleading_v1_ms = 0.08
+misleading_v1_passed = true
+misleading_v2_ms = 0.08
+misleading_v2_passed = true
+misleading_v2_tested = true
+reason = "misleading cannot override obvious cues in baseline code (comments + array decl)"
+note = "即使加强 misleading（假 profiler 数据），模型仍找到正确优化"
+
+[ipb_cuda_010_layernorm]
+baseline_ms = 0.305
+reference_ms = 0.115
+speedup = 2.66
+status = "valid"
+differentiation_status = "confirmed"
+test_date = "2026-08-22"
+fuzzy_median_ms = 0.131
+misleading_median_ms = 0.185
+note = "misleading 导致次优实现（在线算法但未优化 warp shuffle）"
+
+# CPU 任务（7个有 timing，待测试区分度）
+[ipb_cpu_001_gaussian_blur]
+baseline_ms = 156.0
+reference_ms = 14.0
+speedup = 11.14
+status = "pending_differentiation"
+
+[ipb_cpu_002_flash_attention]
+baseline_ms = 91.0
+reference_ms = 22.0
+speedup = 4.14
+status = "pending_differentiation"
+
+[ipb_cpu_002_sha256_throughput]
+baseline_ms = 2910.0
+reference_ms = 635.0
+speedup = 4.58
+status = "pending_differentiation"
+
+[ipb_cpu_003_bvh_raytracer]
+baseline_ms = 2780.0
+reference_ms = 205.0
+speedup = 13.56
+status = "pending_differentiation"
+
+[ipb_cpu_003_vliw_scheduler]
+baseline_ms = 1360.0
+reference_ms = 135.0
+speedup = 10.07
+status = "pending_differentiation"
+
+[ipb_cpu_004_aes128_ctr]
+baseline_ms = 710.0
+reference_ms = 83.0
+speedup = 8.55
+status = "pending_differentiation"
+
+[ipb_cpu_004_hash_join]
+baseline_ms = 3200.0
+reference_ms = 275.0
+speedup = 11.64
+status = "pending_differentiation"
+
+# DEV 任务
+[ipb_dev_003]
+baseline_ms = 2820.0
+reference_ms = 280.0
+speedup = 10.06
+status = "valid"
+differentiation_status = "confirmed"
+note = "已验证有效，区分度良好"
