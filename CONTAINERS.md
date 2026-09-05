@@ -13,22 +13,27 @@
 - `ipb_cuda_009_matrix_transpose` - Matrix Transpose
 - `ipb_cuda_010_layernorm` - Layer Normalization
 
-### 快速开始 (推荐使用 Docker)
+### 快速开始
 
-**选项 1: 从 Docker Hub 拉取** (推荐)
+**选项 1: 下载预构建的 Singularity 容器** (推荐，HPC环境)
 
 ```bash
-# 拉取预构建镜像
-docker pull zwxie/codebench:pytorch-cutile-v1.0
+# 从 OneDrive 下载 (9.1 GB)
+wget "https://hkustconnect-my.sharepoint.com/personal/zxiebk_connect_ust_hk/_layouts/15/download.aspx?share=IQDbaDspfcxLQZGsKHx9hv-GAdtBT9Vvnk737xMQz3ny0Lo" \
+  -O pytorch_cutile.sif
 
-# 运行容器
-docker run --gpus all -it --rm \
-  -v $(pwd):/workspace \
-  zwxie/codebench:pytorch-cutile-v1.0 \
+# 或使用 rclone (如果已配置)
+rclone copy onedrive:/intent-perf-bench-containers/pytorch_cutile.sif .
+
+# 移动到项目目录
+mv pytorch_cutile.sif containers/
+
+# 使用容器
+singularity exec --nv containers/pytorch_cutile.sif \
   python evaluation/evaluate.py --task-id ipb_cuda_001
 ```
 
-**选项 2: 本地构建**
+**选项 2: 使用 Docker** (需要自行构建)
 
 ```bash
 # 从 Dockerfile 构建
