@@ -5,6 +5,18 @@
 核心问题：当用户的性能优化请求不完整、模糊、或包含错误诊断时，agent 是否能通过
 脚本、profile、benchmark、CI 和 SLO 等环境证据，自行恢复真实的优化目标和验收合同？
 
+---
+
+## 📋 目录
+
+- [关键区别](#关键区别)
+- [快速开始](#快速开始)
+- [推荐任务](#推荐任务)
+- [评测指标](#主指标)
+- [文档索引](#文档)
+
+---
+
 ## 关键区别
 
 | benchmark | 给 Agent 的信息 | 测量内容 |
@@ -35,20 +47,22 @@ intent-perf-bench/
 
 ## 快速开始
 
+**🚀 完整重建指南**: 首次使用？查看 [REBUILD_GUIDE.md](REBUILD_GUIDE.md) 获取详细步骤和问题排查。
+
 ### 1. 克隆仓库
 
 ```bash
-git clone https://github.com/GenseeAI/intent-perf-bench.git
+git clone https://github.com/zhongweixie/intent-perf-bench.git
 cd intent-perf-bench
 ```
 
 ### 2. 下载任务工作区数据
 
-从 [GitHub Release v1.0](https://github.com/GenseeAI/intent-perf-bench/releases/tag/v1.0) 下载 `ipb_workspaces_v1.0.tar.gz` (711MB)：
+从 [GitHub Release v1.0](https://github.com/zhongweixie/intent-perf-bench/releases/tag/v1.0) 下载 `ipb_workspaces_v1.0.tar.gz` (711MB)：
 
 ```bash
 # 下载并解压
-wget https://github.com/GenseeAI/intent-perf-bench/releases/download/v1.0/ipb_workspaces_v1.0.tar.gz
+wget https://github.com/zhongweixie/intent-perf-bench/releases/download/v1.0/ipb_workspaces_v1.0.tar.gz
 tar -xzf ipb_workspaces_v1.0.tar.gz
 ```
 
@@ -61,18 +75,19 @@ python3 tasks/ipb_dev_033/workspace/generate_data.py
 
 ### 4. 安装依赖
 
-**纯Python任务**:
+**纯Python任务** (56/61):
 ```bash
 pip install -r requirements.txt
 ```
 
-**CUDA任务** (需要GPU):
+**CUDA任务** (5/61，需要GPU):
 ```bash
-# 选项A: Docker (推荐)
-docker pull zwxie/codebench:pytorch-cutile-v1.0
+# 选项A: Singularity (推荐，HPC环境)
+wget "https://hkustconnect-my.sharepoint.com/personal/zxiebk_connect_ust_hk/_layouts/15/download.aspx?share=IQDbaDspfcxLQZGsKHx9hv-GAdtBT9Vvnk737xMQz3ny0Lo" \
+  -O containers/pytorch_cutile.sif
 
-# 选项B: Singularity (HPC环境)
-singularity pull docker://zwxie/codebench:pytorch-cutile-v1.0
+# 选项B: Docker (本地构建)
+cd containers && docker build -t pytorch-cutile:local -f Dockerfile .
 ```
 
 详见 [CONTAINERS.md](CONTAINERS.md)
@@ -81,12 +96,26 @@ singularity pull docker://zwxie/codebench:pytorch-cutile-v1.0
 
 ```bash
 # Python任务
-python evaluation/evaluate.py --task-id ipb_dev_001 --variant fuzzy
+python evaluation/evaluate.py --task-id ipb_dev_007 --variant fuzzy
 
-# CUDA任务 (使用Docker)
-docker run --gpus all -v $(pwd):/workspace zwxie/codebench:pytorch-cutile-v1.0 \
+# CUDA任务 (使用Singularity)
+singularity exec --nv containers/pytorch_cutile.sif \
   python evaluation/evaluate.py --task-id ipb_cuda_001 --variant fuzzy
 ```
+
+---
+
+## 🎯 推荐任务
+
+从 61 个任务中不知道选哪个？查看 [docs/RECOMMENDED_TASKS.md](docs/RECOMMENDED_TASKS.md)
+
+**快速推荐** (强区分度任务):
+- `ipb_dev_007` - 数据结构选择，misleading 慢 67×
+- `ipb_dev_038` - 算法复杂度，慢 6.9×  
+- `ipb_dev_037` - 缓存策略，慢 6.3×
+- `ipb_cpu_001_gaussian_blur` - SIMD向量化，慢 1.9×
+
+---
 
 ## 主指标
 
@@ -125,6 +154,9 @@ python scripts/04_measure_baseline.py --task-id ipb_new_001
 
 ## 文档
 
+- **[REBUILD_GUIDE.md](REBUILD_GUIDE.md)** - 完整重建指南（从零开始）
+- **[docs/RECOMMENDED_TASKS.md](docs/RECOMMENDED_TASKS.md)** - 推荐任务清单和评测方案
 - [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - 部署和发布指南
 - [CONTAINERS.md](CONTAINERS.md) - 容器环境说明
+- [docs/task_design_principles.md](docs/task_design_principles.md) - 任务设计原则
 - [docs/](docs/) - 详细设计文档和实验报告
