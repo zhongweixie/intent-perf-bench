@@ -1,0 +1,12 @@
+         10004 function calls in 0.090 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.083    0.083    0.090    0.090 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_016/workspace/report_generator/formatter.py:15(generate_report)
+    10000    0.007    0.000    0.007    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_016/workspace/report_generator/formatter.py:3(format_line)
+        2    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

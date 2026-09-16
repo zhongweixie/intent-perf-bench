@@ -1,0 +1,20 @@
+cProfile Output - Recent Performance Analysis
+=====================================================
+
+Command: python3 -m cProfile run_pipeline.py
+Date: 2024-01-15
+
+Top functions by cumulative time:
+        1    0.001    0.001   85.331   85.331 pipeline/transformer.py:26(calculate_metrics)
+   100000    2.145    0.000   83.891    0.001 pipeline/transformer.py:42(<iterrows loop body>)
+   100000   45.223    0.000   72.108    0.001 pandas/core/frame.py:1538(__getitem__)
+   100000   18.334    0.000   18.334    0.000 pandas/core/frame.py:3761(at setter)
+    10000    4.891    0.000    8.223    0.001 pandas/core/groupby/groupby.py:1421(sum)
+
+Summary:
+- Transform stage shows significant time in DataFrame row iteration
+- iterrows() loop dominates execution (83.9s out of 85.3s)
+- Frequent DataFrame indexing operations detected
+- Total profiled time: 87.2s (100k rows)
+
+Recommendation: Consider vectorized operations instead of row-by-row iteration

@@ -1,0 +1,12 @@
+         200030002 function calls in 42.625 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1   32.024   32.024   42.625   42.625 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_018/workspace/json_processor/merger.py:4(merge_records)
+200010000   10.599    0.000   10.599    0.000 {method 'get' of 'dict' objects}
+    20000    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

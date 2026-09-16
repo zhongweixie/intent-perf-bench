@@ -1,0 +1,15 @@
+         200043 function calls in 0.102 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.011    0.011    0.102    0.102 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_030/workspace/event_processor/processor.py:37(aggregate_by_type)
+       10    0.048    0.005    0.048    0.005 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_030/workspace/event_processor/processor.py:55(<listcomp>)
+       10    0.010    0.001    0.034    0.003 {built-in method builtins.sum}
+   100010    0.024    0.000    0.024    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_030/workspace/event_processor/processor.py:57(<genexpr>)
+   100001    0.010    0.000    0.010    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_030/workspace/event_processor/processor.py:50(<genexpr>)
+       10    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

@@ -1,0 +1,16 @@
+         1400023 function calls in 0.265 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.047    0.047    0.265    0.265 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_017/workspace/csv_processor/analyzer.py:4(analyze_data)
+        5    0.065    0.013    0.091    0.018 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_017/workspace/csv_processor/analyzer.py:22(<listcomp>)
+        4    0.054    0.013    0.075    0.019 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_017/workspace/csv_processor/analyzer.py:28(<listcomp>)
+  1200000    0.065    0.000    0.065    0.000 {method 'get' of 'dict' objects}
+   100001    0.017    0.000    0.023    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_017/workspace/csv_processor/analyzer.py:19(<genexpr>)
+   100001    0.017    0.000    0.023    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_017/workspace/csv_processor/analyzer.py:25(<genexpr>)
+       10    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

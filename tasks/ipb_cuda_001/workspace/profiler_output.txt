@@ -1,0 +1,25 @@
+==============================================================================
+Nsight Systems Profile Summary — huffman_decode --benchmark
+GPU: H800, CUDA 12.3
+==============================================================================
+
+Top CUDA API calls (by total duration):
+  cudaMemcpy (HtoD)            2 calls    38.4 ms    67.2%  ← !! HIGH !!
+  cudaMemcpy (DtoH)            1 call     12.1 ms    21.2%  ← !! HIGH !!
+  huffman_decode_baseline_kernel   7 calls    56.0 ms
+  cudaMalloc                   6 calls     4.2 ms     7.4%
+  cudaFree                     6 calls     3.1 ms     5.4%
+  cudaDeviceSynchronize        7 calls     0.04 ms
+
+Top Kernel Duration:
+  huffman_decode_baseline_kernel: 56.0ms total (7 runs × 8.0ms avg)
+
+Memory Transfer Summary:
+  HtoD bitstream buffer: 2048 × 131072 bytes = 256 MB
+  HtoD code_len + symbols: 512 bytes (negligible)
+  DtoH output buffer:  2048 × 65536 bytes = 128 MB
+
+Note: cudaMemcpy HtoD/DtoH transfers account for 88.4% of API time
+      outside kernel execution. Memory allocation/free overhead is
+      also notable (12.8% of non-kernel API time).
+==============================================================================

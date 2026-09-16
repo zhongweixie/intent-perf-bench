@@ -1,0 +1,15 @@
+         400685 function calls (400656 primitive calls) in 0.119 seconds
+
+   Ordered by: cumulative time
+   List reduced from 45 to 20 due to restriction <20>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.068    0.068    0.119    0.119 log_analyzer/analyzer.py:33(count_error_types)
+   200000    0.036    0.000    0.036    0.000 {method 'match' of 're.Pattern' objects}
+   200002    0.015    0.000    0.015    0.000 {method 'get' of 'dict' objects}
+        1    0.000    0.000    0.001    0.001 re/__init__.py:225(compile)
+        1    0.000    0.000    0.001    0.001 re/__init__.py:272(_compile)
+        1    0.000    0.000    0.000    0.000 re/_compiler.py:740(compile)
+        1    0.000    0.000    0.000    0.000 re/_parser.py:979(parse)
+      2/1    0.000    0.000    0.000    0.000 re/_parser.py:456(_parse_sub)
+      7/1    0.000    0.000    0.000    0.000 re/_parser.py:516(_parse)

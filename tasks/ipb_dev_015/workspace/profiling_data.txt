@@ -1,0 +1,24 @@
+         1465132 function calls (1437464 primitive calls) in 1.163 seconds
+
+   Ordered by: cumulative time
+   List reduced from 692 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.016    0.016    1.163    1.163 log_aggregator/aggregator.py:13(aggregate_by_window)
+      501    0.006    0.000    0.328    0.001 pandas/pandas/core/frame.py:698(__init__)
+      500    0.003    0.000    0.272    0.001 pandas/pandas/core/series.py:2849(quantile)
+      500    0.002    0.000    0.259    0.001 pandas/pandas/core/reshape/concat.py:157(concat)
+      500    0.006    0.000    0.238    0.000 pandas/pandas/core/reshape/concat.py:622(get_result)
+ 1000/500    0.006    0.000    0.208    0.000 pandas/pandas/core/frame.py:12075(quantile)
+      501    0.002    0.000    0.178    0.000 pandas/pandas/core/internals/construction.py:96(arrays_to_mgr)
+      500    0.022    0.000    0.156    0.000 pandas/pandas/core/internals/concat.py:94(concatenate_managers)
+      500    0.002    0.000    0.133    0.000 pandas/pandas/core/internals/construction.py:506(nested_data_to_arrays)
+      501    0.002    0.000    0.131    0.000 pandas/pandas/core/internals/managers.py:2140(create_block_manager_from_column_arrays)
+      500    0.003    0.000    0.130    0.000 pandas/pandas/core/internals/managers.py:1539(quantile)
+      500    0.002    0.000    0.127    0.000 pandas/pandas/core/internals/construction.py:793(to_arrays)
+     2002    0.020    0.000    0.127    0.000 pandas/pandas/core/indexes/base.py:475(__new__)
+     1000    0.002    0.000    0.120    0.000 pandas/pandas/core/ops/common.py:62(new_method)
+     1000    0.001    0.000    0.117    0.000 pandas/pandas/core/arraylike.py:38(__eq__)
+
+
+

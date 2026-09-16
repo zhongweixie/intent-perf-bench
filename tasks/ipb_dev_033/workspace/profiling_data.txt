@@ -1,0 +1,13 @@
+         1000003 function calls in 0.297 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.297    0.297 sorter/sorter.py:25(find_top_k)
+        1    0.187    0.187    0.297    0.297 {built-in method builtins.sorted}
+   500000    0.081    0.000    0.110    0.000 sorter/sorter.py:37(<lambda>)
+   500000    0.029    0.000    0.029    0.000 {method 'get' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

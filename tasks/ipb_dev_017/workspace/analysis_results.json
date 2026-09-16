@@ -1,0 +1,17 @@
+{
+  "total": 100000,
+  "by_category": {
+    "electronics": 19980,
+    "sports": 20152,
+    "furniture": 19918,
+    "clothing": 20038,
+    "food": 19912
+  },
+  "by_status": {
+    "cancelled": 24914,
+    "completed": 25190,
+    "pending": 24977,
+    "active": 24919
+  },
+  "avg_value": 5033.54607
+}

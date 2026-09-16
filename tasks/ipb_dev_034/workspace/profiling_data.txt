@@ -1,0 +1,24 @@
+         4000153 function calls (4000149 primitive calls) in 1.180 seconds
+
+   Ordered by: cumulative time
+   List reduced from 46 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.325    0.325    1.180    1.180 csv_validator/validator.py:20(validate_fields)
+   800000    0.299    0.000    0.810    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/__init__.py:163(match)
+   800000    0.238    0.000    0.328    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/__init__.py:272(_compile)
+   800000    0.183    0.000    0.183    0.000 {method 'match' of 're.Pattern' objects}
+   800025    0.090    0.000    0.090    0.000 {built-in method builtins.isinstance}
+   800025    0.045    0.000    0.045    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_compiler.py:740(compile)
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_parser.py:979(parse)
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_parser.py:456(_parse_sub)
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_compiler.py:573(_code)
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_parser.py:516(_parse)
+      2/1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_compiler.py:37(_compile)
+        1    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/re/_compiler.py:511(_compile_info)
+        2    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/enum.py:1525(__and__)
+        2    0.000    0.000    0.000    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/enum.py:688(__call__)
+
+
+

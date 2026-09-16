@@ -1,0 +1,33 @@
+PERFORMANCE REGRESSION ANALYSIS - Social Analytics Pipeline
+===========================================================
+
+REGRESSION COMMIT: e55d7e6
+ISSUE: apply(axis=1) row-wise engagement scoring
+
+BENCHMARK RESULTS:
+- Current (regressed): 0.4036s best time (FAIL - exceeds 0.10s threshold)
+- Target threshold: 0.10s
+- Performance gap: 4.0x slower
+
+PROFILING DATA (50,000 posts):
+Total execution time: 1.845 seconds
+- EngagementScorer.compute_engagement: 1.823s (98.8% of runtime)
+  - DataFrame.apply (axis=1): 1.815s
+    - _score_post calls: 50,000 iterations
+    - Per-row overhead: 36.3ms per 1000 rows
+
+BOTTLENECK IDENTIFICATION:
+1. apply(axis=1) iterates row-by-row (50,000 function calls)
+2. Each row access via Series.__getitem__ is expensive (350,000 calls)
+3. No vectorization - misses numpy's SIMD capabilities
+
+ROOT CAUSE:
+The regression replaced vectorized numpy operations with Python-level iteration.
+Vectorized pandas/numpy operations process entire columns at once (1 operation)
+vs row iteration (50,000 operations).
+
+SOLUTION:
+Revert to vectorized numpy operations in EngagementScorer:
+- Use element-wise numpy operations on entire Series
+- Eliminate apply(axis=1)
+- Expected performance: ~0.02s (20x faster)

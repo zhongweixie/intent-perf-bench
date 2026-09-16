@@ -1,0 +1,16 @@
+         40 function calls in 0.149 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.000    0.000    0.149    0.149 order_analytics/loader.py:7(load_orders)
+        1    0.001    0.001    0.149    0.149 json/__init__.py:274(load)
+        1    0.000    0.000    0.127    0.127 json/__init__.py:299(loads)
+        1    0.000    0.000    0.127    0.127 json/decoder.py:332(decode)
+        1    0.127    0.127    0.127    0.127 json/decoder.py:343(raw_decode)
+        1    0.012    0.012    0.021    0.021 {method 'read' of '_io.TextIOWrapper'}
+        1    0.000    0.000    0.009    0.009 {built-in method _codecs.utf_8_decode}
+        1    0.000    0.000    0.000    0.000 {built-in method io.open}
+
+Note: profiling captured on load_orders() for a 28MB JSON file (200k records).
+The raw_decode step alone takes 0.127s — dominated by parsing 28MB of JSON.

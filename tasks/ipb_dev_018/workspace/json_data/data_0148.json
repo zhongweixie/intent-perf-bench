@@ -1,0 +1,702 @@
+[
+  {
+    "id": 14800,
+    "timestamp": "2024-01-17T16:00:00Z",
+    "value": 648,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14801,
+    "timestamp": "2024-01-18T17:00:00Z",
+    "value": 203,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14802,
+    "timestamp": "2024-01-19T18:00:00Z",
+    "value": 399,
+    "status": "active",
+    "category": "B"
+  },
+  {
+    "id": 14803,
+    "timestamp": "2024-01-20T19:00:00Z",
+    "value": 194,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14804,
+    "timestamp": "2024-01-21T20:00:00Z",
+    "value": 380,
+    "status": "completed",
+    "category": "C"
+  },
+  {
+    "id": 14805,
+    "timestamp": "2024-01-22T21:00:00Z",
+    "value": 567,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14806,
+    "timestamp": "2024-01-23T22:00:00Z",
+    "value": 245,
+    "status": "active",
+    "category": "C"
+  },
+  {
+    "id": 14807,
+    "timestamp": "2024-01-24T23:00:00Z",
+    "value": 986,
+    "status": "failed",
+    "category": "A"
+  },
+  {
+    "id": 14808,
+    "timestamp": "2024-01-25T00:00:00Z",
+    "value": 83,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14809,
+    "timestamp": "2024-01-26T01:00:00Z",
+    "value": 253,
+    "status": "failed",
+    "category": "E"
+  },
+  {
+    "id": 14810,
+    "timestamp": "2024-01-27T02:00:00Z",
+    "value": 401,
+    "status": "completed",
+    "category": "D"
+  },
+  {
+    "id": 14811,
+    "timestamp": "2024-01-28T03:00:00Z",
+    "value": 624,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14812,
+    "timestamp": "2024-01-01T04:00:00Z",
+    "value": 90,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14813,
+    "timestamp": "2024-01-02T05:00:00Z",
+    "value": 387,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14814,
+    "timestamp": "2024-01-03T06:00:00Z",
+    "value": 681,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14815,
+    "timestamp": "2024-01-04T07:00:00Z",
+    "value": 251,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14816,
+    "timestamp": "2024-01-05T08:00:00Z",
+    "value": 957,
+    "status": "pending",
+    "category": "D"
+  },
+  {
+    "id": 14817,
+    "timestamp": "2024-01-06T09:00:00Z",
+    "value": 270,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14818,
+    "timestamp": "2024-01-07T10:00:00Z",
+    "value": 738,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14819,
+    "timestamp": "2024-01-08T11:00:00Z",
+    "value": 102,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14820,
+    "timestamp": "2024-01-09T12:00:00Z",
+    "value": 980,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14821,
+    "timestamp": "2024-01-10T13:00:00Z",
+    "value": 592,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14822,
+    "timestamp": "2024-01-11T14:00:00Z",
+    "value": 762,
+    "status": "completed",
+    "category": "C"
+  },
+  {
+    "id": 14823,
+    "timestamp": "2024-01-12T15:00:00Z",
+    "value": 277,
+    "status": "completed",
+    "category": "C"
+  },
+  {
+    "id": 14824,
+    "timestamp": "2024-01-13T16:00:00Z",
+    "value": 871,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14825,
+    "timestamp": "2024-01-14T17:00:00Z",
+    "value": 459,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14826,
+    "timestamp": "2024-01-15T18:00:00Z",
+    "value": 933,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14827,
+    "timestamp": "2024-01-16T19:00:00Z",
+    "value": 388,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14828,
+    "timestamp": "2024-01-17T20:00:00Z",
+    "value": 861,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14829,
+    "timestamp": "2024-01-18T21:00:00Z",
+    "value": 368,
+    "status": "completed",
+    "category": "D"
+  },
+  {
+    "id": 14830,
+    "timestamp": "2024-01-19T22:00:00Z",
+    "value": 466,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14831,
+    "timestamp": "2024-01-20T23:00:00Z",
+    "value": 826,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14832,
+    "timestamp": "2024-01-21T00:00:00Z",
+    "value": 725,
+    "status": "failed",
+    "category": "E"
+  },
+  {
+    "id": 14833,
+    "timestamp": "2024-01-22T01:00:00Z",
+    "value": 947,
+    "status": "completed",
+    "category": "E"
+  },
+  {
+    "id": 14834,
+    "timestamp": "2024-01-23T02:00:00Z",
+    "value": 485,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14835,
+    "timestamp": "2024-01-24T03:00:00Z",
+    "value": 258,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14836,
+    "timestamp": "2024-01-25T04:00:00Z",
+    "value": 897,
+    "status": "active",
+    "category": "B"
+  },
+  {
+    "id": 14837,
+    "timestamp": "2024-01-26T05:00:00Z",
+    "value": 312,
+    "status": "pending",
+    "category": "D"
+  },
+  {
+    "id": 14838,
+    "timestamp": "2024-01-27T06:00:00Z",
+    "value": 153,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14839,
+    "timestamp": "2024-01-28T07:00:00Z",
+    "value": 685,
+    "status": "active",
+    "category": "C"
+  },
+  {
+    "id": 14840,
+    "timestamp": "2024-01-01T08:00:00Z",
+    "value": 207,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14841,
+    "timestamp": "2024-01-02T09:00:00Z",
+    "value": 186,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14842,
+    "timestamp": "2024-01-03T10:00:00Z",
+    "value": 295,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14843,
+    "timestamp": "2024-01-04T11:00:00Z",
+    "value": 269,
+    "status": "active",
+    "category": "C"
+  },
+  {
+    "id": 14844,
+    "timestamp": "2024-01-05T12:00:00Z",
+    "value": 466,
+    "status": "failed",
+    "category": "A"
+  },
+  {
+    "id": 14845,
+    "timestamp": "2024-01-06T13:00:00Z",
+    "value": 338,
+    "status": "pending",
+    "category": "E"
+  },
+  {
+    "id": 14846,
+    "timestamp": "2024-01-07T14:00:00Z",
+    "value": 28,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14847,
+    "timestamp": "2024-01-08T15:00:00Z",
+    "value": 484,
+    "status": "completed",
+    "category": "D"
+  },
+  {
+    "id": 14848,
+    "timestamp": "2024-01-09T16:00:00Z",
+    "value": 322,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14849,
+    "timestamp": "2024-01-10T17:00:00Z",
+    "value": 132,
+    "status": "completed",
+    "category": "C"
+  },
+  {
+    "id": 14850,
+    "timestamp": "2024-01-11T18:00:00Z",
+    "value": 741,
+    "status": "failed",
+    "category": "C"
+  },
+  {
+    "id": 14851,
+    "timestamp": "2024-01-12T19:00:00Z",
+    "value": 596,
+    "status": "active",
+    "category": "B"
+  },
+  {
+    "id": 14852,
+    "timestamp": "2024-01-13T20:00:00Z",
+    "value": 416,
+    "status": "failed",
+    "category": "E"
+  },
+  {
+    "id": 14853,
+    "timestamp": "2024-01-14T21:00:00Z",
+    "value": 756,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14854,
+    "timestamp": "2024-01-15T22:00:00Z",
+    "value": 328,
+    "status": "failed",
+    "category": "D"
+  },
+  {
+    "id": 14855,
+    "timestamp": "2024-01-16T23:00:00Z",
+    "value": 223,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14856,
+    "timestamp": "2024-01-17T00:00:00Z",
+    "value": 48,
+    "status": "completed",
+    "category": "C"
+  },
+  {
+    "id": 14857,
+    "timestamp": "2024-01-18T01:00:00Z",
+    "value": 162,
+    "status": "completed",
+    "category": "D"
+  },
+  {
+    "id": 14858,
+    "timestamp": "2024-01-19T02:00:00Z",
+    "value": 780,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14859,
+    "timestamp": "2024-01-20T03:00:00Z",
+    "value": 808,
+    "status": "failed",
+    "category": "D"
+  },
+  {
+    "id": 14860,
+    "timestamp": "2024-01-21T04:00:00Z",
+    "value": 675,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14861,
+    "timestamp": "2024-01-22T05:00:00Z",
+    "value": 374,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14862,
+    "timestamp": "2024-01-23T06:00:00Z",
+    "value": 621,
+    "status": "active",
+    "category": "B"
+  },
+  {
+    "id": 14863,
+    "timestamp": "2024-01-24T07:00:00Z",
+    "value": 159,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14864,
+    "timestamp": "2024-01-25T08:00:00Z",
+    "value": 754,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14865,
+    "timestamp": "2024-01-26T09:00:00Z",
+    "value": 632,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14866,
+    "timestamp": "2024-01-27T10:00:00Z",
+    "value": 539,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14867,
+    "timestamp": "2024-01-28T11:00:00Z",
+    "value": 343,
+    "status": "failed",
+    "category": "C"
+  },
+  {
+    "id": 14868,
+    "timestamp": "2024-01-01T12:00:00Z",
+    "value": 39,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14869,
+    "timestamp": "2024-01-02T13:00:00Z",
+    "value": 926,
+    "status": "pending",
+    "category": "E"
+  },
+  {
+    "id": 14870,
+    "timestamp": "2024-01-03T14:00:00Z",
+    "value": 897,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14871,
+    "timestamp": "2024-01-04T15:00:00Z",
+    "value": 627,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14872,
+    "timestamp": "2024-01-05T16:00:00Z",
+    "value": 94,
+    "status": "completed",
+    "category": "E"
+  },
+  {
+    "id": 14873,
+    "timestamp": "2024-01-06T17:00:00Z",
+    "value": 849,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14874,
+    "timestamp": "2024-01-07T18:00:00Z",
+    "value": 578,
+    "status": "active",
+    "category": "B"
+  },
+  {
+    "id": 14875,
+    "timestamp": "2024-01-08T19:00:00Z",
+    "value": 834,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14876,
+    "timestamp": "2024-01-09T20:00:00Z",
+    "value": 514,
+    "status": "completed",
+    "category": "D"
+  },
+  {
+    "id": 14877,
+    "timestamp": "2024-01-10T21:00:00Z",
+    "value": 133,
+    "status": "failed",
+    "category": "B"
+  },
+  {
+    "id": 14878,
+    "timestamp": "2024-01-11T22:00:00Z",
+    "value": 711,
+    "status": "pending",
+    "category": "E"
+  },
+  {
+    "id": 14879,
+    "timestamp": "2024-01-12T23:00:00Z",
+    "value": 291,
+    "status": "active",
+    "category": "E"
+  },
+  {
+    "id": 14880,
+    "timestamp": "2024-01-13T00:00:00Z",
+    "value": 780,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14881,
+    "timestamp": "2024-01-14T01:00:00Z",
+    "value": 984,
+    "status": "failed",
+    "category": "A"
+  },
+  {
+    "id": 14882,
+    "timestamp": "2024-01-15T02:00:00Z",
+    "value": 706,
+    "status": "pending",
+    "category": "C"
+  },
+  {
+    "id": 14883,
+    "timestamp": "2024-01-16T03:00:00Z",
+    "value": 381,
+    "status": "pending",
+    "category": "D"
+  },
+  {
+    "id": 14884,
+    "timestamp": "2024-01-17T04:00:00Z",
+    "value": 943,
+    "status": "completed",
+    "category": "B"
+  },
+  {
+    "id": 14885,
+    "timestamp": "2024-01-18T05:00:00Z",
+    "value": 883,
+    "status": "pending",
+    "category": "A"
+  },
+  {
+    "id": 14886,
+    "timestamp": "2024-01-19T06:00:00Z",
+    "value": 628,
+    "status": "failed",
+    "category": "D"
+  },
+  {
+    "id": 14887,
+    "timestamp": "2024-01-20T07:00:00Z",
+    "value": 707,
+    "status": "active",
+    "category": "A"
+  },
+  {
+    "id": 14888,
+    "timestamp": "2024-01-21T08:00:00Z",
+    "value": 657,
+    "status": "failed",
+    "category": "E"
+  },
+  {
+    "id": 14889,
+    "timestamp": "2024-01-22T09:00:00Z",
+    "value": 254,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14890,
+    "timestamp": "2024-01-23T10:00:00Z",
+    "value": 750,
+    "status": "failed",
+    "category": "E"
+  },
+  {
+    "id": 14891,
+    "timestamp": "2024-01-24T11:00:00Z",
+    "value": 337,
+    "status": "pending",
+    "category": "B"
+  },
+  {
+    "id": 14892,
+    "timestamp": "2024-01-25T12:00:00Z",
+    "value": 778,
+    "status": "pending",
+    "category": "E"
+  },
+  {
+    "id": 14893,
+    "timestamp": "2024-01-26T13:00:00Z",
+    "value": 323,
+    "status": "pending",
+    "category": "E"
+  },
+  {
+    "id": 14894,
+    "timestamp": "2024-01-27T14:00:00Z",
+    "value": 879,
+    "status": "active",
+    "category": "D"
+  },
+  {
+    "id": 14895,
+    "timestamp": "2024-01-28T15:00:00Z",
+    "value": 370,
+    "status": "failed",
+    "category": "D"
+  },
+  {
+    "id": 14896,
+    "timestamp": "2024-01-01T16:00:00Z",
+    "value": 793,
+    "status": "completed",
+    "category": "E"
+  },
+  {
+    "id": 14897,
+    "timestamp": "2024-01-02T17:00:00Z",
+    "value": 672,
+    "status": "pending",
+    "category": "C"
+  },
+  {
+    "id": 14898,
+    "timestamp": "2024-01-03T18:00:00Z",
+    "value": 235,
+    "status": "completed",
+    "category": "A"
+  },
+  {
+    "id": 14899,
+    "timestamp": "2024-01-04T19:00:00Z",
+    "value": 53,
+    "status": "failed",
+    "category": "B"
+  }
+]

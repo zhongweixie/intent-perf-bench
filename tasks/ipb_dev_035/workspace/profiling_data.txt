@@ -1,0 +1,21 @@
+         9400834 function calls (9200798 primitive calls) in 4.191 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.139    0.139    4.191    4.191 pricing_engine/calculator.py:6(calculate_order_totals)
+    50001    0.085    0.000    2.797    0.000 pandas/core/frame.py(iterrows)
+    50000    0.355    0.000    2.519    0.000 pandas/core/series.py(__init__)
+   250000    0.328    0.000    1.201    0.000 pandas/core/series.py(__getitem__)
+    50007    0.214    0.000    0.827    0.000 pandas/core/construction.py(sanitize_array)
+   250000    0.181    0.000    0.493    0.000 pandas/core/series.py(_get_value)
+    50003    0.193    0.000    0.341    0.000 pandas/core/dtypes/cast.py(maybe_infer_to_datetimelike)
+    50000    0.087    0.000    0.338    0.000 pandas/core/internals/managers.py(from_array)
+  2650177    0.259    0.000    0.338    0.000 {built-in method builtins.isinstance}
+    50000    0.066    0.000    0.299    0.000 pandas/core/generic.py(__setattr__)
+   250000    0.174    0.000    0.253    0.000 pandas/core/indexing.py(check_dict_or_set_indexers)
+    50001    0.044    0.000    0.212    0.000 pandas/_config/config.py(_get_option)
+    50000    0.053    0.000    0.199    0.000 pandas/core/generic.py(_set_axis)
+    50000    0.117    0.000    0.177    0.000 pandas/core/generic.py(__finalize__)
+   250000    0.137    0.000    0.162    0.000 pandas/core/indexes/base.py(get_loc)
+   250000    0.078    0.000    0.149    0.000 pandas/core/series.py(_values)

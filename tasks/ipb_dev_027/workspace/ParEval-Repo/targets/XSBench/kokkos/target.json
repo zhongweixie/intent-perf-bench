@@ -1,0 +1,34 @@
+{
+    "app": "xsbench",
+    "model": "kokkos",
+    "path": "targets/XSBench/kokkos/repo",
+    "dependencies": ["gnu", "cuda", "kokkos"],
+    "build_commands_debug": "rm -rf build ; cmake -DKOKKOS_BACKEND=CUDA -DCMAKE_CXX_COMPILER=g++ -GNinja -Bbuild . && cmake --build build/",
+    "build_commands_perf": "rm -rf build ; cmake -DKOKKOS_BACKEND=CUDA -DCMAKE_CXX_COMPILER=g++ -GNinja -Bbuild . && cmake --build build/",
+    "build_timeout": 120,
+    "exe_file": "build/XSBench",
+    "debug_type": "match",
+    "run_commands_debug": [
+        "./build/XSBench -m event -s small",
+        "./build/XSBench -m event -s large"
+    ],
+    "debug_outputs": [
+        "(Valid)",
+        "(Valid)"
+    ],
+    "run_commands_perf": [
+        "./build/XSBench -m event -s large"
+    ],
+    "perf_outputs": [
+        "(Valid)"
+    ],
+    "run_timeout": 120,
+    "ex_build_cmd": "cmake -DKOKKOS_BACKEND=CUDA -DCMAKE_CXX_COMPILER=g++ -Bbuild . && cmake --build build/",
+    "ex_build_desc": "the Kokkos CUDA backend, targeting a system with an NVIDIA GPU, compiled with g++ as the host compiler, with Kokkos installed and available in the environment through $PATH and $LD_LIBRARY_PATH",
+    "build_filename": "CMakeLists.txt",
+    "extra_build_files": ["Makefile"],
+    "ex_run_cmd": "./build/XSBench -m event -s large",
+    "ex_run_desc": "an event-based simulation with the large input size",
+    "main_filename": "Main.cpp",
+    "filename_desc": "C++"
+}

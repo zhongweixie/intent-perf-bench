@@ -1,0 +1,6 @@
+Data Summary Statistics
+==================================================
+
+Total records: 99987
+Columns: transaction_id, customer_id, timestamp, amount, category, store_id, hour, day_of_week, is_weekend, txn_count, cumulative_spent, avg_transaction, amount_vs_avg, is_large_txn
+Memory usage: 10.08 MB

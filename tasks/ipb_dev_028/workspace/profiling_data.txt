@@ -1,0 +1,22 @@
+Profiling data showing O(n²) behavior in deduplicate_records():
+
+Tested with smaller dataset (10k records) to complete profiling:
+
+         500050012 function calls in 45.237 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1   44.891   44.891   45.237   45.237 merger.py:15(deduplicate_records)
+500050000    0.346    0.000    0.346    0.000 {method 'append' of 'list' objects}
+    10000    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+
+The bottleneck is the nested loop:
+- Outer loop: 10,000 records
+- Inner loop: grows from 0 to ~7,700 unique records
+- Total comparisons: ~38.5 million (O(n²) complexity)
+
+With 150k records, estimated time would be 225x worse: ~10,000+ seconds.
+
+Root cause: Linear search through unique_records list for each new record.
+Solution: Use set to track seen IDs for O(1) lookup instead of O(n) linear search.

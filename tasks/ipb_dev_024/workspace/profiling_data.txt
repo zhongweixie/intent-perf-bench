@@ -1,0 +1,25 @@
+         1100002 function calls in 0.619 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.071    0.071    0.619    0.619 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_024/workspace/json_processor/parser.py:18(extract_fields)
+    50000    0.021    0.000    0.258    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/__init__.py:183(dumps)
+    50000    0.050    0.000    0.237    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/encoder.py:183(encode)
+    50000    0.038    0.000    0.234    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/__init__.py:299(loads)
+    50000    0.063    0.000    0.185    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/decoder.py:332(decode)
+    50000    0.173    0.000    0.173    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/encoder.py:205(iterencode)
+    50000    0.082    0.000    0.082    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/decoder.py:343(raw_decode)
+    50000    0.038    0.000    0.051    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_024/workspace/json_processor/parser.py:36(<dictcomp>)
+   100000    0.028    0.000    0.028    0.000 {method 'match' of 're.Pattern' objects}
+   150000    0.014    0.000    0.014    0.000 {built-in method builtins.isinstance}
+   200000    0.013    0.000    0.013    0.000 {method 'get' of 'dict' objects}
+   100000    0.008    0.000    0.008    0.000 {method 'end' of 're.Match' objects}
+    50000    0.007    0.000    0.007    0.000 {method 'startswith' of 'str' objects}
+    50000    0.005    0.000    0.005    0.000 {method 'join' of 'str' objects}
+    50000    0.004    0.000    0.004    0.000 {built-in method builtins.len}
+    50000    0.004    0.000    0.004    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

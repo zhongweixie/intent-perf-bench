@@ -1,0 +1,21 @@
+         4502002 function calls in 1.034 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.153    0.153    1.034    1.034 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:63(process_image_batch)
+   500000    0.113    0.000    0.407    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:92(<lambda>)
+   500000    0.109    0.000    0.374    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:86(<lambda>)
+   500000    0.189    0.000    0.294    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:33(apply_contrast_adjustment)
+   500000    0.160    0.000    0.265    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:19(apply_brightness_adjustment)
+  1000000    0.106    0.000    0.106    0.000 {built-in method builtins.min}
+  1000000    0.103    0.000    0.103    0.000 {built-in method builtins.max}
+      200    0.073    0.000    0.098    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_022/workspace/image_processor/transforms.py:48(compute_histogram)
+   501200    0.025    0.000    0.025    0.000 {method 'get' of 'dict' objects}
+      200    0.002    0.000    0.002    0.000 {built-in method builtins.sum}
+      200    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+      200    0.000    0.000    0.000    0.000 {method 'append' of 'list' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

@@ -1,0 +1,29 @@
+name: Performance Tests
+
+on: [push, pull_request]
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pandas numpy pyarrow
+      
+      - name: Generate test data
+        run: python3 generate_data.py
+      
+      - name: Run performance benchmark
+        run: python3 benchmarks/pipeline_bench.py
+        
+      # Performance threshold: 1.5x baseline (0.33s)
+      # Baseline: 0.22s (vectorized implementation)
+      # Threshold: 0.33s (1.5x slowdown tolerance)

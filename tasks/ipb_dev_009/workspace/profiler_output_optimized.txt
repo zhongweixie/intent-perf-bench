@@ -1,0 +1,24 @@
+         7101 function calls (7003 primitive calls) in 0.030 seconds
+
+   Ordered by: cumulative time
+   List reduced from 307 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002    0.030    0.030 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_009/workspace/feature_eng/builder.py:13(build_features)
+        5    0.000    0.000    0.012    0.002 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/internals/managers.py:317(apply)
+        4    0.000    0.000    0.012    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/generic.py:6485(astype)
+        4    0.000    0.000    0.012    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/internals/managers.py:440(astype)
+        4    0.000    0.000    0.011    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/internals/blocks.py:749(astype)
+        4    0.000    0.000    0.011    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/dtypes/astype.py:191(astype_array_safe)
+        4    0.000    0.000    0.011    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/dtypes/astype.py:157(astype_array)
+        4    0.011    0.003    0.011    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/dtypes/astype.py:56(_astype_nansafe)
+       13    0.000    0.000    0.011    0.001 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/ops/common.py:62(new_method)
+       11    0.000    0.000    0.011    0.001 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/series.py:6152(_arith_method)
+       11    0.000    0.000    0.011    0.001 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/base.py:1380(_arith_method)
+       13    0.000    0.000    0.009    0.001 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/ops/array_ops.py:189(_na_arithmetic_op)
+       11    0.000    0.000    0.009    0.001 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/ops/array_ops.py:240(arithmetic_op)
+        3    0.000    0.000    0.009    0.003 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/site-packages/pandas/core/arraylike.py:98(__add__)
+        3    0.008    0.003    0.008    0.003 {built-in method _operator.add}
+
+
+

@@ -1,0 +1,247 @@
+"""
+Naive Attention implementation using cuTile (baseline - slow version).
+
+This is a straightforward implementation that materializes the full attention matrix.
+Performance bottlenecks:
+1. Materializes full N×N attention matrix (high memory bandwidth)
+2. No online softmax - requires two passes over data
+3. Separate softmax kernel launch overhead
+4. No tiling optimization for cache efficiency
+"""
+import torch
+import math
+import cuda.tile as ct
+import numpy as np
+
+ConstInt = ct.Constant[int]
+ConstBool = ct.Constant[bool]
+
+
+@ct.kernel
+def naive_qk_kernel(Q, K, QK_out,
+                    qk_scale: float,
+                    input_pos: int,
+                    TILE_D: ConstInt,
+                    H: ConstInt,
+                    SEQLEN_Q: ConstInt,
+                    SEQLEN_KV: ConstInt,
+                    QUERY_GROUP_SIZE: ConstInt,
+                    CAUSAL: ConstBool):
+    """
+    Compute Q @ K^T scores (naive, materializes full matrix).
+    """
+    bid_y = ct.bid(0)  # Batch * Heads
+    batch_idx = bid_y // H
+    head_idx = bid_y % H
+    off_kv_h = head_idx // QUERY_GROUP_SIZE
+
+    tid = ct.tid(0)
+
+    # Each thread computes one row of QK^T
+    if tid < SEQLEN_Q:
+        # Load one query vector
+        q = ct.load(
+            Q, index=(batch_idx, head_idx, tid, 0), shape=(1, 1, 1, TILE_D)
+        ).reshape((TILE_D,))
+
+        # Compute dot product with all keys
+        for j in range(SEQLEN_KV):
+            k = ct.load(
+                K, index=(batch_idx, off_kv_h, j, 0), shape=(1, 1, 1, TILE_D)
+            ).reshape((TILE_D,))
+
+            # Scalar dot product
+            score = 0.0
+            for d in range(TILE_D):
+                score += q[d] * k[d]
+
+            score = score * qk_scale
+
+            # Apply causal mask
+            if CAUSAL:
+                q_pos = input_pos + tid
+                if q_pos < j:
+                    score = -np.inf
+
+            # Store score
+            ct.store(QK_out, index=(batch_idx, head_idx, tid, j),
+                    tile=ct.full((1, 1, 1, 1), score, dtype=np.float32))
+
+
+@ct.kernel
+def naive_softmax_kernel(QK, P_out,
+                        H: ConstInt,
+                        SEQLEN_Q: ConstInt,
+                        SEQLEN_KV: ConstInt):
+    """
+    Row-wise softmax (naive, separate kernel).
+    """
+    bid_y = ct.bid(0)  # Batch * Heads
+    batch_idx = bid_y // H
+    head_idx = bid_y % H
+
+    tid = ct.tid(0)
+
+    if tid < SEQLEN_Q:
+        # Load row of scores
+        row_max = -np.inf
+        for j in range(SEQLEN_KV):
+            score = ct.load(
+                QK, index=(batch_idx, head_idx, tid, j), shape=(1, 1, 1, 1)
+            ).reshape(())
+            if score > row_max:
+                row_max = score
+
+        # Compute exp and sum
+        row_sum = 0.0
+        for j in range(SEQLEN_KV):
+            score = ct.load(
+                QK, index=(batch_idx, head_idx, tid, j), shape=(1, 1, 1, 1)
+            ).reshape(())
+            prob = ct.exp(score - row_max)
+            row_sum += prob
+            # Store unnormalized prob temporarily
+            ct.store(P_out, index=(batch_idx, head_idx, tid, j),
+                    tile=ct.full((1, 1, 1, 1), prob, dtype=np.float32))
+
+        # Normalize
+        for j in range(SEQLEN_KV):
+            prob = ct.load(
+                P_out, index=(batch_idx, head_idx, tid, j), shape=(1, 1, 1, 1)
+            ).reshape(())
+            normalized = prob / row_sum
+            ct.store(P_out, index=(batch_idx, head_idx, tid, j),
+                    tile=ct.full((1, 1, 1, 1), normalized, dtype=np.float32))
+
+
+@ct.kernel
+def naive_pv_kernel(P, V, Out,
+                   H: ConstInt,
+                   SEQLEN_Q: ConstInt,
+                   SEQLEN_KV: ConstInt,
+                   TILE_D: ConstInt,
+                   QUERY_GROUP_SIZE: ConstInt):
+    """
+    Compute P @ V (naive).
+    """
+    bid_y = ct.bid(0)  # Batch * Heads
+    batch_idx = bid_y // H
+    head_idx = bid_y % H
+    off_kv_h = head_idx // QUERY_GROUP_SIZE
+
+    tid = ct.tid(0)
+
+    if tid < SEQLEN_Q:
+        # Compute one output row
+        out_row = ct.full((TILE_D,), 0.0, dtype=np.float32)
+
+        for j in range(SEQLEN_KV):
+            p_val = ct.load(
+                P, index=(batch_idx, head_idx, tid, j), shape=(1, 1, 1, 1)
+            ).reshape(())
+
+            v = ct.load(
+                V, index=(batch_idx, off_kv_h, j, 0), shape=(1, 1, 1, TILE_D)
+            ).reshape((TILE_D,))
+
+            for d in range(TILE_D):
+                out_row[d] += p_val * v[d]
+
+        # Store output
+        out_tile = out_row.reshape((1, 1, 1, TILE_D))
+        ct.store(Out, index=(batch_idx, head_idx, tid, 0), tile=out_tile)
+
+
+def cutile_fmha(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor,
+                qk_scale: float | None = None,
+                input_pos: int = 0,
+                tile_m: int = 128,
+                tile_n: int = 128,
+                query_group_size: int = 1,
+                causal: bool = False) -> torch.Tensor:
+    """
+    Naive Multi-Head Attention using cuTile (baseline).
+
+    This version materializes the full attention matrix and uses separate
+    kernel launches for QK^T, softmax, and PV computation.
+
+    Args:
+        Q: Query tensor (Batch, Heads, SeqLen_Q, D_k)
+        K: Key tensor (Batch, KV_Heads, SeqLen_KV, D_k)
+        V: Value tensor (Batch, KV_Heads, SeqLen_KV, D_v)
+        qk_scale: Scaling factor for QK^T (default: 1/sqrt(D_k))
+        input_pos: Starting position for queries (for causal masking)
+        tile_m: Tile size for query sequence length (unused in naive version)
+        tile_n: Tile size for key/value sequence length (unused in naive version)
+        query_group_size: Number of query heads per KV head (GQA)
+        causal: Whether to apply causal masking
+
+    Returns:
+        Output tensor (Batch, Heads, SeqLen_Q, D_v)
+    """
+    # Validate inputs
+    if Q.ndim != 4 or K.ndim != 4 or V.ndim != 4:
+        raise ValueError("Q, K, V must be 4D tensors")
+    if Q.shape[0] != K.shape[0] or Q.shape[0] != V.shape[0]:
+        raise ValueError("Batch dimensions must match")
+    if Q.shape[1] % query_group_size != 0:
+        raise ValueError("Query heads must be divisible by query_group_size")
+    if K.shape[1] * query_group_size != Q.shape[1]:
+        raise ValueError("K_Heads * query_group_size must equal Q_Heads")
+    if Q.shape[3] != K.shape[3]:
+        raise ValueError("D_k must match between Q and K")
+    if K.shape[2] != V.shape[2]:
+        raise ValueError("SeqLen_KV must match between K and V")
+    if not Q.is_cuda or not K.is_cuda or not V.is_cuda:
+        raise ValueError("All tensors must be on CUDA device")
+    if Q.dtype != K.dtype or Q.dtype != V.dtype:
+        raise ValueError("All tensors must have same dtype")
+
+    Batch, Heads, SeqLen_Q, D_k = Q.shape
+    _, KV_Heads, SeqLen_KV, D_v = V.shape
+
+    if qk_scale is None:
+        qk_scale = 1.0 / math.sqrt(D_k)
+
+    # Allocate intermediate tensors (memory bottleneck!)
+    QK = torch.empty((Batch, Heads, SeqLen_Q, SeqLen_KV), dtype=torch.float32, device=Q.device)
+    P = torch.empty((Batch, Heads, SeqLen_Q, SeqLen_KV), dtype=torch.float32, device=Q.device)
+    Out = torch.empty((Batch, Heads, SeqLen_Q, D_v), dtype=Q.dtype, device=Q.device)
+
+    stream = torch.cuda.current_stream()
+
+    # Step 1: Compute QK^T
+    grid_qk = (Batch * Heads, 1, 1)
+    ct.launch(stream, grid_qk, naive_qk_kernel, (
+        Q, K, QK,
+        qk_scale,
+        input_pos,
+        D_k,
+        Heads,
+        SeqLen_Q,
+        SeqLen_KV,
+        query_group_size,
+        causal
+    ))
+
+    # Step 2: Softmax
+    grid_softmax = (Batch * Heads, 1, 1)
+    ct.launch(stream, grid_softmax, naive_softmax_kernel, (
+        QK, P,
+        Heads,
+        SeqLen_Q,
+        SeqLen_KV
+    ))
+
+    # Step 3: P @ V
+    grid_pv = (Batch * Heads, 1, 1)
+    ct.launch(stream, grid_pv, naive_pv_kernel, (
+        P, V, Out,
+        Heads,
+        SeqLen_Q,
+        SeqLen_KV,
+        D_v,
+        query_group_size
+    ))
+
+    return Out

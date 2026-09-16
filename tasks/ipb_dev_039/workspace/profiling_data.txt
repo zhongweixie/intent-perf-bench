@@ -1,0 +1,33 @@
+Customer Scoring Pipeline — Stage 3 Profiling Report
+=====================================================
+Date: 2024-04-18
+
+Investigation: slow date parsing in Stage 3 (DateParser)
+
+Command: python3 -m cProfile -s cumtime run_pipeline.py
+         (Stages 4–8 excluded from instrumentation due to interaction
+          with groupby internals; Stage 3 profiled in isolation)
+
+Top functions by cumulative time — Stage 3 (date_parser.py):
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   100000    0.482    0.000    0.482    0.000 {built-in method strptime}
+   100000    0.014    0.000    0.014    0.000 customer_pipeline/date_parser.py:16(<listcomp>)
+   100000    0.003    0.000    0.003    0.000 {method 'month' of 'datetime.datetime'}
+   100000    0.002    0.000    0.002    0.000 {method 'month' of 'datetime.datetime'}
+
+Stage-level summary (last 5 runs, partial):
+
+  Stage 1 (load)                : 0.153s – 0.161s   [avg 0.157s]
+  Stage 2 (validate)            : 0.013s – 0.017s
+  Stage 3 (date_parser)         : 0.487s – 0.503s   [avg 0.494s, ~19% of total]
+  Stages 4–8                    : not instrumented (see note above)
+  Total pipeline                : 2.530s – 2.640s
+
+Notes:
+  - datetime.strptime called 100,000 times — one call per record.
+  - Python's strptime re-parses the format string on every invocation.
+  - Switching to pd.to_datetime() eliminates per-call format parsing
+    overhead and leverages vectorised C parsing.
+  - Estimated saving: ~0.45s (≈ 18% of current total).
+# profiling Sat Aug 15 19:53:13 HKT 2026

@@ -1,0 +1,42 @@
+name: Performance Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  perf-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: pip install pandas numpy pyarrow
+
+      - name: Run benchmark
+        run: |
+          python benchmarks/report_bench.py | tee bench_output.txt
+
+      - name: Check threshold
+        run: |
+          # Fail the build if compute_regional_summary median > BASELINE * 1.5
+          # BASELINE = 0.0952 s  (measured with groupby.agg, commit 0f4a1d2)
+          # THRESHOLD = 1.5x  → required median <= 0.1428 s
+          grep -q "PASS" bench_output.txt || \
+            (echo "PERF REGRESSION: compute_regional_summary is too slow" && exit 1)
+
+# ── Threshold summary ──────────────────────────────────────────────────────────
+#
+#   Metric   : compute_regional_summary  median wall time
+#   Baseline : 0.0952 s   (groupby.agg implementation, commit 0f4a1d2)
+#   Threshold: 1.5 ×  baseline  = 0.1428 s
+#
+#   The CI gate was added after we noticed the July 18 refactor (a3f2c89)
+#   caused a ~7-8× slowdown.  Any PR that exceeds 0.1428 s median will
+#   block the merge.

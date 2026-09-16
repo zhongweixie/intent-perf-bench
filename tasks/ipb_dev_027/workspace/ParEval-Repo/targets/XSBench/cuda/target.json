@@ -1,0 +1,34 @@
+{
+    "app": "xsbench",
+    "model": "cuda",
+    "path": "targets/XSBench/cuda/repo",
+    "dependencies": ["cuda"],
+    "build_commands_debug": "make clean ; make -B SM_VERSION=80 DEBUG=yes -j8",
+    "build_commands_perf": "make clean ; make -B SM_VERSION=80 -j8",
+    "build_timeout": 60,
+    "exe_file": "XSBench",
+    "debug_type": "match",
+    "run_commands_debug": [
+        "./XSBench -m event -s small",
+        "./XSBench -m event -s large"
+    ],
+    "debug_outputs": [
+        "(Valid)",
+        "(Valid)"
+    ],
+    "run_commands_perf": [
+        "./XSBench -m event -s large"
+    ],
+    "perf_outputs": [
+        "(Valid)"
+    ],
+    "run_timeout": 120,
+    "ex_build_cmd": "make SM_VERSION=80",
+    "ex_build_desc": "a system with an NVIDIA GPU with compute capability 80",
+    "build_filename": "Makefile",
+    "extra_build_files": ["CMakeLists.txt"],
+    "ex_run_cmd": "./XSBench -m event -s large",
+    "ex_run_desc": "an event-based simulation with the large input size",
+    "main_filename": "Main.cu",
+    "filename_desc": "C"
+}

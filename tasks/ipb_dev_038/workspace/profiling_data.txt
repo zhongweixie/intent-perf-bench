@@ -1,0 +1,38 @@
+IoT Sensor Anomaly Detection Pipeline — Stage 1 I/O Profiling Report
+======================================================================
+Date: 2024-04-10
+
+Investigation: data ingestion bottleneck for 3-channel sensor feed
+
+Profiling scope: Stage 1 (sensor file reading) only.
+Command: python3 -m cProfile -s cumtime run_pipeline.py
+         (rolling window stages excluded from instrumentation — their
+          computation interacts with the profiler in ways that distort
+          timings for the other stages)
+
+Top functions by cumulative time — Stage 1:
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.213    0.213    0.213    0.213 sensor_pipeline/reader.py:21(read_sensor_data)
+        3    0.074    0.025    0.198    0.066 pandas/core/frame.py:664(__init__)
+      340    0.012    0.000    0.047    0.000 numpy/core/numeric.py:...
+       12    0.008    0.001    0.032    0.003 numpy/random/_common.pyx:...
+
+Stage-level summary (from last 5 pipeline runs):
+
+  Stage 1 (read sensor feed)  : 0.203s – 0.218s   [avg 0.210s]
+  Stage 2 (clean / interpolate): 0.008s – 0.011s
+  Rolling feature extraction  : instrumentation interfered; excluded
+  Downstream stages           : < 0.010s total
+  Total pipeline              : 4.912s – 5.134s   [avg 5.021s]
+
+Notes:
+  - Sensor feed is written as a fresh DataFrame each run (binary .npy
+    format not yet adopted).
+  - np.random seed + 3 × cumsum + sin wave construction dominates
+    Stage 1 CPU time beyond the simulated I/O wait.
+  - Switching to pre-serialised numpy .npy files would eliminate the
+    data-generation overhead on each run (~0.05 s of numpy ops).
+  - Pre-serialised binary loading could also make Stage 1 more
+    deterministic across runs.
+# profiling investigation Sat Aug 15 12:01:12 HKT 2026

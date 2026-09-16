@@ -1,0 +1,13 @@
+         14 function calls in 0.114 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.002    0.002    0.114    0.114 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_032/workspace/metric_collector/collector.py:33(compute_percentiles)
+        4    0.113    0.028    0.113    0.028 {built-in method builtins.sorted}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.min}
+        4    0.000    0.000    0.000    0.000 {built-in method builtins.len}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

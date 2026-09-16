@@ -1,0 +1,25 @@
+         1380007 function calls in 0.831 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        3    0.130    0.043    0.831    0.277 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_029/workspace/json_processor/parser.py:22(extract_nested_values)
+    60000    0.026    0.000    0.348    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/__init__.py:183(dumps)
+    60000    0.062    0.000    0.322    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/encoder.py:183(encode)
+    60000    0.049    0.000    0.321    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/__init__.py:299(loads)
+    60000    0.078    0.000    0.259    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/decoder.py:332(decode)
+    60000    0.243    0.000    0.243    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/encoder.py:205(iterencode)
+    60000    0.133    0.000    0.133    0.000 /home/hansirui_3rd/zxiebk/envs/ipttt/lib/python3.11/json/decoder.py:343(raw_decode)
+   120000    0.032    0.000    0.032    0.000 {method 'match' of 're.Pattern' objects}
+   360000    0.027    0.000    0.027    0.000 {built-in method builtins.isinstance}
+   180000    0.015    0.000    0.015    0.000 {method 'get' of 'dict' objects}
+   120000    0.011    0.000    0.011    0.000 {method 'end' of 're.Match' objects}
+    60000    0.009    0.000    0.009    0.000 {method 'startswith' of 'str' objects}
+    60000    0.006    0.000    0.006    0.000 {method 'join' of 'str' objects}
+    60000    0.006    0.000    0.006    0.000 {built-in method builtins.len}
+    60000    0.005    0.000    0.005    0.000 {method 'append' of 'list' objects}
+        3    0.000    0.000    0.000    0.000 {method 'split' of 'str' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

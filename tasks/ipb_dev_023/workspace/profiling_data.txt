@@ -1,0 +1,14 @@
+         40037 function calls (35075 primitive calls) in 0.016 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        1    0.006    0.006    0.016    0.016 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_023/workspace/network_analysis/analyzer.py:39(find_connected_components)
+  5000/38    0.007    0.000    0.008    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_023/workspace/network_analysis/analyzer.py:57(dfs_recursive)
+    25034    0.001    0.000    0.001    0.000 {method 'append' of 'list' objects}
+    10000    0.001    0.000    0.001    0.000 {method 'add' of 'set' objects}
+        1    0.001    0.001    0.001    0.001 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_023/workspace/network_analysis/analyzer.py:49(<dictcomp>)
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+

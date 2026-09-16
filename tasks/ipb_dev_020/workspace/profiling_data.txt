@@ -1,0 +1,23 @@
+         3633 function calls in 0.001 seconds
+
+   Ordered by: cumulative time
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+     1000    0.000    0.000    0.000    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_020/workspace/cache_manager/cache_ops.py:9(get_cached)
+      544    0.000    0.000    0.000    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_020/workspace/cache_manager/cache_ops.py:21(set_cached)
+     1000    0.000    0.000    0.000    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_020/workspace/cache_manager/lru_cache.py:23(get)
+      544    0.000    0.000    0.000    0.000 /aifs4su/hansirui_3rd/zxiebk/scripts/codeben/intent-perf-bench/tasks/ipb_dev_020/workspace/cache_manager/lru_cache.py:42(set)
+      544    0.000    0.000    0.000    0.000 {method 'get' of 'dict' objects}
+        1    0.000    0.000    0.000    0.000 {method 'disable' of '_lsprof.Profiler' objects}
+
+
+
+
+--- Cache Stats ---
+{'hits': 456, 'misses': 544, 'size': 544, 'capacity': 1000, 'hit_rate': 0.456}
+Cache size exceeds capacity: 544 > 1000
+Cache Statistics After Full Run:
+  Size: 2000
+  Capacity: 1000
+  Exceeded by: 1000 items (100.0%)
+  Hit rate: 96.0%
