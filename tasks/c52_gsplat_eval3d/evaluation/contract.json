@@ -1,0 +1,35 @@
+{
+  "case": "C52",
+  "baseline_commit": "3f1b4339c6a8d7898a47241b3fbe0bb86ba26507",
+  "baseline_source_files": 536,
+  "oracle_zip_sha256": "a36d0afbd65223d90aa6772d982816a189863445aa511196470e47340afa2da4",
+  "outputs": [
+    "colors",
+    "alpha"
+  ],
+  "gradients": [
+    "means",
+    "quats",
+    "scales",
+    "colors",
+    "opacities",
+    "backgrounds"
+  ],
+  "precision_contract": "fixed-parent full-tensor equivalence; known high-opacity Torch residual retained under original user waiver",
+  "conditions": 7,
+  "checks": 63,
+  "timing_conditions": [
+    "ordinary",
+    "long_overlap",
+    "two_camera_features"
+  ],
+  "timing_boundary": "host synchronized candidate.run(inputs,meta,weights), including Python, allocations, complete forward and six VJPs; input generation, compilation and oracle excluded",
+  "statistic": "geometric mean of per-condition median milliseconds",
+  "primary_comparison": "R_runtime=T_F_ms/T_M_ms",
+  "threshold": null,
+  "publication_adapter_changes": [
+    "filesystem paths made portable",
+    "frozen input generation reused from original recipe",
+    "no new GPU or paid model experiment"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "case": "C52",
+  "editable": [
+    "candidate.py",
+    "gsplat"
+  ],
+  "oracle": "fixed parent full tensors; Torch residuals retained, high-opacity precision gate waived by user",
+  "check_conditions": 7,
+  "timing_conditions": [
+    "ordinary",
+    "long_overlap",
+    "two_camera_features"
+  ],
+  "statistic": "geometric mean of per-condition median complete-call ms"
+}

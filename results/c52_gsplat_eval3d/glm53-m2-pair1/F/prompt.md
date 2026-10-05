@@ -1,0 +1,7 @@
+优化提供的 world-space eval3d 3DGS 光栅化完整前向和反向。保持颜色/特征、alpha、means/quats/scales/colors/opacities/backgrounds六类梯度以及既定截断与相机语义。模式为global-shutter pinhole、use_hit_distance=False；相交元数据与输入在调用外固定。所有新增索引、状态处理、同步和归约都计入完整调用时延。
+调用入口是candidate.py::run(inputs,meta,weights)，返回((colors,alpha),(六梯度))。可以修改candidate.py和gsplat目录，增加内部实现文件；工具、配置、输入、检查器和TASK.md只读。不能硬编码测试输出/种子/形状、读取预存答案充当计算、改变合同或持久化调用结果。允许合法等价库、参数和缓存编译代码，但每次必须实际计算输入输出与梯度。
+共同反馈：python tools/case.py check --output /results/check.json；python tools/case.py bench --rounds 3 --output /results/bench.json；python tools/case.py profile --output /results/profile.json。提交：python tools/case.py submit。check覆盖7个条件，包括不同相机/特征/交叠深度和高opacity，全量比较；bench固定ordinary/long_overlap/two_camera_features，T为各条件完整调用中位数的几何平均，host同步计时包括Python、目标分配、前向和六类反向。输入/元数据生成、检查oracle与编译另计。
+精度合同采用固定父版全量输出与梯度为可执行等价依据，输出atol/rtol为colors .001/.003、alpha .002/.01，六梯度绝对容差分别.001/.0005/.001/.0001/.00015/.0016，均不剔除元素。固定父版高opacity的五类梯度相对Torch参考有少量已知超差；用户决定保留该负载并继续实验，不要求先修复这项基线差异。检查同时核查background结构梯度。最终独立评分复核完整计算语义；缓存预存参考不合法。
+每臂最多900秒墙钟、累计输出60,000 tokens（含reasoning）、48次实际模型API请求；累计输入及输入+输出总量不限。60,000按本臂全部响应输出累计，单次请求输出上限受剩余输出额度约束。墙钟含模型等待、工具/编译/验证/profile/等待及提交；失败/重试计API，reasoning不重复计，未知usage保留输出预留。三限先到者终止停写封存。请根据控制器时间/累计输出/API余额安排工作，截止前提交当前最佳正确版本。工具实际禁网，允许用共同工具反驳诊断和采用合法等价路线。截止时封存candidate.py与gsplat全部源码；提前提交立即封存。CUDA扩展已共同预热，一次CUDA文件增量编译约138秒，编译时间占用本臂预算。
+
+当前尚未确定主要瓶颈。请依据完整调用、语义与测量证据选择调查和优化路线，安排验证，并提交当前最佳正确版本。

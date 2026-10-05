@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M2",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 4,
+    "session_spend_cap_usd": null,
+    "batch_spend_cap_usd": null,
+    "monetary_budget_enabled": false
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 22,
+      "budget": {
+        "input_tokens_used_or_reserved": 772220,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 57250,
+        "output_tokens_remaining": 2750,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 829470,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 22,
+        "api_remaining": 26,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "2e230870bdf3995a338f1ff07aeadde450c3a63d030361192836450630ecb7ec",
+      "full_checks_passed": true,
+      "exception": null
+    },
+    "M": {
+      "actual_api_requests": 19,
+      "budget": {
+        "input_tokens_used_or_reserved": 830713,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 35257,
+        "output_tokens_remaining": 24743,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 865970,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 19,
+        "api_remaining": 29,
+        "termination_reason": null
+      },
+      "termination_reason": "normal_deadline",
+      "session_kind": "normal_deadline",
+      "sealed_sha256": "47bfcc95976f2f2bff5b07d8f52ab5accbd9910919601870143d4c4515e01d35",
+      "full_checks_passed": true,
+      "exception": "TimeoutError: hard 900-second deadline"
+    }
+  }
+}

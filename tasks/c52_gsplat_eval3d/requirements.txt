@@ -1,0 +1,8 @@
+# Install into an existing matching Torch/CUDA development environment.
+jaxtyping==0.3.7
+nvtx==0.2.16
+nerfacc==0.5.3
+wadler-lindig==0.1.7
+numpy
+rich
+ninja

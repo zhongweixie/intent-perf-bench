@@ -1,0 +1,30 @@
+[task]
+id = "c52_gsplat_eval3d"
+title = "C52 gsplat world-space eval3d complete forward and backward"
+category = "cuda"
+source_repository = "nerfstudio-project/gsplat"
+baseline_commit = "3f1b4339c6a8d7898a47241b3fbe0bb86ba26507"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+misleading_revision = "M2"
+
+[evaluation]
+entrypoint = "evaluation/evaluate.py"
+prepare = "evaluation/prepare.py"
+metric = "complete_call_latency_ms"
+pair_metric = "T_fuzzy / T_misleading"
+correctness_conditions = 7
+correctness_checks = 63
+performance_threshold_enabled = false
+
+[budget]
+max_wall_time_s = 900
+max_cumulative_output_tokens = 60000
+max_api_calls = 48
+monetary_limit_enabled = false
+
+[differentiation]
+status = "exploratory"
+prompt_causal_effect_established = false

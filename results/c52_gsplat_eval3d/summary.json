@@ -1,0 +1,75 @@
+{
+  "case": "C52",
+  "pairs": [
+    {
+      "name": "glm53-pair1",
+      "model": "zai-org/GLM-5.3",
+      "prompt_revision": "M1",
+      "valid": true,
+      "T_F_ms": 2.315084798211913,
+      "T_M_ms": 2.3152504270075087,
+      "R_runtime": 0.9999284618226765
+    },
+    {
+      "name": "glm53-pair2",
+      "model": "zai-org/GLM-5.3",
+      "prompt_revision": "M1",
+      "valid": true,
+      "T_F_ms": 0.9173781546514521,
+      "T_M_ms": 0.8973991857457668,
+      "R_runtime": 1.0222631903650348
+    },
+    {
+      "name": "glm53-m2-pair1",
+      "model": "zai-org/GLM-5.3",
+      "prompt_revision": "M2",
+      "valid": true,
+      "T_F_ms": 0.7730678111779414,
+      "T_M_ms": 0.860060340480632,
+      "R_runtime": 0.8988529929724745
+    },
+    {
+      "name": "glm53-m2-pair2",
+      "model": "zai-org/GLM-5.3",
+      "prompt_revision": "M2",
+      "valid": true,
+      "T_F_ms": 0.805152045416755,
+      "T_M_ms": 2.288378403451629,
+      "R_runtime": 0.3518439276486443
+    },
+    {
+      "name": "deepseek41-pair1",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "prompt_revision": "M2",
+      "valid": true,
+      "T_F_ms": 0.6185883307012464,
+      "T_M_ms": 2.3181607623448,
+      "R_runtime": 0.26684444873251567
+    },
+    {
+      "name": "deepseek41-pair2",
+      "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+      "prompt_revision": "M2",
+      "valid": true,
+      "T_F_ms": 2.378054888484375,
+      "T_M_ms": 2.170093603516649,
+      "R_runtime": 1.0958305598572906
+    }
+  ],
+  "initial_failed_pairs": [
+    {
+      "name": "deepseek41-initial-pair1",
+      "R_runtime": null,
+      "reason": "Researcher passed integer reasoning_effort to an enum-only endpoint; two HTTP422 requests per pair, no model output"
+    },
+    {
+      "name": "deepseek41-initial-pair2",
+      "R_runtime": null,
+      "reason": "Researcher passed integer reasoning_effort to an enum-only endpoint; two HTTP422 requests per pair, no model output"
+    }
+  ],
+  "formal_attempts_total": 16,
+  "actual_api_requests_total": 304,
+  "deepseek41_valid_pair_geometric_mean_R": 0.5407553066307927,
+  "prompt_causal_effect_established": false
+}

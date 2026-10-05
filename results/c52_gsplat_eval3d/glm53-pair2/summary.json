@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "zai-org/GLM-5.3",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M1",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 3,
+    "session_spend_cap_usd": 2.0,
+    "batch_spend_cap_usd": 4.0,
+    "monetary_budget_enabled": null
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 21,
+      "budget": {
+        "input_tokens_used_or_reserved": 590874,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 24259,
+        "output_tokens_remaining": 35741,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 615133,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 21,
+        "api_remaining": 27,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "92aa045fd997123c579fc2e754661cb8e26b1eee01ce8c984e26f41b3ca3fe73",
+      "full_checks_passed": true,
+      "exception": null
+    },
+    "M": {
+      "actual_api_requests": 31,
+      "budget": {
+        "input_tokens_used_or_reserved": 1190322,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 35334,
+        "output_tokens_remaining": 24666,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1225656,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 31,
+        "api_remaining": 17,
+        "termination_reason": null
+      },
+      "termination_reason": "spend_cap_snapshot",
+      "session_kind": "spend_cap_snapshot",
+      "sealed_sha256": "7a4332c6279feaa8f818d89a2f81cf70379214e2a584ca8863a948c14809bcdb",
+      "full_checks_passed": true,
+      "exception": "BudgetLimit: remaining fee cannot cover this input and1 output token"
+    }
+  }
+}

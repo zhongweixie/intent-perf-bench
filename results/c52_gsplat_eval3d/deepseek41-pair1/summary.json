@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "deepseek-ai/DeepSeek-V4.1-Flash",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M2",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 4,
+    "session_spend_cap_usd": null,
+    "batch_spend_cap_usd": null,
+    "monetary_budget_enabled": false
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 32,
+      "budget": {
+        "input_tokens_used_or_reserved": 1548290,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 49738,
+        "output_tokens_remaining": 10262,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1598028,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 32,
+        "api_remaining": 16,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "4d2a30d6148d018b5a7d90c4b02a5c1447acda90d959dbefa116d32690037830",
+      "full_checks_passed": true,
+      "exception": null
+    },
+    "M": {
+      "actual_api_requests": 23,
+      "budget": {
+        "input_tokens_used_or_reserved": 976880,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 36115,
+        "output_tokens_remaining": 23885,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1012995,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 23,
+        "api_remaining": 25,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "6181c97f439507681bd9e3cf06a3657b08183b5a872aa8e535eeec5b987aef87",
+      "full_checks_passed": true,
+      "exception": null
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "zai-org/GLM-5.3",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M2",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 4,
+    "session_spend_cap_usd": null,
+    "batch_spend_cap_usd": null,
+    "monetary_budget_enabled": false
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 30,
+      "budget": {
+        "input_tokens_used_or_reserved": 1317868,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 33213,
+        "output_tokens_remaining": 26787,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1351081,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 30,
+        "api_remaining": 18,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "54ef4508a966b74ec4b2f9c12eb8ab050df6b19e202309c9c03ae306208b4b0e",
+      "full_checks_passed": true,
+      "exception": null
+    },
+    "M": {
+      "actual_api_requests": 35,
+      "budget": {
+        "input_tokens_used_or_reserved": 2063570,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 33994,
+        "output_tokens_remaining": 26006,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 2097564,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 35,
+        "api_remaining": 13,
+        "termination_reason": null
+      },
+      "termination_reason": "normal_deadline",
+      "session_kind": "normal_deadline",
+      "sealed_sha256": "b5a3e63becbc9fd384bd614c6f0f1fedc51ffa95fed6112b131120f69855871e",
+      "full_checks_passed": true,
+      "exception": "TimeoutError: hard 900-second deadline"
+    }
+  }
+}

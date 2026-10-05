@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "zai-org/GLM-5.3",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M2",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 4,
+    "session_spend_cap_usd": null,
+    "batch_spend_cap_usd": null,
+    "monetary_budget_enabled": false
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 35,
+      "budget": {
+        "input_tokens_used_or_reserved": 1268038,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 31618,
+        "output_tokens_remaining": 28382,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1299656,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 35,
+        "api_remaining": 13,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "7c2b3865b0b9d80a320f89ebe91b98e02404c70f6e442a82b7f72a3dfe6dbe4a",
+      "full_checks_passed": true,
+      "exception": null
+    },
+    "M": {
+      "actual_api_requests": 37,
+      "budget": {
+        "input_tokens_used_or_reserved": 1652287,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 34633,
+        "output_tokens_remaining": 25367,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 1686920,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 37,
+        "api_remaining": 11,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "ba8ff3b5465c357ec526ddd8b7d69c080416c84689891fd31538de09db93c6b3",
+      "full_checks_passed": true,
+      "exception": null
+    }
+  }
+}

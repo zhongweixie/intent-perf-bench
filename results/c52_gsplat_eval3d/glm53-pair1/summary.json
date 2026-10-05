@@ -1,0 +1,66 @@
+{
+  "case": "C52",
+  "model": "zai-org/GLM-5.3",
+  "provider": "DeepInfra-direct",
+  "sampling": {
+    "temperature": 0,
+    "top_p": 1,
+    "seed": 42,
+    "max_tokens": 8192,
+    "reasoning_effort": "max"
+  },
+  "prompt_revision": "M1",
+  "historical_budget": {
+    "max_wall_s": 900,
+    "max_api_calls": 48,
+    "max_cumulative_output_tokens": 60000,
+    "budget_schema_version": 3,
+    "session_spend_cap_usd": 2.0,
+    "batch_spend_cap_usd": 4.0,
+    "monetary_budget_enabled": null
+  },
+  "arms": {
+    "F": {
+      "actual_api_requests": 7,
+      "budget": {
+        "input_tokens_used_or_reserved": 47206,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 9854,
+        "output_tokens_remaining": 50146,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 57060,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 7,
+        "api_remaining": 41,
+        "termination_reason": null
+      },
+      "termination_reason": "normal_deadline",
+      "session_kind": "normal_deadline",
+      "sealed_sha256": "a34781e90d6abfeb54c0e589a01e60274acbf55a91ecc5eb4a8685d139a48050",
+      "full_checks_passed": true,
+      "exception": "ReadTimeout: HTTPSConnectionPool(host='api.deepinfra.com', port=443): Read timed out. (read timeout=71.08230626769364)"
+    },
+    "M": {
+      "actual_api_requests": 8,
+      "budget": {
+        "input_tokens_used_or_reserved": 109937,
+        "input_tokens_limit": null,
+        "output_tokens_used_or_reserved": 1621,
+        "output_tokens_remaining": 58379,
+        "cumulative_output_limit": 60000,
+        "tokens_used_or_reserved": 111558,
+        "tokens_remaining": null,
+        "max_output_tokens_per_request": 60000,
+        "api_attempts": 8,
+        "api_remaining": 40,
+        "termination_reason": null
+      },
+      "termination_reason": "submitted",
+      "session_kind": "submitted",
+      "sealed_sha256": "91ab84aba4fba278aaf2d83821bb94f1c956241b4faedec9fa7bf568ca23ff21",
+      "full_checks_passed": true,
+      "exception": null
+    }
+  }
+}
