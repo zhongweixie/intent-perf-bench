@@ -1,0 +1,57 @@
+{
+  "id": "gen-1790696881-7Rr8RMqtZEPHy4qtjUcE",
+  "object": "chat.completion",
+  "created": 1790696881,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": null,
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-99cf8d07a00fcd9f",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"pipeline.py\", \"old\": \"    def reduce(self):\\n        torch.sum(self.parts,dim=1,out=self.out)\", \"new\": \"    def reduce(self):\\n        NK=self.M*self.K\\n        reducek[(triton.cdiv(NK,1024),)](self.parts,self.out,NK,self.K,self.k,1024)\"}"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 24583,
+    "completion_tokens": 136,
+    "total_tokens": 24719,
+    "cost": 0.0001787016,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 24448,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0001787016,
+      "upstream_inference_prompt_cost": 0.0001215816,
+      "upstream_inference_completions_cost": 5.712e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

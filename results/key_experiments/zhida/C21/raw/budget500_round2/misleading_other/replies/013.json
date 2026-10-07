@@ -1,0 +1,54 @@
+{
+  "id": "gen-1790585009-StiaQUYdUkaJbOlZMa2v",
+  "object": "chat.completion",
+  "created": 1790585009,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "The last saved version is correct and faster across all three families. Validation complete.\n\n**Final report**\n\n*Investigation*\n- Baseline: small 1644µs, main 6519µs, wide_hidden 6106µs.\n- Tested the background hypothesis (CE kernel register demand / launch geometry): capping `BLOCK_SIZE` from the full vocab row (32768) down to 4096 with fewer warps made every case **worse** (+6–7% on small/main). So the CE kernel's full-row block is not the limiter — that hypothesis was wrong, and I reverted the change.\n- Fitting latency vs. GEMM FLOPs across the three shapes showed the GEMMs run at only ~56% of peak plus a large per-call overhead. The dominant avoidable cost was the weight-gradient path: with default `accum_dtype=None` the code allocated a **bf16** `grad_weight`, which (a) never qualified for the fused `addmm` fp32 path and (b) fell back to `grad_weight += torch.mm(...).float()`, allocating a fresh 128 MB fp32 temp and doing a bf16 read-modify-write *per chunk*.\n\n*Change (in `fused_linear_cross_entropy.py`)*\n- Accumulate `grad_weight`/`grad_bias` in fp32 by default (cast back to the parameter dtype at the end, as the code already did).\n- Accumulate each chunk with a single in-place fused `torch.addmm(..., beta=1, alpha=1, out=grad_weight)` in the fallback path, removing the per-chunk fp32 temp.\n\n*Result (median µs, correctness verified)*\n| case | baseline | final | speedup |\n|---|---:|---:|---:|\n| small | 1644 | 1585 | 1.04× |\n| main | 6519 | 5848 | 1.11× |\n| wide_hidden | 6106 | 5991 | 1.02× |\n\nAll three cases pass (`correct: true`); loss/grad relative errors are at or below baseline (weight-grad error is slightly higher on `main` but still ~4e-5, well within tolerance, and the fp32 accumulator is strictly more accurate than the old bf16 one). Geometric-mean speedup ≈ **1.06×**. The final saved source is the tested version.",
+        "refusal": null,
+        "reasoning": "Correct, and improved across all three:\n- small: 1644 → 1585 (-3.6%)\n- main: 6519 → 5848 (-10.3%)\n- wide_hidden: 6106 → 5991 (-1.9%)\n\nGeometric mean speedup: (1.037*1.115*1.019)^(1/3) ≈ (1.178)^(1/3) ≈ 1.056 → ~5.6% faster.\n\nCorrect and saved. Time is nearly out (67s). Let me stop here — the last saved version is tested and correct. This is my final submission.\n\nLet me write the final report.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Correct, and improved across all three:\n- small: 1644 → 1585 (-3.6%)\n- main: 6519 → 5848 (-10.3%)\n- wide_hidden: 6106 → 5991 (-1.9%)\n\nGeometric mean speedup: (1.037*1.115*1.019)^(1/3) ≈ (1.178)^(1/3) ≈ 1.056 → ~5.6% faster.\n\nCorrect and saved. Time is nearly out (67s). Let me stop here — the last saved version is tested and correct. This is my final submission.\n\nLet me write the final report.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 33115,
+    "completion_tokens": 665,
+    "total_tokens": 33780,
+    "cost": 0.000482888,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 32640,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000482888,
+      "upstream_inference_prompt_cost": 0.000203588,
+      "upstream_inference_completions_cost": 0.0002793
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 142,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RKAGytv5MPXvzxfdgv3inJjl",
+  "object": "chat.completion",
+  "created": 1791043607,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Wait: `inv[idx.long()] = arange(N)` — idx values may exceed... idx values in [0, TK)? Buffer size TK; idx must be < TK else reference would fail too. OK.\n\nAlso `_combine_bwd_x` uses s_ptr indexed by `idx` (int64 after .to) — s_ptr is s (fp32) flat of size TK; idx values < TK ✓.\n\nEdge: idx could be non-contiguous → handled in wrapper (.contiguous()).\n\nBut one more: inv built with index_put — if idx has duplicates, nondeterministic which i wins, matching reference scatter nondeterminism. OK.\n\nAlso `gs = torch.empty((T*K,))` — for uncovered j (inv[j]=-1): gs[j] = sum over h of g*x*mask=0 → 0. Reference: buffer row j is zeros → grad_s[j] = sum g*0 = 0. ✓\n\nRun benchmark.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 35783,
+    "total_tokens": 36021,
+    "completion_tokens": 238,
+    "estimated_cost": 0.022636410000000003,
+    "prompt_tokens_details": {
+      "cached_tokens": 32256,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 208
+    }
+  }
+}

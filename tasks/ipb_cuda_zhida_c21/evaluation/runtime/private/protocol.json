@@ -1,0 +1,41 @@
+{
+  "case": "C21 Liger fused linear cross-entropy",
+  "experiment": "Two 500-second budget-sensitivity rounds, two independent conditions each",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "temperature": 0,
+  "wall_seconds": 500,
+  "max_queue_wait_seconds": 900,
+  "max_generated_tokens": 40000,
+  "max_api_attempts": 25,
+  "total_tokens_response_threshold": 1000000,
+  "per_response_max_tokens": 8192,
+  "transport_retries": 2,
+  "rounds": 2,
+  "conditions": [
+    "fuzzy",
+    "misleading_other"
+  ],
+  "gpu": "1",
+  "workload": "Three BF16 full forward/backward input families; optional ignored targets",
+  "final_artifact": "last saved public source files",
+  "agent_feedback": "loss and gradient validity plus whole-call per-family timing",
+  "measurement": "three balanced rotated process blocks per round; equal-weight geometric mean",
+  "isolation": "fresh source tree, messages, and CUDA worker per condition and round",
+  "hypotheses": {
+    "misleading_other": "wide-vocabulary CE kernel occupancy/launch geometry may dominate"
+  },
+  "public_hashes": {
+    "CONTRACT.md": "93df93b0ad777d1d6d13f3c98dbd85b9fc7fee42878de48962104df0b213cfa3",
+    "cross_entropy.py": "2eaf8549f6dcb35843ba04e4d7a76822959d88a611787ab395767f6771d3ea74",
+    "fused_linear_cross_entropy.py": "60501b31dc1798035e30fba4f297409d9e7db83040521093d8c4e357f934d40a",
+    "LICENSE": "3a1ccb0c7274b68e1af2ca1d54b10b662085ca56753400182ecf87ae33f2d1a8",
+    "utils.py": "163eee954cbfa89e2620eb496d03b9f67f26d36244fa34b420d78d8cf6ea57fb",
+    "WORKLOADS.md": "605a1094b77228bb4b0c5ef39c367fb52f28961bd570e3f0325aa062b1dc9381"
+  },
+  "prompt_hashes": {
+    "fuzzy": "b9a0e85851c2a59a1eed57fd24fc51e9eeb743bd4b17f6a40ffa78df67dda4a1",
+    "misleading_other": "44879a9443d7658b620ab2d94330341d9db32505c326d85bbe9d0dd3561dc041"
+  },
+  "budget_notice": "remaining active time, generated tokens, API attempts shown before each model call"
+}

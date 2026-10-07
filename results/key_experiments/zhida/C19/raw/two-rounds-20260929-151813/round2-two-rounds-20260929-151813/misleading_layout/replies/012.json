@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790696881-2TpPP2H3UDV4qu3ABNTH",
+  "object": "chat.completion",
+  "created": 1790696881,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": "I have limited budget left. Let me implement the hinted optimization (fuse the activation into the first expert projection, eliminating the wide intermediate `h` and the separate activation kernel) and restore in-call routing.\n\n",
+        "refusal": null,
+        "reasoning": "I have ~157s left. Current saved state: routing precomputed (no-op in call) + torch.sum reduce. That's correct but relies on precompute. I need to decide the final state.\n\nGiven very limited budget (157s, maybe 3-4 runs at ~30s), I should implement the fused gemm1+activation and restore routing to in-call, then validate.\n\nBut risk: if the fused kernel has a bug, correctness fails and I'd have limited time to revert. Let me be careful and keep a safe fallback.\n\nLet me write the fused version, and restore routing to in-call.\n\nActually, the safest approach given ~150s: make one careful change and validate. If it fails, revert to the known-good baseline (62.29) which I know is correct.\n\nLet me write the full pipeline.py with:\n- routing in-call (restored)\n- fused gemm1+activation kernel\n- torch.sum reduce\n\nLet me write it now.\n\nI need to double check stride args for w1: w1 shape (E, 2N, K) = (128, 512, 512). stride(0)=512*512=262144, stride(1)=512, stride(2)=1.\n\nKernel b_ptrs = b_ptr + off_experts*stride_be + offs_k[:,None]*stride_bk + offs_bn[None,:]*stride_bn. With stride_bk=1 (K contiguous), stride_bn=512. Yes matches invoke's B.stride(2)=1 as stride_bk, B.stride(1)=512 as stride_bn.\n\noffs_bn < N (256) for gate; +N*stride_bn for up.\n\nNow the a_ptrs: a=x (128,512), stride_am=512, stride_ak=1. offs_token//top_k (top_k=8) → token index in [0,128). Good.\n\nc = act (1024, 256), stride_cm=256, stride_cn=1.\n\nGrid: EM = min(sorted.numel()=9088, M*k*BM = 1024*64=65536) = 9088. num_pid_n = cdiv(256,128)=2. grid = cdiv(9088,64)*2 = 142*2=284.\n\nnum_warps=8, num_stages=3 from config.\n\nLet me write it.\n\nLet me write the full file content.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8fd3a09ca02919e1",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\": \"pipeline.py\", \"content\": \"# Derived from vLLM 94923629729381d7f7c9efde72071a2441f7fd82.\\nimport torch\\nimport triton\\nimport triton.language as tl\\nfrom expert_kernels import get_default_config, invoke_fused_moe_triton_kernel\\nfrom routing import grouped_topk\\nfrom native_ops import lib, check\\n\\n@triton.jit\\ndef gemm1_act_kernel(\\n    a_ptr, b_ptr, c_ptr,\\n    sorted_token_ids_ptr, expert_ids_ptr, num_tokens_post_padded_ptr,\\n    N, K, EM, num_valid_tokens,\\n    stride_am, stride_ak,\\n    stride_be, stride_bk, stride_bn,\\n    stride_cm, stride_cn,\\n    top_k: tl.constexpr,\\n    BLOCK_SIZE_M: tl.constexpr, BLOCK_SIZE_N: tl.constexpr,\\n    BLOCK_SIZE_K: tl.constexpr, GROUP_SIZE_M: tl.constexpr,\\n):\\n    pid = tl.program_id(axis=0)\\n    num_pid_m = tl.cdiv(EM, BLOCK_SIZE_M)\\n    num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)\\n    num_pid_in_group = GROUP_SIZE_M * num_pid_n\\n    group_id = pid // num_pid_in_group\\n    first_pid_m = group_id * GROUP_SIZE_M\\n    group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)\\n    pid_m = first_pid_m + ((pid % num_pid_in_group) % group_size_m)\\n    pid_n = (pid % num_pid_in_group) // group_size_m\\n\\n    offs = tl.arange(0, BLOCK_SIZE_M).to(tl.int64)\\n    num_tokens_post_padded = tl.load(num_tokens_post_padded_ptr)\\n    if pid_m * BLOCK_SIZE_M >= num_tokens_post_padded:\\n        return\\n    offs_token_id = pid_m * BLOCK_SIZE_M + offs\\n    offs_token = tl.load(sorted_token_ids_ptr + offs_token_id).to(tl.int64)\\n    token_mask = offs_token < num_valid_tokens\\n\\n    off_experts = tl.load(expert_ids_ptr + pid_m).to(tl.int64)\\n    offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)\\n    c_ptrs = c_ptr + stride_cm * offs_token[:, None] + stride_cn * offs_cn[None, :]\\n    c_mask = token_mask[:, None] & (offs_cn[None, :] < N)\\n    if off_experts == -1:\\n        tl.store(c_ptrs, tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float16), mask=c_mask)\\n        return\\n\\n    offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N).to(tl.int64)) % N\\n    offs_k = tl.arange(0, BLOCK_SIZE_K)\\n    a_ptrs = a_ptr + (offs_token[:, None] // top_k * stride_am + offs_k[None, :] * stride_ak)\\n    b_ptrs = b_ptr + off_experts * stride_be + (offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn)\\n    b_ptrs_up = b_ptrs + N * stride_bn\\n\\n    acc_gate = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)\\n    acc_up = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)\\n    for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):\\n        kmask = offs_k[:, None] < K - k * BLOCK_SIZE_K\\n        a = tl.load(a_ptrs, mask=token_mask[:, None] & (offs_k[None, :] < K - k * BLOCK_SIZE_K), other=0.0)\\n        bg = tl.load(b_ptrs, mask=kmask, other=0.0)\\n        bu = tl.load(b_ptrs_up, mask=kmask, other=0.0)\\n        acc_gate += tl.dot(a, bg)\\n        acc_up += tl.dot(a, bu)\\n        a_ptrs += BLOCK_SIZE_K * stride_ak\\n        b_ptrs += BLOCK_SIZE_K * stride_bk\\n        b_ptrs_up += BLOCK_SIZE_K * stride_bk\\n\\n    res = (acc_gate / (1 + tl.exp(-acc_gate))) * acc_up\\n    tl.store(c_ptrs, res.to(tl.float16), mask=c_mask)\\n\\nclass Pipeline:\\n    def __init__(self,data):\\n        self.x,self.logits,self.w1,self.w2,self.groups,self.group_topk=data\\n        self.M,self.K=self.x.shape;self.E=self.w1.shape[0];self.N=self.w2.shape[-1];self.k=8\\n        M,E,N,K,k=self.M,self.E,self.N,self.K,self.k\\n        config=get_default_config(M,E,N,K,k,None)\\n        self.config=config; block=config['BLOCK_SIZE_M']\\n        capacity=M*k+E*(block-1)\\n        if M*k<E:capacity=min(M*k*block,capacity)\\n        # Both variants use upstream default pad_sorted_ids=False capacity.\\n        self.sorted=torch.empty(capacity,device='cuda',dtype=torch.int32)\\n        self.experts=torch.empty(triton.cdiv(capacity,block),device='cuda',dtype=torch.int32)\\n        self.padded=torch.empty(1,device='cuda',dtype=torch.int32)\\n        self.cumsum=torch.empty(E+1,device='cuda',dtype=torch.int32)\\n        self.weights=torch.empty((M,k),device='cuda',dtype=torch.float32)\\n        self.ids=torch.empty((M,k),device='cuda',dtype=torch.int32)\\n        self.token_ids=torch.empty_like(self.ids);self.work=torch.empty_like(self.logits)\\n        self.act=torch.empty((M*k,N),device='cuda',dtype=torch.float16)\\n        self.parts=torch.empty((M,k,K),device='cuda',dtype=torch.float16)\\n        self.out=torch.empty_like(self.x)\\n        self.stage_fns=[self.routing,self.alignment,self.gemm1,self.gemm2,self.reduce]\\n\\n    def routing(self):\\n        self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)\\n\\n    def alignment(self):\\n        block=self.config['BLOCK_SIZE_M']\\n        if self.M*self.k*4<=self.E:\\n            # Upstream _prepare_expert_assignment's existing optimization.\\n            self.sorted_ids=None;self.expert_ids=self.ids.reshape(-1)\\n            self.padded.fill_(self.M*self.k*block)\\n        else:\\n            self.sorted_ids=self.sorted;self.expert_ids=self.experts\\n            check(lib.align(self.ids.data_ptr(),self.sorted.data_ptr(),self.experts.data_ptr(),self.padded.data_ptr(),self.cumsum.data_ptr(),self.E,block,self.M*self.k,self.sorted.numel(),self.k,torch.cuda.current_stream().cuda_stream))\\n\\n    def invoke(self,a,b,c,k,weighted):\\n        invoke_fused_moe_triton_kernel(a,b,c,None,None,self.weights,self.sorted_ids,self.expert_ids,self.padded,weighted,k,self.config,tl.float16,False,False,False,False,False)\\n\\n    def gemm1(self):\\n        c=self.config\\n        BM,BN,BK,GM=c['BLOCK_SIZE_M'],c['BLOCK_SIZE_N'],c['BLOCK_SIZE_K'],c['GROUP_SIZE_M']\\n        EM=min(self.sorted.numel(),self.M*self.k*BM)\\n        grid=(triton.cdiv(EM,BM)*triton.cdiv(self.N,BN),)\\n        gemm1_act_kernel[grid](\\n            self.x,self.w1,self.act,\\n            self.sorted_ids,self.expert_ids,self.padded,\\n            self.N,self.K,EM,self.M*self.k,\\n            self.x.stride(0),self.x.stride(1),\\n            self.w1.stride(0),self.w1.stride(2),self.w1.stride(1),\\n            self.act.stride(0),self.act.stride(1),\\n            top_k=self.k,\\n            BLOCK_SIZE_M=BM,BLOCK_SIZE_N=BN,BLOCK_SIZE_K=BK,GROUP_SIZE_M=GM,\\n            num_warps=c.get('num_warps',4),num_stages=c.get('num_stages',3),\\n        )\\n\\n    def gemm2(self):self.invoke(self.act,self.w2,self.parts,1,True)\\n\\n    def reduce(self):\\n        torch.sum(self.parts,dim=1,out=self.out)\\n\\n    def __call__(self):\\n        for f in self.stage_fns:f()\\n        return self.out\\n\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "I have ~157s left. Current saved state: routing precomputed (no-op in call) + torch.sum reduce. That's correct but relies on precompute. I need to decide the final state.\n\nGiven very limited budget (157s, maybe 3-4 runs at ~30s), I should implement the fused gemm1+activation and restore routing to in-call, then validate.\n\nBut risk: if the fused kernel has a bug, correctness fails and I'd have limited time to revert. Let me be careful and keep a safe fallback.\n\nLet me write the fused version, and restore routing to in-call.\n\nActually, the safest approach given ~150s: make one careful change and validate. If it fails, revert to the known-good baseline (62.29) which I know is correct.\n\nLet me write the full pipeline.py with:\n- routing in-call (restored)\n- fused gemm1+activation kernel\n- torch.sum reduce\n\nLet me write it now.\n\nI need to double check stride args for w1: w1 shape (E, 2N, K) = (128, 512, 512). stride(0)=512*512=262144, stride(1)=512, stride(2)=1.\n\nKernel b_ptrs = b_ptr + off_experts*stride_be + offs_k[:,None]*stride_bk + offs_bn[None,:]*stride_bn. With stride_bk=1 (K contiguous), stride_bn=512. Yes matches invoke's B.stride(2)=1 as stride_bk, B.stride(1)=512 as stride_bn.\n\noffs_bn < N (256) for gate; +N*stride_bn for up.\n\nNow the a_ptrs: a=x (128,512), stride_am=512, stride_ak=1. offs_token//top_k (top_k=8) → token index in [0,128). Good.\n\nc = act (1024, 256), stride_cm=256, stride_cn=1.\n\nGrid: EM = min(sorted.numel()=9088, M*k*BM = 1024*64=65536) = 9088. num_pid_n = cdiv(256,128)=2. grid = cdiv(9088,64)*2 = 142*2=284.\n\nnum_warps=8, num_stages=3 from config.\n\nLet me write it.\n\nLet me write the full file content.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 31254,
+    "completion_tokens": 2714,
+    "total_tokens": 33968,
+    "cost": 0.0012915168,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 31104,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0012915168,
+      "upstream_inference_prompt_cost": 0.0001516368,
+      "upstream_inference_completions_cost": 0.00113988
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 535,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

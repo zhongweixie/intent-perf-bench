@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RbQYndiQOLV0vMcHOACXqRze",
+  "object": "chat.completion",
+  "created": 1791033034,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Let me continue. I was analyzing the code. Let me check if triton is available and run a baseline benchmark first. Actually, let me just write the optimized implementation directly since I understand the path well. But first a quick baseline benchmark to know where we stand.\n\nLet me be efficient. First run baseline benchmark.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 14657,
+    "total_tokens": 14755,
+    "completion_tokens": 98,
+    "estimated_cost": 0.03134943,
+    "prompt_tokens_details": {
+      "cached_tokens": 4608,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 67
+    }
+  }
+}

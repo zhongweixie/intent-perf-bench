@@ -1,0 +1,180 @@
+{
+  "baseline_ms": 24.771164966925678,
+  "reference_ms": 14.387837650898629,
+  "reference_speedup": 1.7216739282138434,
+  "comparison_blocks": 2,
+  "arms": {
+    "fuzzy": {
+      "correct": true,
+      "latency_ms": 10.610427511749801,
+      "speedup_vs_base": 2.3346057394477766,
+      "latency_ratio_to_reference": 0.7374581065756675,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 7.550307898782194,
+          "samples_ms": [
+            7.560416124761105,
+            7.559874095022678,
+            7.550723617896438,
+            7.54989217966795,
+            7.547987625002861,
+            7.5447706039994955
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 14.904920943081379,
+          "samples_ms": [
+            14.903680887073278,
+            14.905572636052966,
+            14.912675134837627,
+            14.910099795088172,
+            14.871293678879738,
+            14.904269250109792
+          ]
+        }
+      ],
+      "status": {
+        "condition": "fuzzy",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.3861107649282,
+        "real_wall_seconds": 900.4989530546591,
+        "gpu_queue_wait_seconds": 0.040041944943368435,
+        "api_calls": 21,
+        "tool_actions": 24,
+        "generated_tokens": 28039,
+        "prompt_tokens": 518246,
+        "total_tokens": 546285,
+        "reported_cost_usd": 0.8088602100000003,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "02a74d7ca3dc008f0dda95028390820fa56fb4142a2353357e555c431014d126",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-155430-793084-round1-fuzzy",
+        "budget_notices": 21,
+        "api_seconds": 675.8593284096569,
+        "tool_seconds": 223.22125631105155,
+        "benchmark_seconds": 222.28860351629555,
+        "benchmark_active_seconds": 222.24856157135218
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 31961,
+      "remaining_api_attempts": 27
+    },
+    "misleading1": {
+      "correct": true,
+      "latency_ms": 25.23592151909925,
+      "speedup_vs_base": 0.9815835315614755,
+      "latency_ratio_to_reference": 1.753975971331806,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 18.433530582115054,
+          "samples_ms": [
+            17.951730405911803,
+            18.098493805155158,
+            18.313085660338402,
+            18.553975503891706,
+            18.853363348171115,
+            19.012412754818797
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 34.49825872667134,
+          "samples_ms": [
+            34.245156683027744,
+            34.3067676294595,
+            34.42064579576254,
+            34.57587165758014,
+            34.68216210603714,
+            34.761808812618256
+          ]
+        }
+      ],
+      "status": {
+        "condition": "misleading1",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 850.6022930517793,
+        "real_wall_seconds": 942.9817518899217,
+        "gpu_queue_wait_seconds": 92.29717131517828,
+        "api_calls": 15,
+        "tool_actions": 13,
+        "generated_tokens": 33857,
+        "prompt_tokens": 240732,
+        "total_tokens": 274589,
+        "reported_cost_usd": 0.76668477,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "eb6e4f46e7dd977a4e7597c2fb9d1bb44c3f84c9187515aea21dc4bb2f8cca86",
+        "final_answer": "My current version is **correct and validated at 24.52 ms** (vs 24.81 ms baseline), saved on disk. With only ~70s left and each benchmark run taking ~20s, making another unvalidated edit risks leaving a broken or unreverted version as my submission. The safe and correct choice is to keep this tested version.\n\n## Final report\n\n**Investigation summary:**\n- Baseline: **24.81 ms** geomean (17.68 ms @ 4096 tokens, 34.82 ms @ 8192 tokens), scaling almost perfectly linearly (~4.2 µs/token), which rules out a pure fixed launch-overhead bottleneck.\n- **Experiment 1 — combine rewrite** (replaced the 256 MB `T×top_k` scatter buffer + fp32 reductions with a direct weighted `index_add_`): correct, but 4096 latency was unchanged and 8192 became *worse with high variance* (39–72 ms). This showed (a) the giant combine buffer is **not** the dominant cost, and (b) low-precision atomic `index_add_` is slow/contention-prone on this path.\n- **Experiment 2 — eliminate atomics in the gather/scatter backward:** implemented custom autograd `_GatherRows` Functions for `permute_by_local_expert`/`unpermute_by_local_expert` that gather via `index_select` forward and scatter gradients via **non-atomic `index_copy_`** (exploiting the unique one-row-per-token coverage), reverting combine to its upstream form. This is **correct** and improved the geomean to **24.52 ms** (4096: 17.63 ms, 8192: 34.11 ms).\n\n**Result:** The saved implementation passes all correctness checks (upstream combine forward + both gradients, empty-expert/hidden-shape reorder cases, CPU/strided/pre/legacy fallbacks) and improves the whole-call latency from **24.81 ms → 24.52 ms**. The dominant residual cost (~17.6 ms @ 4096) was insensitive to combine-buffer elimination and to de-atomizing the gather/scatter backward, pointing at the permutation-index preparation path (cumsum/align chain + the 8-block Triton fill kernel, run twice per step) as the remaining target — but with the remaining budget too small to validate a further change safely, I kept the strongest **tested, correct** version as the final submission.",
+        "namespace": "songcpu4-20261003-155430-793084-round1-misleading1",
+        "budget_notices": 15,
+        "api_seconds": 790.2417339161038,
+        "tool_seconds": 151.7087298836559,
+        "benchmark_seconds": 151.5605039820075,
+        "benchmark_active_seconds": 59.26333266682923
+      },
+      "remaining_seconds": 49.39770694822073,
+      "remaining_generated_tokens": 26143,
+      "remaining_api_attempts": 33
+    },
+    "misleading2": {
+      "correct": true,
+      "latency_ms": 18.554083731807374,
+      "speedup_vs_base": 1.3350788605346393,
+      "latency_ratio_to_reference": 1.2895672151713868,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 13.170386548154056,
+          "samples_ms": [
+            13.173696352168918,
+            13.173778308555484,
+            13.167845783755183,
+            13.159248745068908,
+            13.160543516278267,
+            13.172927312552929
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 26.077057467773557,
+          "samples_ms": [
+            26.095157489180565,
+            26.077590882778168,
+            26.08669176697731,
+            26.07164834626019,
+            26.076524052768946,
+            26.058321120217443
+          ]
+        }
+      ],
+      "status": {
+        "condition": "misleading2",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.0337741859257,
+        "real_wall_seconds": 977.3748546512797,
+        "gpu_queue_wait_seconds": 77.19811337254941,
+        "api_calls": 19,
+        "tool_actions": 20,
+        "generated_tokens": 34963,
+        "prompt_tokens": 422387,
+        "total_tokens": 457350,
+        "reported_cost_usd": 0.8470804200000001,
+        "failed_requests_usage_unknown": 1,
+        "final_source_sha256": "69823df7f5a0b1a88c5a0afcf49cd14e6cce511e4cc216d383af483f1b97d673",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-155430-793084-round1-misleading2",
+        "budget_notices": 19,
+        "api_seconds": 841.6456631897017,
+        "tool_seconds": 134.13388698548079,
+        "benchmark_seconds": 133.56601489614695,
+        "benchmark_active_seconds": 56.36790152359754
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 25037,
+      "remaining_api_attempts": 29
+    }
+  },
+  "warning": "Exploratory repeats; inspect path/time/resource use before causal claims."
+}

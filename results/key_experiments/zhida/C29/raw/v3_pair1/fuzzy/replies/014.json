@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-Rup8HAYCt2uw5a0jRYWijUj4",
+  "object": "chat.completion",
+  "created": 1791043483,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"combine_kernels.py\",\"old\":\"        j = tl.program_id(0)\\n        idx = tl.load(idx_ptr + j)\\n        t = j // K\\n        acc = tl.zeros((1,), dtype=tl.float32)\\n        for hb in range(0, H, BLOCK_H):\\n            offs = hb + tl.arange(0, BLOCK_H)\\n            m = offs < H\\n            g = tl.load(g_ptr + t * H + offs, mask=m, other=0.0).to(tl.float32)\\n            x = tl.load(x_ptr + idx * H + offs, mask=m, other=0.0).to(tl.float32)\\n            acc += tl.sum(g * x)\\n        tl.store(gs_ptr + j, tl.sum(acc))\",\"new\":\"        j = tl.program_id(0)\\n        idx = tl.load(idx_ptr + j).to(tl.int64)\\n        t = j // K\\n        acc = tl.zeros((BLOCK_H,), dtype=tl.float32)\\n        for hb in range(0, H, BLOCK_H):\\n            offs = hb + tl.arange(0, BLOCK_H)\\n            m = offs < H\\n            g = tl.load(g_ptr + t * H + offs, mask=m, other=0.0).to(tl.float32)\\n            x = tl.load(x_ptr + idx * H + offs, mask=m, other=0.0).to(tl.float32)\\n            acc += g * x\\n        tl.store(gs_ptr + j, tl.sum(acc))\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 30610,
+    "total_tokens": 30999,
+    "completion_tokens": 389,
+    "estimated_cost": 0.02186463,
+    "prompt_tokens_details": {
+      "cached_tokens": 27648,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

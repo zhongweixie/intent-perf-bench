@@ -1,0 +1,1 @@
+The multi-tensor update groups this large workload into chunks and launches CUDA work for those groups. Chunk boundaries can affect occupancy and memory traffic, making launch grouping a plausible contributor to full-step latency at this scale. Its measured contribution here is unknown.

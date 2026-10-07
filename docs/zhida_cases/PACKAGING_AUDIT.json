@@ -1,0 +1,222 @@
+{
+  "frozen_source_checks": [
+    {
+      "case": "C19",
+      "file": "expert_kernels.py",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "LICENSE",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "routing.py",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "native/align.cu",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "native/cub_helpers.h",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "native/cuda_compat.h",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "native/topk.cu",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C19",
+      "file": "native/core/math.hpp",
+      "matches_frozen_hash": true,
+      "authority": "Frozen screen provenance.json source_sha256"
+    },
+    {
+      "case": "C21",
+      "file": "CONTRACT.md",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C21",
+      "file": "cross_entropy.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C21",
+      "file": "fused_linear_cross_entropy.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C21",
+      "file": "LICENSE",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C21",
+      "file": "utils.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C21",
+      "file": "WORKLOADS.md",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "CONTRACT.md",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "LICENSE",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "SOURCE_NOTICE.md",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "THIRD_PARTY_NOTICES.md",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "auto_ep_layer.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "combine_kernels.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "ep_kernels.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C29",
+      "file": "local_pipeline.py",
+      "matches_frozen_hash": true
+    },
+    {
+      "case": "C8673",
+      "file": "utils.py",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "multi_tensor_apply.cuh",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "multi_tensor_adam.cu",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "fused_optimizer.py",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "fused_adam_frontend.cpp",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "fused_adam.py",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    },
+    {
+      "case": "C8673",
+      "file": "CONTRACT.md",
+      "matches_frozen_hash": true,
+      "authority": "Initial ZIP matches frozen protocol public_sha256; archived initial_public contains mutable solver files."
+    }
+  ],
+  "frozen_prompt_checks": [
+    {
+      "case": "C8673",
+      "condition": "fuzzy",
+      "matches_frozen_prompt": true
+    },
+    {
+      "case": "C8673",
+      "condition": "flatten_hint",
+      "matches_frozen_prompt": true
+    }
+  ],
+  "credential_redactions": [],
+  "syntax_or_json_errors": [],
+  "archived_invalid_submission_sources_retained": [
+    "results\\key_experiments\\zhida\\C29\\raw\\v2_pair1\\misleading1\\public\\combine_kernels.py: unindent does not match any outer indentation level (<unknown>, line 36)"
+  ],
+  "files_over_50MiB": [],
+  "uncompressed_bytes": 53032343,
+  "normalized_outcomes": 31,
+  "runtime_validation": [
+    {
+      "case": "C19",
+      "passed": true,
+      "baseline_ms": 0.06199808120727539,
+      "reference_ms": 0.05285247802734375,
+      "reference_speedup": 1.1730401964350674,
+      "expert_patch_applies": true,
+      "wrong_numeric_answer_rejected": true
+    },
+    {
+      "case": "C21",
+      "passed": true,
+      "baseline_ms": 4.085267774143596,
+      "reference_ms": 3.068643973373998,
+      "reference_speedup": 1.3312941512898326,
+      "expert_patch_applies": true,
+      "wrong_numeric_answer_rejected": true
+    },
+    {
+      "case": "C29",
+      "passed": true,
+      "baseline_ms": 24.73358182906179,
+      "reference_ms": 14.443553360963486,
+      "reference_speedup": 1.7124305363740413,
+      "expert_patch_applies": true,
+      "wrong_numeric_answer_rejected": true
+    },
+    {
+      "case": "C8673",
+      "passed": true,
+      "baseline_ms": 6.5352959632873535,
+      "reference_ms": 4.36191987991333,
+      "reference_speedup": 1.4982613489492171,
+      "expert_patch_applies": true,
+      "wrong_numeric_answer_rejected": true
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "correct": true,
+  "checks": [
+    {
+      "case": 0,
+      "ok": true,
+      "relative_rms": 0.0005374010652303696,
+      "max_abs": 0.001476287841796875,
+      "route_set_equal": true,
+      "padded_slots": 1472,
+      "block_m": 64
+    },
+    {
+      "case": 1,
+      "ok": true,
+      "relative_rms": 0.0005185838672332466,
+      "max_abs": 0.0010089874267578125,
+      "route_set_equal": true,
+      "padded_slots": 4064,
+      "block_m": 32
+    },
+    {
+      "case": 2,
+      "ok": true,
+      "relative_rms": 0.000473549822345376,
+      "max_abs": 0.001068115234375,
+      "route_set_equal": true,
+      "padded_slots": 3904,
+      "block_m": 32
+    }
+  ],
+  "latency_us": 52.10815906524658,
+  "samples_us": [
+    52.10303783416748,
+    51.99999809265137,
+    52.10815906524658,
+    52.11775779724121,
+    52.17535972595215,
+    51.98783874511719,
+    52.13888168334961,
+    52.1292781829834,
+    52.069759368896484
+  ],
+  "errors": []
+}

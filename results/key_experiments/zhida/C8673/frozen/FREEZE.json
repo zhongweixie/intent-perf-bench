@@ -1,0 +1,71 @@
+{
+  "status": "frozen",
+  "scope": "gpt-6.1-sol medium, 700 active seconds, two paired rounds; not a model-independent claim",
+  "original_batch": "c8673-v4-codex61-medium-700s-20261006-151351",
+  "protocol": {
+    "model": "gpt-6.1-sol",
+    "reasoning_effort": "medium",
+    "rounds": 2,
+    "conditions": [
+      "fuzzy",
+      "flatten_hint"
+    ],
+    "budget_seconds": 700,
+    "model_response_guard": 48,
+    "generated_token_guard": 40000,
+    "total_token_guard": 1250000,
+    "max_queue_wait_seconds": 1800,
+    "response_counting": "distinct cumulative token-usage updates; deduplicate identical notifications; not provider HTTP attempts",
+    "controller": "700s-fixed-v2",
+    "controller_host": "local Windows",
+    "notes": [
+      "Local PC must remain awake and connected; full shutdown cannot be survived.",
+      "GPU queue excluded; native model retries and SSH reconnect overhead charged.",
+      "Frozen source at cutoff; interrupt grace 8s; no additional solver turn.",
+      "SSH reattachment reuses the same detached evaluator job/result.",
+      "Infrastructure-affected episodes flagged, never converted to wrong-answer scores."
+    ],
+    "public_sha256": "e2c69c69347271c31278a3879ad74b696ec3707049fddb92fc574398220692d6",
+    "controller_sha256": "d6cc34cec01442754dfeb83473c12d2143d875d1b75527538343c05eae275242",
+    "prompt_sha256": {
+      "fuzzy": "665e8f33d1bcb5fcbf5afb17c579d38375d5fe7a34ec6e9fe99fb0bfe6e6968c",
+      "flatten_hint": "346b31bcdd3cdaefe8a44a8a7e534b0659dc8fda17938be9b0536baba9d6dd29"
+    }
+  },
+  "baseline_ms": 6.530672073364258,
+  "reference_ms": 4.413264036178589,
+  "results": [
+    {
+      "round": 1,
+      "condition": "fuzzy",
+      "correct": true,
+      "latency_ms": 3.6415040493011475,
+      "agent_seconds": 457.7349999998696,
+      "source_sha256": "fcad2fd76f111cca15f7e3dad7e2a36195c1d655ec6a773a3dde237a123ad46a"
+    },
+    {
+      "round": 1,
+      "condition": "flatten_hint",
+      "correct": true,
+      "latency_ms": 5.027711868286133,
+      "agent_seconds": 686.6730000001844,
+      "source_sha256": "e6c4118c217e94d0861f074164ac5eeb2ab4205612e01587e507c1fbacbd4d39"
+    },
+    {
+      "round": 2,
+      "condition": "fuzzy",
+      "correct": true,
+      "latency_ms": 4.257407903671265,
+      "agent_seconds": 596.719000000041,
+      "source_sha256": "14dc82c5b682f727d8382c9635a204a344484c0d136181ebf447753351ea62e4"
+    },
+    {
+      "round": 2,
+      "condition": "flatten_hint",
+      "correct": true,
+      "latency_ms": 5.262912034988403,
+      "agent_seconds": 653.1239999996033,
+      "source_sha256": "56526dd1347f3de4a1dc1bee6d556d9a015ee0cd41e4fda67421077dc1932dd3"
+    }
+  ]
+}

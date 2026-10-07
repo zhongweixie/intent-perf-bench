@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790584188-SECvb9AQNi9l6G97ntKR",
+  "object": "chat.completion",
+  "created": 1790584188,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Time is dropping fast. 154s left, 16 attempts. Let me run benchmark.\n\nWait — but grad_bias was allocated as zeros_like(bias) (bias dtype). If bias is not None and fp32, and then torch.add(input=grad_bias, other=grad_logits_chunk.sum(0))... grad_logits_chunk is bf16, sum → bf16? Actually sum(dim=0) of bf16 gives bf16. add into fp32 grad_bias fine. Then cast to bias.dtype. OK.\n\nBut our workloads have no bias, so irrelevant.\n\nRun benchmark.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-80d92f07d47f170f",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Time is dropping fast. 154s left, 16 attempts. Let me run benchmark.\n\nWait — but grad_bias was allocated as zeros_like(bias) (bias dtype). If bias is not None and fp32, and then torch.add(input=grad_bias, other=grad_logits_chunk.sum(0))... grad_logits_chunk is bf16, sum → bf16? Actually sum(dim=0) of bf16 gives bf16. add into fp32 grad_bias fine. Then cast to bias.dtype. OK.\n\nBut our workloads have no bias, so irrelevant.\n\nRun benchmark.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 27785,
+    "completion_tokens": 158,
+    "total_tokens": 27943,
+    "cost": 0.0002364264,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 27392,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0002364264,
+      "upstream_inference_prompt_cost": 0.0001700664,
+      "upstream_inference_completions_cost": 6.636e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 133,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

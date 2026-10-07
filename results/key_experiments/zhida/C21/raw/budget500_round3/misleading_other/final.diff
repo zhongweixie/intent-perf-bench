@@ -1,0 +1,34 @@
+--- baseline/fused_linear_cross_entropy.py
++++ misleading_other/fused_linear_cross_entropy.py
+@@ -35,7 +35,7 @@
+ # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation
+ # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on
+ # all devices.
+-_CHUNK_MEM_CONST = 16
++_CHUNK_MEM_CONST = 64
+ _TORCH_VERSION = Version(torch.__version__.split("+")[0])
+ _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version("2.8.0")
+ 
+@@ -212,7 +212,7 @@
+                 HAS_SOFTCAPPING=softcap is not None,
+                 HAS_GRADIENTS=input_requires_grad,
+                 BLOCK_SIZE=block_size,
+-                num_warps=32 if not is_hip() else 16,
++                num_warps=16 if not is_hip() else 16,
+             )
+             grad_logits_chunk = logits_chunk
+         else:
+@@ -281,7 +281,12 @@
+ 
+         if grad_weight is not None and input_requires_grad:
+             grad_logits_t = grad_logits_chunk.t()
+-            if (
++            if num_chunks == 1 and accum_dtype is None and _input_chunk.dtype == grad_logits_t.dtype:
++                # Single chunk: the fp32 accumulator starts at zero, so zero-fill +
++                # read-modify-write is pure overhead. A single projection is numerically
++                # identical (round(0 + x.float()) == x) while skipping the temp copy.
++                grad_weight = torch.mm(grad_logits_t, _input_chunk)
++            elif (
+                 _ADDMM_SUPPORTS_OUT_DTYPE
+                 and grad_weight.device.type == "cuda"
+                 and torch.cuda.get_device_capability(grad_weight.device)[0] >= 8

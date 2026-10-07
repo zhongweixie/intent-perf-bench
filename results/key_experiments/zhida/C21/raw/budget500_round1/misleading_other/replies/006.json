@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790583993-s6ulx2PydJZoTbMHuKMM",
+  "object": "chat.completion",
+  "created": 1790583993,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Let me run the benchmark.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-a45fc6ff68086b45",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Let me run the benchmark.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 20645,
+    "completion_tokens": 31,
+    "total_tokens": 20676,
+    "cost": 0.0001916656,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 19968,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0001916656,
+      "upstream_inference_prompt_cost": 0.0001786456,
+      "upstream_inference_completions_cost": 1.302e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 6,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

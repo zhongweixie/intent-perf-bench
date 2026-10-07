@@ -1,0 +1,42 @@
+--- baseline/fused_linear_cross_entropy.py
++++ misleading_other/fused_linear_cross_entropy.py
+@@ -98,12 +98,14 @@
+ 
+     # we use fp32 for loss and gradients accumulator
+     if input_requires_grad:
+-        if accum_dtype is None:
+-            grad_weight = torch.zeros_like(weight, device=device) if weight_needs_grad else None
+-            grad_bias = torch.zeros_like(bias, device=device) if bias is not None else None
+-        else:
+-            grad_weight = torch.zeros_like(weight, dtype=accum_dtype, device=device) if weight_needs_grad else None
+-            grad_bias = torch.zeros_like(bias, dtype=accum_dtype, device=device) if bias is not None else None
++        # Accumulate weight/bias grads in fp32 by default (cast back to the
++        # parameter dtype at the end). A bf16 accumulator would both lose
++        # precision and force a per-chunk `torch.mm(...).float()` temp + bf16
++        # read-modify-write; a persistent fp32 buffer lets a single fused
++        # `addmm` accumulate each chunk in place.
++        _accum = accum_dtype if accum_dtype is not None else torch.float32
++        grad_weight = torch.zeros_like(weight, dtype=_accum, device=device) if weight_needs_grad else None
++        grad_bias = torch.zeros_like(bias, dtype=_accum, device=device) if bias is not None else None
+     else:
+         grad_weight = None
+         grad_bias = None
+@@ -303,7 +305,17 @@
+                     out=grad_weight,
+                 )
+             else:
+-                grad_weight += torch.mm(grad_logits_chunk.t(), _input_chunk).float()
++                input_chunk = _input_chunk
++                if input_chunk.dtype != grad_logits_t.dtype:
++                    input_chunk = input_chunk.to(grad_logits_t.dtype)
++                torch.addmm(
++                    grad_weight,
++                    grad_logits_t,
++                    input_chunk,
++                    beta=1,
++                    alpha=1,
++                    out=grad_weight,
++                )
+ 
+         if bias is not None and input_requires_grad:
+             torch.add(

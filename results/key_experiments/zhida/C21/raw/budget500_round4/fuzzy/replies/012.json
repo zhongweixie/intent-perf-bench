@@ -1,0 +1,54 @@
+{
+  "id": "gen-1790589373-OOEvDgi4wmj6b1nocroi",
+  "object": "chat.completion",
+  "created": 1790589373,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "The last saved source is byte-identical (same content hash `946d895b…`) to the version I already ran through `run_benchmark` with `correct: true` on all three cases, so the final submission is validated.\n\n## Final report\n\n**Change made (only `fused_linear_cross_entropy.py`)**\n\nThe dominant, easily-fixable cost was in the weight-gradient accumulation:\n\n```python\ngrad_weight += torch.mm(grad_logits_chunk.t(), _input_chunk).float()\n```\n\n`grad_weight` is allocated by `torch.zeros_like(weight)`, i.e. **bf16** in the default (`accum_dtype=None`) path. That means the `out_dtype` fp32 `addmm` branch above it (`grad_weight.dtype == torch.float32`) was dead code, and every chunk materialized two extra full `V×H` tensors: the bf16 `mm` result (67 MB for `main`/`wide_hidden`) plus an fp32 `.float()` copy (134 MB), then read/wrote both again for the `+=`. cuBLAS already reduces K in fp32 and rounds once, so the fp32 intermediate bought no precision.\n\nReplaced with a single fused accumulate:\n\n```python\ninput_chunk = _input_chunk\nif input_chunk.dtype != grad_logits_t.dtype:\n    input_chunk = input_chunk.to(grad_logits_t.dtype)\nif grad_weight.dtype == grad_logits_t.dtype:\n    torch.addmm(grad_weight, grad_logits_t, input_chunk, out=grad_weight)\nelse:\n    grad_weight += torch.mm(grad_logits_t, input_chunk).to(grad_weight.dtype)\n```\n\nThe `else` keeps the original semantics for the explicit `accum_dtype=fp32` case (mismatched dtypes), so behavior is preserved outside the optimized path.\n\n**Measured effect** (median full fwd+bwd, A6000; `correct: true`, all three cases)\n\n| case | baseline | final | speedup |\n|---|---:|---:|---:|\n| small (512/1024/16384) | 1596.5 µs | 1384.6 µs | 1.15× |\n| main (2048/1024/32768) | 6559.0 µs | 5135.6 µs | 1.28× |\n| wide_hidden (1024/2048/32768) | 6080.7 µs | 4681.9 µs | 1.30× |\n\nGeometric-mean speedup ≈ **1.24×**. Weight-grad relative error also improved (main: 1.09e-3 → 7.6e-4) since the accumulator is now read/rounded once per chunk instead of twice; loss and input-grad errors are unchanged and all three are within tolerance.\n\n**Remaining headroom identified but not pursued** (would need a larger rewrite): the three GEMMs still account for roughly two-thirds of the time and are near cuBLAS efficiency limits; the CE kernel's unavoidable 2-reads+1-write over the `BT×V` logits (~0.57 ms on `main`) is the next largest memory-bound term. A speculative CE `MAX_FUSED_SIZE` reduction was tested-adjacent but reverted unvalidated to keep the final source in a known-good state.",
+        "refusal": null,
+        "reasoning": "19 seconds. I can't fit a benchmark run probably. The saved file now has hash 946d895... which is exactly the version I validated earlier (the addmm change with MAX_FUSED_SIZE=65536//2) — that same hash was produced when I saved the addmm edit, and I then ran the benchmark successfully with correct=true on all three cases. So the last saved source is the exact validated version.\n\nGood — no further action needed. Let me write the final report.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "19 seconds. I can't fit a benchmark run probably. The saved file now has hash 946d895... which is exactly the version I validated earlier (the addmm change with MAX_FUSED_SIZE=65536//2) — that same hash was produced when I saved the addmm edit, and I then ran the benchmark successfully with correct=true on all three cases. So the last saved source is the exact validated version.\n\nGood — no further action needed. Let me write the final report.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 36217,
+    "completion_tokens": 843,
+    "total_tokens": 37060,
+    "cost": 0.0005399856,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 35968,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0005399856,
+      "upstream_inference_prompt_cost": 0.0001859256,
+      "upstream_inference_completions_cost": 0.00035406
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 102,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

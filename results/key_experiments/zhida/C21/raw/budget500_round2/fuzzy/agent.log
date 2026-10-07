@@ -1,0 +1,11 @@
+fuzzy call 1 generated 31 elapsed 2 benchmarks 0
+fuzzy call 2 generated 103 elapsed 5 benchmarks 0
+fuzzy call 3 generated 212 elapsed 9 benchmarks 0
+fuzzy call 4 generated 382 elapsed 13 benchmarks 0
+fuzzy call 5 generated 555 elapsed 18 benchmarks 0
+fuzzy call 6 generated 1728 elapsed 78 benchmarks 1
+fuzzy call 8 generated 10760 elapsed 316 benchmarks 1
+fuzzy call 9 generated 10785 elapsed 332 benchmarks 2
+fuzzy call 10 generated 11524 elapsed 359 benchmarks 2
+fuzzy call 11 generated 11549 elapsed 378 benchmarks 3
+TRIAL_END {"condition": "fuzzy", "stop_reason": "time_limit", "agent_seconds": 500.1045575616881, "real_wall_seconds": 500.2768994262442, "gpu_queue_wait_seconds": 0.09655342809855938, "api_calls": 12, "tool_actions": 16, "generated_tokens": 11549, "prompt_tokens": 196062, "total_tokens": 207611, "reported_cost_usd": 0.0084679896, "failed_requests_usage_unknown": 1, "final_source_sha256": "b2f5b9b51ee739911cdb2f1931fd0412dce171b52d1ef86096dc8b48c66deeed", "final_answer": "", "namespace": "20260928-082312-r2-fuzzy", "budget_notices": 12, "api_seconds": 452.5140577843413, "tool_seconds": 46.8831429425627, "benchmark_seconds": 46.64762833341956, "benchmark_active_seconds": 46.551074905321}

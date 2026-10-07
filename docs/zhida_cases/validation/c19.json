@@ -1,0 +1,138 @@
+{
+  "task_id": "ipb_cuda_zhida_c19",
+  "positive_controls": {
+    "baseline": {
+      "correct": true,
+      "latency_ms": 0.06199808120727539,
+      "raw_worker_result": {
+        "correct": true,
+        "checks": [
+          {
+            "case": 0,
+            "ok": true,
+            "relative_rms": 0.00022025413636583835,
+            "max_abs": 0.000823974609375,
+            "route_set_equal": true,
+            "padded_slots": 1472,
+            "block_m": 64
+          },
+          {
+            "case": 1,
+            "ok": true,
+            "relative_rms": 0.00022222001280169934,
+            "max_abs": 0.000598907470703125,
+            "route_set_equal": true,
+            "padded_slots": 4064,
+            "block_m": 32
+          },
+          {
+            "case": 2,
+            "ok": true,
+            "relative_rms": 0.0002174583642045036,
+            "max_abs": 0.0004730224609375,
+            "route_set_equal": true,
+            "padded_slots": 3904,
+            "block_m": 32
+          }
+        ],
+        "latency_us": 61.99808120727539,
+        "samples_us": [
+          62.0249605178833,
+          62.045440673828125,
+          61.98080062866211,
+          61.86944007873535,
+          61.99808120727539,
+          62.076802253723145,
+          61.89055919647217,
+          61.916160583496094,
+          62.011518478393555
+        ],
+        "errors": []
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c19"
+    },
+    "reference": {
+      "correct": true,
+      "latency_ms": 0.05285247802734375,
+      "raw_worker_result": {
+        "correct": true,
+        "checks": [
+          {
+            "case": 0,
+            "ok": true,
+            "relative_rms": 0.00022038022871129215,
+            "max_abs": 0.000823974609375,
+            "route_set_equal": true,
+            "padded_slots": 1472,
+            "block_m": 64
+          },
+          {
+            "case": 1,
+            "ok": true,
+            "relative_rms": 0.00022218862432055175,
+            "max_abs": 0.000598907470703125,
+            "route_set_equal": true,
+            "padded_slots": 4064,
+            "block_m": 32
+          },
+          {
+            "case": 2,
+            "ok": true,
+            "relative_rms": 0.0002174583642045036,
+            "max_abs": 0.0004730224609375,
+            "route_set_equal": true,
+            "padded_slots": 3904,
+            "block_m": 32
+          }
+        ],
+        "latency_us": 52.85247802734375,
+        "samples_us": [
+          52.96256065368652,
+          52.943358421325684,
+          52.85247802734375,
+          52.91840076446533,
+          52.872958183288574,
+          52.82944202423096,
+          52.846078872680664,
+          52.805118560791016,
+          52.848639488220215
+        ],
+        "errors": []
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c19"
+    },
+    "wrong_answer": {
+      "correct": false,
+      "latency_ms": null,
+      "raw_worker_result": {
+        "correct": false,
+        "checks": [
+          {
+            "case": 0,
+            "ok": false,
+            "relative_rms": 1.0,
+            "max_abs": 1.3704442977905273,
+            "route_set_equal": true,
+            "padded_slots": 1472,
+            "block_m": 64
+          }
+        ],
+        "errors": [
+          "correctness failed for case 0"
+        ]
+      },
+      "seed": 271828,
+      "final": false,
+      "task_id": "ipb_cuda_zhida_c19"
+    }
+  },
+  "passed": true,
+  "note": "Packaging check only; negative control changes numeric output/gradient/state. This does not add independent agent trials or replace archived performance.",
+  "negative_control_rejected_numerically": true,
+  "verification_host": "songcpu4",
+  "verification_date": "2026-10-07"
+}

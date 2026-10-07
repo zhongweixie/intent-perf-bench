@@ -1,0 +1,75 @@
+{
+  "id": "gen-1790696549-bkGzZUwBi3VXhUp648yb",
+  "object": "chat.completion",
+  "created": 1790696549,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": null,
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-bc4a6bb5c31ed1e5",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"CONTRACT.md\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-b96b05f038dff1e8",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"pipeline.py\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 2,
+            "id": "chatcmpl-tool-8232a2ee19299c6a",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"routing.py\"}"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1075,
+    "completion_tokens": 101,
+    "total_tokens": 1176,
+    "cost": 7.12432e-05,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 896,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 7.12432e-05,
+      "upstream_inference_prompt_cost": 2.88232e-05,
+      "upstream_inference_completions_cost": 4.242e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

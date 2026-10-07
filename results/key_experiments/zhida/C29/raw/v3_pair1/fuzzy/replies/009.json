@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RTatnzd0cfLCjAQCdd60rfI4",
+  "object": "chat.completion",
+  "created": 1791043436,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"combine_kernels.py\",\"old\":\"        i = tl.program_id(0)\\n        hb = tl.program_id(1)\\n        p = tl.load(perm_ptr + i)\\n        if p >= 0:\\n            offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)\\n            m = offs < H\\n            v = tl.load(g_ptr + i * H + offs, mask=m, other=0.0)\\n            tl.atomic_add(gx_ptr + p * H + offs, v, mask=m)\",\"new\":\"        i = tl.program_id(0)\\n        hb = tl.program_id(1)\\n        p = tl.load(perm_ptr + i).to(tl.int64)\\n        if p >= 0:\\n            offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)\\n            m = offs < H\\n            v = tl.load(g_ptr + i * H + offs, mask=m, other=0.0).to(tl.float32)\\n            tl.atomic_add(gx_ptr + p * H + offs, v, mask=m)\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 28525,
+    "total_tokens": 28819,
+    "completion_tokens": 294,
+    "estimated_cost": 0.01850847,
+    "prompt_tokens_details": {
+      "cached_tokens": 26112,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

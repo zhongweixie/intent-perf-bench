@@ -1,0 +1,46 @@
+--- baseline/fused_linear_cross_entropy.py
++++ misleading_other/fused_linear_cross_entropy.py
+@@ -35,7 +35,11 @@
+ # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation
+ # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on
+ # all devices.
+-_CHUNK_MEM_CONST = 16
++_CHUNK_MEM_CONST = 64
++
++# CE kernel geometry tunables.
++CE_BLOCK_CAP = 32768
++CE_NUM_WARPS = 32
+ _TORCH_VERSION = Version(torch.__version__.split("+")[0])
+ _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version("2.8.0")
+ 
+@@ -99,7 +103,11 @@
+     # we use fp32 for loss and gradients accumulator
+     if input_requires_grad:
+         if accum_dtype is None:
+-            grad_weight = torch.zeros_like(weight, device=device) if weight_needs_grad else None
++            # Keep weight-grad accumulation in fp32 when the fused addmm(out_dtype)
++            # path is available: it accumulates directly into fp32, avoiding the
++            # extra bf16 mm result + cast + add round-trip.
++            _gw_dtype = torch.float32 if _ADDMM_SUPPORTS_OUT_DTYPE else weight.dtype
++            grad_weight = torch.zeros_like(weight, dtype=_gw_dtype, device=device) if weight_needs_grad else None
+             grad_bias = torch.zeros_like(bias, device=device) if bias is not None else None
+         else:
+             grad_weight = torch.zeros_like(weight, dtype=accum_dtype, device=device) if weight_needs_grad else None
+@@ -181,7 +189,7 @@
+             z_loss_1d_slice = z_loss_1d[start_idx:end_idx] if return_z_loss else None
+             token_accuracy_1d_slice = token_accuracy_1d[start_idx:end_idx] if return_token_accuracy else None
+             predicted_tokens_1d_slice = predicted_tokens_1d[start_idx:end_idx] if return_predicted_tokens else None
+-            block_size = min(MAX_FUSED_SIZE, triton.next_power_of_2(V))
++            block_size = min(CE_BLOCK_CAP, triton.next_power_of_2(V))
+ 
+             liger_cross_entropy_kernel[(end_idx - start_idx,)](
+                 X_ptr=logits_chunk,
+@@ -212,7 +220,7 @@
+                 HAS_SOFTCAPPING=softcap is not None,
+                 HAS_GRADIENTS=input_requires_grad,
+                 BLOCK_SIZE=block_size,
+-                num_warps=32 if not is_hip() else 16,
++                num_warps=CE_NUM_WARPS,
+             )
+             grad_logits_chunk = logits_chunk
+         else:

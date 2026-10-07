@@ -1,0 +1,5 @@
+misleading2 call 1 generated 50 elapsed 4 benchmarks 0
+misleading2 call 2 generated 147 elapsed 10 benchmarks 0
+misleading2 call 3 generated 253 elapsed 15 benchmarks 0
+misleading2 call 4 generated 314 elapsed 19 benchmarks 0
+TRIAL_END {"condition": "misleading2", "stop_reason": "time_limit", "agent_seconds": 900.0915971547365, "real_wall_seconds": 900.1550769796595, "gpu_queue_wait_seconds": 0.0, "api_calls": 7, "tool_actions": 6, "generated_tokens": 314, "prompt_tokens": 12402, "total_tokens": 12716, "reported_cost_usd": 0.03588036, "failed_requests_usage_unknown": 3, "final_source_sha256": "f0fb561f06dbe6072c9be258fa7d1030f0648dcf6cf48181bad635845104dcc9", "final_answer": "", "namespace": "songcpu4-20261003-155430-793084-round2-misleading2", "budget_notices": 5, "api_seconds": 893.6756111495197, "tool_seconds": 0.05115473456680775, "benchmark_seconds": 0, "benchmark_active_seconds": 0.0}

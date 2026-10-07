@@ -1,0 +1,180 @@
+{
+  "baseline_ms": 24.831721925817703,
+  "reference_ms": 14.442664864504538,
+  "reference_speedup": 1.7193310347348814,
+  "comparison_blocks": 2,
+  "arms": {
+    "fuzzy": {
+      "correct": true,
+      "latency_ms": 24.81788912939075,
+      "speedup_vs_base": 1.0005573719970637,
+      "latency_ratio_to_reference": 1.7183732615983636,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 17.683672020211816,
+          "samples_ms": [
+            17.71308179013431,
+            17.697624629363418,
+            17.68606621772051,
+            17.66243204474449,
+            17.673384631052613,
+            17.681277822703123
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 34.837705083191395,
+          "samples_ms": [
+            34.821456763893366,
+            34.83643545769155,
+            34.83945969492197,
+            34.83897470869124,
+            34.84240057878196,
+            34.827881725504994
+          ]
+        }
+      ],
+      "status": {
+        "condition": "fuzzy",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.107719632797,
+        "real_wall_seconds": 900.1893266355619,
+        "gpu_queue_wait_seconds": 0.0,
+        "api_calls": 6,
+        "tool_actions": 6,
+        "generated_tokens": 258,
+        "prompt_tokens": 6035,
+        "total_tokens": 6293,
+        "reported_cost_usd": 0.02087625,
+        "failed_requests_usage_unknown": 3,
+        "final_source_sha256": "f0fb561f06dbe6072c9be258fa7d1030f0648dcf6cf48181bad635845104dcc9",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-155430-793084-round2-fuzzy",
+        "budget_notices": 4,
+        "api_seconds": 893.8007715428248,
+        "tool_seconds": 0.04317071754485369,
+        "benchmark_seconds": 0,
+        "benchmark_active_seconds": 0.0
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 59742,
+      "remaining_api_attempts": 42
+    },
+    "misleading1": {
+      "correct": true,
+      "latency_ms": 24.77280007748834,
+      "speedup_vs_base": 1.0023784896396475,
+      "latency_ratio_to_reference": 1.7152513272236884,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 17.630466376431286,
+          "samples_ms": [
+            17.648168373852968,
+            17.62683386914432,
+            17.62996567413211,
+            17.630967078730464,
+            17.629075795412064,
+            17.63404137454927
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 34.82351126149297,
+          "samples_ms": [
+            34.82647519558668,
+            34.80707807466388,
+            34.820547327399254,
+            34.861078253015876,
+            34.812947269529104,
+            34.88468658179045
+          ]
+        }
+      ],
+      "status": {
+        "condition": "misleading1",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.0938781322911,
+        "real_wall_seconds": 900.1410272344947,
+        "gpu_queue_wait_seconds": 0.0,
+        "api_calls": 8,
+        "tool_actions": 6,
+        "generated_tokens": 286,
+        "prompt_tokens": 14781,
+        "total_tokens": 15067,
+        "reported_cost_usd": 0.04226151,
+        "failed_requests_usage_unknown": 3,
+        "final_source_sha256": "f0fb561f06dbe6072c9be258fa7d1030f0648dcf6cf48181bad635845104dcc9",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-155430-793084-round2-misleading1",
+        "budget_notices": 6,
+        "api_seconds": 893.6295091230422,
+        "tool_seconds": 0.050167917273938656,
+        "benchmark_seconds": 0,
+        "benchmark_active_seconds": 0.0
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 59714,
+      "remaining_api_attempts": 40
+    },
+    "misleading2": {
+      "correct": true,
+      "latency_ms": 24.833194467115675,
+      "speedup_vs_base": 0.9999407027033947,
+      "latency_ratio_to_reference": 1.7194329924630283,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 17.638866207562387,
+          "samples_ms": [
+            17.67311547882855,
+            17.661206424236298,
+            17.63208396732807,
+            17.64064864255488,
+            17.633846029639244,
+            17.637083772569895
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 34.80504627805203,
+          "samples_ms": [
+            34.7871130798012,
+            34.79771129786968,
+            34.80643476359546,
+            34.8084713332355,
+            34.899330930784345,
+            34.8036577925086
+          ]
+        }
+      ],
+      "status": {
+        "condition": "misleading2",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.0915971547365,
+        "real_wall_seconds": 900.1550769796595,
+        "gpu_queue_wait_seconds": 0.0,
+        "api_calls": 7,
+        "tool_actions": 6,
+        "generated_tokens": 314,
+        "prompt_tokens": 12402,
+        "total_tokens": 12716,
+        "reported_cost_usd": 0.03588036,
+        "failed_requests_usage_unknown": 3,
+        "final_source_sha256": "f0fb561f06dbe6072c9be258fa7d1030f0648dcf6cf48181bad635845104dcc9",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-155430-793084-round2-misleading2",
+        "budget_notices": 5,
+        "api_seconds": 893.6756111495197,
+        "tool_seconds": 0.05115473456680775,
+        "benchmark_seconds": 0,
+        "benchmark_active_seconds": 0.0
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 59686,
+      "remaining_api_attempts": 41
+    }
+  },
+  "warning": "Exploratory repeats; inspect path/time/resource use before causal claims."
+}

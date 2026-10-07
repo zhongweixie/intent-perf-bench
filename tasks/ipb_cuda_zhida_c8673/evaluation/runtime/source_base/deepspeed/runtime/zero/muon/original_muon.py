@@ -1,0 +1,518 @@
+# Copyright (c) 2024 Keller Jordan
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+"""
+MIT License
+
+Copyright (c) 2024 Keller Jordan
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+"""
+
+import math
+import torch
+import deepspeed.comm as dist  # replace torch's distributed package with deepspeed.comm to resolve deepspeed check
+from deepspeed.runtime import compiler
+from deepspeed.accelerator import get_accelerator
+
+
+def ns_compute_dtype(ns_method: str = "gram") -> torch.dtype:
+    """The dtype a Newton-Schulz iteration runs in, by method.
+
+    `gram` uses fp16 for better precision than bf16, `standard` uses bf16, and either falls
+    back to fp32 where the accelerator does not support its choice. Exported so that anything
+    reasoning about NS precision -- test tolerances in particular -- reads it from here rather
+    than restating it, which would let the two drift apart silently.
+    """
+    if ns_method == "gram":
+        return torch.float16 if get_accelerator().is_fp16_supported() else torch.float32
+    return torch.bfloat16 if get_accelerator().is_bf16_supported() else torch.float32
+
+
+@compiler.compile()
+def zeropower_via_newtonschulz5(G, steps: int):
+    """
+    Newton-Schulz iteration to compute the zeroth power / orthogonalization of G. We opt to use a
+    quintic iteration whose coefficients are selected to maximize the slope at zero. For the purpose
+    of minimizing steps, it turns out to be empirically effective to keep increasing the slope at
+    zero even beyond the point where the iteration no longer converges all the way to one everywhere
+    on the interval. This iteration therefore does not produce UV^T but rather something like US'V^T
+    where S' is diagonal with S_{ii}' ~ Uniform(0.5, 1.5), which turns out not to hurt model
+    performance at all relative to UV^T, where USV^T = G is the SVD.
+    """
+    assert G.ndim >= 2  # batched Muon implementation by @scottjmaddox, and put into practice in the record by @YouJiacheng
+    a, b, c = (3.4445, -4.7750, 2.0315)
+    compute_dtype = ns_compute_dtype("standard")
+    X = G.to(compute_dtype)
+    if G.size(-2) > G.size(-1):
+        X = X.mT
+
+    # Ensure spectral norm is at most 1
+    X = X / (X.norm(dim=(-2, -1), keepdim=True) + 1e-7)
+    # Perform the NS iterations
+    for _ in range(steps):
+        A = X @ X.mT
+        B = b * A + c * A @ A  # quintic computation strategy adapted from suggestion by @jxbz, @leloykun, and @YouJiacheng
+        X = a * X + B @ X
+
+    if G.size(-2) > G.size(-1):
+        X = X.mT
+    return X
+
+
+@compiler.compile()
+def zeropower_via_gram_newtonschulz(G, steps: int):
+    """
+    Gram Newton-Schulz iteration for orthogonalization.
+
+    Mathematically equivalent to standard Newton-Schulz but iterates on the
+    small square Gram matrix R = X @ X.T (n x n) instead of the full rectangular
+    X (n x m). This reduces FLOPs significantly when m >> n (typical for
+    transformer weight matrices with aspect ratio ~5).
+
+    Uses fp16 instead of bf16 for better numerical precision at the same
+    compute cost. Includes a restart at iteration 2 to maintain stability
+    in half-precision.
+
+    Falls back to standard Newton-Schulz for square matrices (n == m)
+    where there is no FLOP advantage.
+
+    Reference: https://tridao.me/blog/2026/gram-newton-schulz/
+    """
+    assert G.ndim >= 2
+    a, b, c = (3.4445, -4.7750, 2.0315)
+    compute_dtype = ns_compute_dtype("gram")
+    # Normalize before the cast, in a dtype the input cannot already have left. fp16 stops at
+    # 65504, so a finite fp32 gradient under a loss scale arrives at the iteration as inf and
+    # the whole matrix comes back zero. bf16 and fp32 carry fp32's range, so they normalize as
+    # they are. The iteration itself is unchanged: it still runs in compute_dtype on a matrix
+    # the normalization has already brought into [-1, 1].
+    norm_dtype = torch.float32 if G.dtype == torch.float16 else G.dtype
+    X = G.to(norm_dtype)
+    if G.size(-2) > G.size(-1):
+        X = X.mT
+
+    n, m = X.size(-2), X.size(-1)
+
+    X = (X / (X.norm(dim=(-2, -1), keepdim=True) + 1e-7)).to(compute_dtype)
+
+    # For square matrices, no FLOP advantage; use standard iteration
+    if m <= n:
+        for _ in range(steps):
+            A = X @ X.mT
+            B = b * A + c * A @ A
+            X = a * X + B @ X
+        if G.size(-2) > G.size(-1):
+            X = X.mT
+        return X
+
+    # Gram NS: iterate on R = X @ X.T (n x n) instead of X (n x m)
+    R = X @ X.mT
+    Q = None
+    restart_at = 2
+
+    for i in range(steps):
+        if i == restart_at and i != 0:
+            X = Q @ X
+            R = X @ X.mT
+            Q = None
+
+        Z = b * R + c * R @ R
+
+        if Q is None:
+            Q = Z.clone()
+            if Q.ndim == 2:
+                Q.diagonal().add_(a)
+            else:
+                Q.diagonal(dim1=-2, dim2=-1).add_(a)
+        else:
+            Q = a * Q + Z @ Q
+
+        if i < steps - 1 and (i + 1) != restart_at:
+            RZ = a * R + Z @ R
+            R = a * RZ + Z @ RZ
+
+    if G.size(-2) > G.size(-1):
+        X = X.mT @ Q.mT
+    else:
+        X = Q @ X
+    return X
+
+
+NS_METHODS = {"standard", "gram"}
+
+
+def _aspect_ratio_scale(rows, cols):
+    # sqrt(max(1, rows / cols)), written without max() or **. Once `muon_update` is recompiled
+    # for a second shape the sizes are symbolic: inductor casts both sides of a symbolic max to
+    # int64, so max(1, 32 / 12) came out as 2, and a symbolic ** failed to compile for Triton.
+    return math.sqrt(rows / cols) if rows > cols else 1.0
+
+
+def _per_head_orthogonalize(update, num_heads, ns_steps, ns_method):
+    """Newton-Schulz per attention head, then fold the head dim back."""
+    if update.ndim != 2:
+        raise ValueError(f"Per-head Muon expects a 2D attention projection, got shape {tuple(update.shape)}.")
+
+    out_features, in_features = update.shape
+    if num_heads < 1 or out_features % num_heads != 0:
+        raise ValueError(f"Per-head Muon needs the output dim to split evenly across heads, but "
+                         f"{out_features} is not divisible by num_heads={num_heads}.")
+
+    head_dim = out_features // num_heads
+    ns_fn = zeropower_via_gram_newtonschulz if ns_method == "gram" else zeropower_via_newtonschulz5
+    # Scale per head block, matching what the full-matrix path does for the whole matrix.
+    scale = _aspect_ratio_scale(head_dim, in_features)
+    per_head = ns_fn(update.view(num_heads, head_dim, in_features), steps=ns_steps) * scale
+
+    return per_head.reshape(out_features, in_features)
+
+
+@compiler.compile()
+def muon_update(grad,
+                momentum,
+                beta=0.95,
+                ns_steps=5,
+                nesterov=True,
+                ns_method="gram",
+                is_expert_group=False,
+                num_heads=None):
+    """Muon update, optionally orthogonalizing each attention head separately.
+
+    With ``num_heads`` set, the update for an attention projection of shape
+    ``[num_heads * head_dim, in_features]`` is viewed as ``[num_heads, head_dim, in_features]``
+    and Newton-Schulz runs on that batch, so each head is orthogonalized against itself instead
+    of sharing one update direction with every other head. Both NS kernels are already batched,
+    so this is the same path the expert-group branch takes.
+    """
+    orig_dtype = grad.dtype
+    # A step whose gradients overflowed is discarded by the loss scaler, but Muon folds the
+    # gradient into its momentum before that decision is made. Left alone, one overflow
+    # leaves the momentum non-finite for the rest of the run: with nesterov the blend is
+    # written back into the gradient in place, so the next step overflows too, and the
+    # scaler backs off until it raises "Current loss scale already at minimum". Keep the
+    # momentum out of it, and let the non-finite gradient through so the overflow is still
+    # seen and the step still skipped. Evaluated on device so this costs no synchronization.
+    grad_is_finite = torch.isfinite(grad).all()
+    momentum.copy_(torch.where(grad_is_finite, momentum.lerp(grad, 1 - beta), momentum))
+    update = grad.lerp_(momentum, beta) if nesterov else momentum
+    if num_heads is not None:
+        return _per_head_orthogonalize(update, num_heads, ns_steps, ns_method).to(orig_dtype)
+    if is_expert_group:
+        ns_fn = zeropower_via_gram_newtonschulz if ns_method == "gram" else zeropower_via_newtonschulz5
+        scale = _aspect_ratio_scale(update.size(-2), update.size(-1))
+        update = ns_fn(update, steps=ns_steps) * scale
+    else:
+        if update.ndim == 4:  # for the case of conv filters
+            update = update.view(len(update), -1)
+        if ns_method == "gram":
+            update = zeropower_via_gram_newtonschulz(update, steps=ns_steps)
+        else:
+            update = zeropower_via_newtonschulz5(update, steps=ns_steps)
+        update *= _aspect_ratio_scale(grad.size(-2), grad.size(-1))
+    if update.dtype != orig_dtype:
+        update = update.to(orig_dtype)
+    # On the non-nesterov path `update` is the (untouched, finite) momentum, so without this
+    # an overflowed step would produce a finite update and be applied instead of skipped.
+    return torch.where(grad_is_finite, update, grad.to(orig_dtype))
+
+
+class Muon(torch.optim.Optimizer):
+    """
+    Muon - MomentUm Orthogonalized by Newton-schulz
+
+    https://kellerjordan.github.io/posts/muon/
+
+    Muon internally runs standard SGD-momentum, and then performs an orthogonalization post-
+    processing step, in which each 2D parameter's update is replaced with the nearest orthogonal
+    matrix. For efficient orthogonalization we use a Newton-Schulz iteration, which has the
+    advantage that it can be stably run in bfloat16 on the GPU.
+
+    Muon should only be used for hidden weight layers. The input embedding, final output layer,
+    and any internal gains or biases should be optimized using a standard method such as AdamW.
+    Hidden convolutional weights can be trained using Muon by viewing them as 2D and then
+    collapsing their last 3 dimensions.
+
+    Arguments:
+        lr: The learning rate, in units of spectral norm per update.
+        weight_decay: The AdamW-style weight decay.
+        momentum: The momentum. A value of 0.95 here is usually fine.
+        ns_method: Newton-Schulz method. "gram" (default) uses Gram NS for ~2x speedup
+                   on rectangular matrices. "standard" uses the original iteration.
+    """
+
+    def __init__(self, params, lr=0.02, weight_decay=0, momentum=0.95, ns_method="gram"):
+        defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum, ns_method=ns_method)
+        assert isinstance(params, list) and len(params) >= 1 and isinstance(params[0], torch.nn.Parameter)
+        params = sorted(params, key=lambda x: x.size(), reverse=True)
+        super().__init__(params, defaults)
+
+    @torch.no_grad()
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            params = group["params"]
+            params_pad = params + [torch.empty_like(params[-1])
+                                   ] * (dist.get_world_size() - len(params) % dist.get_world_size())
+            for base_i in range(len(params))[::dist.get_world_size()]:
+                if base_i + dist.get_rank() < len(params):
+                    p = params[base_i + dist.get_rank()]
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["momentum_buffer"] = torch.zeros_like(p)
+                    update = muon_update(p.grad,
+                                         state["momentum_buffer"],
+                                         beta=group["momentum"],
+                                         ns_method=group.get("ns_method", "gram"),
+                                         is_expert_group=getattr(p, 'is_expert_group', False),
+                                         num_heads=getattr(p, 'muon_num_heads', None))
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update.reshape(p.shape), alpha=-group["lr"])
+                dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()],
+                                params_pad[base_i + dist.get_rank()])
+
+        return loss
+
+
+class SingleDeviceMuon(torch.optim.Optimizer):
+    """
+    Muon variant for usage in non-distributed settings.
+    """
+
+    def __init__(self, params, lr=0.02, weight_decay=0, momentum=0.95, ns_method="gram"):
+        defaults = dict(lr=lr, weight_decay=weight_decay, momentum=momentum, ns_method=ns_method)
+        super().__init__(params, defaults)
+
+    @torch.no_grad()
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            for p in group["params"]:
+                if p.grad is None:
+                    # continue
+                    p.grad = torch.zeros_like(p)  # Force synchronization
+                state = self.state[p]
+                if len(state) == 0:
+                    state["momentum_buffer"] = torch.zeros_like(p)
+                update = muon_update(p.grad,
+                                     state["momentum_buffer"],
+                                     beta=group["momentum"],
+                                     ns_method=group.get("ns_method", "gram"),
+                                     is_expert_group=getattr(p, 'is_expert_group', False),
+                                     num_heads=getattr(p, 'muon_num_heads', None))
+                p.mul_(1 - group["lr"] * group["weight_decay"])
+                p.add_(update.reshape(p.shape), alpha=-group["lr"])
+
+        return loss
+
+
+def adam_update(grad, buf1, buf2, step, betas, eps):
+    buf1.lerp_(grad, 1 - betas[0])
+    buf2.lerp_(grad.square(), 1 - betas[1])
+    buf1c = buf1 / (1 - betas[0]**step)
+    buf2c = buf2 / (1 - betas[1]**step)
+    return buf1c / (buf2c.sqrt() + eps)
+
+
+class MuonWithAuxAdam(torch.optim.Optimizer):
+    """
+    Distributed Muon variant that can be used for all parameters in the network, since it runs an
+    internal AdamW for the parameters that are not compatible with Muon. The user must manually
+    specify which parameters shall be optimized with Muon and which with Adam by passing in a
+    list of param_groups with the `use_muon` flag set.
+
+    The point of this class is to allow the user to have a single optimizer in their code, rather
+    than having both a Muon and an Adam which each need to be stepped.
+
+    You can see an example usage below:
+
+    https://github.com/KellerJordan/modded-nanogpt/blob/master/records/052525_MuonWithAuxAdamExample/b01550f9-03d8-4a9c-86fe-4ab434f1c5e0.txt#L470
+    ```
+    hidden_matrix_params = [p for n, p in model.blocks.named_parameters() if p.ndim >= 2 and "embed" not in n]
+    embed_params = [p for n, p in model.named_parameters() if "embed" in n]
+    scalar_params = [p for p in model.parameters() if p.ndim < 2]
+    head_params = [model.lm_head.weight]
+
+    from muon import MuonWithAuxAdam
+    adam_groups = [dict(params=head_params, lr=0.22), dict(params=embed_params, lr=0.6), dict(params=scalar_params, lr=0.04)]
+    adam_groups = [dict(**g, betas=(0.8, 0.95), eps=1e-10, use_muon=False) for g in adam_groups]
+    muon_group = dict(params=hidden_matrix_params, lr=0.05, momentum=0.95, use_muon=True)
+    param_groups = [*adam_groups, muon_group]
+    optimizer = MuonWithAuxAdam(param_groups)
+    ```
+    """
+
+    def __init__(self, param_groups):
+        for group in param_groups:
+            assert "use_muon" in group
+            if group["use_muon"]:
+                group["params"] = sorted(group["params"], key=lambda x: x.size(), reverse=True)
+                # defaults
+                group["lr"] = group.get("lr", 0.02)
+                group["momentum"] = group.get("momentum", 0.95)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                group["ns_method"] = group.get("ns_method", "gram")
+                assert group[
+                    "ns_method"] in NS_METHODS, f"ns_method must be one of {NS_METHODS}, got {group['ns_method']}"
+                assert set(["params", "lr", "momentum", "weight_decay", "use_muon",
+                            "ns_method"]).issubset(set(group.keys()))
+            else:
+                # defaults
+                group["lr"] = group.get("lr", 3e-4)
+                group["betas"] = group.get("betas", (0.9, 0.95))
+                group["eps"] = group.get("eps", 1e-10)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(["params", "lr", "betas", "eps", "weight_decay", "use_muon"]).issubset(set(group.keys()))
+        super().__init__(param_groups, dict())
+
+    @torch.no_grad()
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            if group["use_muon"]:
+                params = group["params"]
+                params_pad = params + [torch.empty_like(params[-1])
+                                       ] * (dist.get_world_size() - len(params) % dist.get_world_size())
+                for base_i in range(len(params))[::dist.get_world_size()]:
+                    if base_i + dist.get_rank() < len(params):
+                        p = params[base_i + dist.get_rank()]
+                        if p.grad is None:
+                            # continue
+                            p.grad = torch.zeros_like(p)  # Force synchronization
+                        state = self.state[p]
+                        if len(state) == 0:
+                            state["momentum_buffer"] = torch.zeros_like(p)
+                        update = muon_update(p.grad,
+                                             state["momentum_buffer"],
+                                             beta=group["momentum"],
+                                             ns_method=group.get("ns_method", "gram"),
+                                             is_expert_group=getattr(p, 'is_expert_group', False),
+                                             num_heads=getattr(p, 'muon_num_heads', None))
+                        p.mul_(1 - group["lr"] * group["weight_decay"])
+                        p.add_(update.reshape(p.shape), alpha=-group["lr"])
+                    dist.all_gather(params_pad[base_i:base_i + dist.get_world_size()],
+                                    params_pad[base_i + dist.get_rank()])
+            else:
+                for p in group["params"]:
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["exp_avg"] = torch.zeros_like(p)
+                        state["exp_avg_sq"] = torch.zeros_like(p)
+                        state["step"] = 0
+                    state["step"] += 1
+                    update = adam_update(p.grad, state["exp_avg"], state["exp_avg_sq"], state["step"], group["betas"],
+                                         group["eps"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
+
+        return loss
+
+
+class SingleDeviceMuonWithAuxAdam(torch.optim.Optimizer):
+    """
+    Non-distributed variant of MuonWithAuxAdam.
+    """
+
+    def __init__(self, param_groups):
+        for group in param_groups:
+            assert "use_muon" in group
+            if group["use_muon"]:
+                # defaults
+                group["lr"] = group.get("lr", 0.02)
+                group["momentum"] = group.get("momentum", 0.95)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                group["ns_method"] = group.get("ns_method", "gram")
+                assert group[
+                    "ns_method"] in NS_METHODS, f"ns_method must be one of {NS_METHODS}, got {group['ns_method']}"
+                assert set(["params", "lr", "momentum", "weight_decay", "use_muon",
+                            "ns_method"]).issubset(set(group.keys()))
+            else:
+                # defaults
+                group["lr"] = group.get("lr", 3e-4)
+                group["betas"] = group.get("betas", (0.9, 0.95))
+                group["eps"] = group.get("eps", 1e-10)
+                group["weight_decay"] = group.get("weight_decay", 0)
+                assert set(["params", "lr", "betas", "eps", "weight_decay", "use_muon"]).issubset(set(group.keys()))
+        super().__init__(param_groups, dict())
+
+    @torch.no_grad()
+    def step(self, closure=None):
+
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
+        for group in self.param_groups:
+            if group["use_muon"]:
+                for p in group["params"]:
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["momentum_buffer"] = torch.zeros_like(p)
+                    update = muon_update(p.grad,
+                                         state["momentum_buffer"],
+                                         beta=group["momentum"],
+                                         ns_method=group.get("ns_method", "gram"),
+                                         is_expert_group=getattr(p, 'is_expert_group', False),
+                                         num_heads=getattr(p, 'muon_num_heads', None))
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update.reshape(p.shape), alpha=-group["lr"])
+            else:
+                for p in group["params"]:
+                    if p.grad is None:
+                        # continue
+                        p.grad = torch.zeros_like(p)  # Force synchronization
+                    state = self.state[p]
+                    if len(state) == 0:
+                        state["exp_avg"] = torch.zeros_like(p)
+                        state["exp_avg_sq"] = torch.zeros_like(p)
+                        state["step"] = 0
+                    state["step"] += 1
+                    update = adam_update(p.grad, state["exp_avg"], state["exp_avg_sq"], state["step"], group["betas"],
+                                         group["eps"])
+                    p.mul_(1 - group["lr"] * group["weight_decay"])
+                    p.add_(update, alpha=-group["lr"])
+
+        return loss

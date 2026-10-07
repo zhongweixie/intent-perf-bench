@@ -1,0 +1,1734 @@
+---
+title: "DeepSpeed Configuration JSON"
+toc: true
+toc_label: "Contents"
+---
+
+### Batch Size Related Parameters
+
+**Note:** <i>**train_batch_size**</i> must be equal to  <i>**train_micro_batch_size_per_gpu**</i> * <i>**gradient_accumulation_steps**</i> * number of GPUs. For simplicity, you can choose to only specify two of the three parameters, the last one will be inferred automatically by DeepSpeed.
+{: .notice--warning}
+
+<i>**train_batch_size**</i>: [integer]
+
+| Value                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Example |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The effective training batch size. This is the amount of data samples that leads to one step of model update. <i>**train_batch_size**</i> is aggregated by the batch size that a single GPU processes in one forward/backward pass (a.k.a., <i>**train_micro_batch_size_per_gpu**</i>),  the gradient accumulation steps (a.k.a., <i>**gradient_accumulation_steps**</i>), and the number of GPUs. Can be omitted if both <i>**train_micro_batch_size_per_gpu**</i> and <i>**gradient_accumulation_steps**</i> are provided. | `32`    |
+
+
+<i>**train_micro_batch_size_per_gpu**</i>: [integer]
+
+| Description                                                                                                                                                                                    | Default                           |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Batch size to be processed by one GPU in one step (without gradient accumulation). Can be omitted if both <i>**train_batch_size**</i> and <i>**gradient_accumulation_steps**</i> are provided. | <i>**train_batch_size**</i> value |
+
+<i>**gradient_accumulation_steps**</i>: [integer]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                                     | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Number of training steps to accumulate gradients before averaging and applying them. This feature is sometimes useful to improve scalability since it results in less frequent communication of gradients between steps. Another impact of this feature is the ability to train with larger batch sizes per GPU. Can be omitted if both <i>**train_batch_size**</i> and <i>**train_micro_batch_size_per_gpu**</i> are provided. | `1`     |
+
+
+<i>**managed_gradient_accumulation**</i>: [boolean]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Controls how gradient accumulation boundaries are managed. When `true`, DeepSpeed tracks micro-steps and applies the optimizer step only at the accumulation boundary, so `forward`/`backward`/`step` can be called symmetrically on every micro-batch. When `false`, micro-step tracking is disabled and the client is responsible for calling `step()` at the accumulation boundary; each `step()` finalizes the locally-accumulated gradients and applies an optimizer update. The `false` setting supports ZeRO stage 0/1/2/3 (and DDP), including ZeRO optimizer-state and parameter offload (CPU/NVMe). It is incompatible with pipeline parallelism and DeepCompile. ZeRO `overlap_comm` is supported only with ZeRO stage 2 (rejected for stage 0/1, where reduction is deferred to `step()`). | `true`  |
+
+
+
+### Optimizer Parameters
+
+<i>**optimizer**</i>: [dictionary]
+
+| Fields | Value                                                                                                                                                                                                                                                                                                        | Example                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------- |
+| type   | The optimizer name. DeepSpeed natively supports **Adam**, **AdamW**, **Lamb**, and **Muon** optimizers (See [here](https://deepspeed.readthedocs.io/en/latest/optimizers.html) for details) and will import other optimizers from [torch](https://pytorch.org/docs/stable/optim.html). | `"Adam"`                     |
+| params | Dictionary of parameters to instantiate optimizer. The parameter names must match the optimizer constructor signature (e.g., for [Adam](https://pytorch.org/docs/stable/optim.html#torch.optim.Adam)).                                                                                                       | `{"lr": 0.001, "eps": 1e-8}` |
+
+Muon optimizer is supported with ZeRO Stage 1, 2, and 3. To use Muon, set the optimizer name to `Muon`. The parameters applied for Muon are automatically determined by the matrix shape and name. For ZeRO Stage 3 with NVMe offloading, set `save_muon_momentum_buffer_in_memory` to `true` under `zero_optimization` to keep the Muon momentum buffer in GPU/CPU memory instead of swapping to NVMe.
+
+Keeping Muon momentum in memory does not keep gradients resident: swappable ZeRO-3 subgroups still load their gradients from NVMe before computing Muon updates.
+
+With ZeRO Stage 1/2 CPU optimizer offload, Muon gathers only locally owned gradient and momentum slices. Communication is chunked to a 64 MiB combined send/receive scratch budget per rank, independently of the 256 MiB buffer-cache limit. Full gradients and momentum are processed in batches targeting 64 MiB; a matrix exceeding that target is processed alone because Newton-Schulz requires the full matrix. These limits exclude Newton-Schulz workspaces and other training memory.
+
+Muon supports the following params:
+
+| "params" key   | Description                                                                                                          | Default   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------- | --------- |
+| lr             | Learning rate for all parameters. Overridden by `muon_lr` / `adam_lr` if set.                                        | 0.001     |
+| momentum       | Momentum coefficient for the Muon update.                                                                            | 0.95      |
+| weight\_decay  | Weight decay (AdamW-style).                                                                                          | 0.0       |
+| muon\_lr       | Learning rate override for Muon parameters. Defaults to `lr` if not set.                                             | -         |
+| adam\_lr       | Learning rate override for non-Muon (Adam) parameters. Defaults to `lr` if not set.                                  | -         |
+| torch\_adam    | Use torch Adam/AdamW for non-Muon parameters instead of the DeepSpeed Adam backend.                                  | false     |
+| adam\_w\_mode | Use AdamW rather than Adam for non-Muon parameters.                                                                  | true      |
+| ns\_method     | Newton-Schulz orthogonalization method: `"gram"` for Gram NS (~2x faster on rectangular matrices), `"standard"` for the original iteration. Use `"standard"` to fall back if you encounter convergence issues. | `"gram"`  |
+| per\_head\_muon | Orthogonalize each attention head separately instead of the whole projection. See below. | false |
+
+#### Per-head Muon
+
+With `per_head_muon: true`, an attention projection shaped `[num_heads * head_dim, in_features]`
+is viewed as `[num_heads, head_dim, in_features]` and Newton-Schulz runs on that batch, so each
+head is orthogonalized against itself rather than sharing one update direction with every other
+head. This is the split described by Kimi K3 ("Per-Head Muon") and GLM-5 ("Muon Split"). Off by
+default; communication volume is unchanged.
+
+What is tagged, and what deliberately is not:
+
+| matrix | per-head | why |
+| --- | --- | --- |
+| `q_proj` / `query` / `wq` | yes | blocked by the query head count |
+| `k_proj` / `v_proj` / `key` / `value` / `wk` / `wv` | yes | blocked by the KV head count, which differs from the query count under GQA |
+| MLA `q_b_proj`, `kv_b_proj` | yes | the two up-projections, whose per-head widths are `qk_nope + qk_rope` and `qk_nope + v_head_dim` rather than `head_dim` |
+| `o_proj` and other output projections | no | the head structure is on the input dimension, so splitting dim 0 would cut across the wrong axis |
+| fused `qkv_proj` / `query_key_value` / `c_attn` / `wqkv` | no | the three sections do not share a head count under GQA |
+| MLA `q_a_proj`, `kv_a_proj_with_mqa` | no | down-projections mixing latent and rope components, with no head structure |
+| linear-attention `q_proj` / `k_proj` / `v_proj` of a supported model (below) | yes | blocked by the head count the attention module was built with, which for hybrids such as Kimi-K3 is not `num_attention_heads * head_dim` |
+| linear attention of any other model | no | not supported yet; see below |
+| sparse-attention indexers (e.g. GLM-5.2's DSA indexer) | no | the indexer selects which keys attention will see; the split is defined on attention itself |
+
+**Where the geometry comes from.** For standard attention and MLA, from the config: head counts
+through `AutoTPMeta`, per-head widths from the fields the architecture defines. Linear attention
+often keeps its geometry outside those fields, so it is supported per module, listed in
+`_LINEAR_ATTENTION_OWNERS` in `deepspeed/__init__.py`. For a listed module, the head counts it was
+built with are used, and the config is not consulted, since a config geometry can match the same
+width by coincidence:
+
+| model | linear-attention module | geometry |
+| --- | --- | --- |
+| Kimi-K3 | `KimiDeltaAttention` | `linear_attn_config` `num_heads` x `head_dim` |
+
+Linear attention in any other model stays on the full-matrix path. To enable it, add the module's
+class name to `_LINEAR_ATTENTION_OWNERS` with the model it was checked on, after confirming the
+module exposes its head count and per-head width as attributes.
+
+**The shape confirms the name.** A leaf name is treated as a claim about the layout, never as
+proof of it. Every geometry the config makes plausible for that name is evaluated, and a
+parameter is tagged only when its rows equal `num_heads * width` exactly for one of them. Two
+geometries that confirm and agree on the head count are not a conflict; two that confirm and
+disagree are, and the parameter is skipped with a warning.
+
+**Tensor parallelism.** Column-parallel TP splits an attention projection on dim 0, which is
+the axis the heads are on, so a rank holds whole heads and the per-head width is unchanged. That
+makes the per-head split exact under TP: Newton-Schulz on a rank's heads is the same computation
+whether the other ranks' heads are present or not. The head *count* is not invariant, so with
+AutoTP the counts are re-resolved against the shards after partitioning; a shard whose rows are
+not a multiple of the per-head width does not hold whole heads and stays on the full-matrix path.
+A model that arrives already sharded by an external tensor-parallel implementation cannot be
+tagged at all, because the config then describes a width no parameter has.
+
+**The flag reports what it did.** Because it is an explicit opt-in, DeepSpeed raises at
+`deepspeed.initialize` if it is enabled and no attention projection could be tagged, rather than
+training on without it. Parameters that match an attention name but confirm no geometry are
+reported as a warning and stay on the full-matrix path, so a hybrid model still gets per-head on
+its recognized layers.
+
+By default, non-Muon parameters use `FusedAdam`. When optimizer state is offloaded to the CPU, DeepSpeed selects `DeepSpeedCPUAdam`. This is the same backend selection used by the Adam and AdamW optimizer types.
+
+  Example of <i>**optimizer**</i> with Adam
+
+```json
+"optimizer": {
+    "type": "Adam",
+    "params": {
+      "lr": 0.001,
+      "betas": [
+        0.8,
+        0.999
+      ],
+      "eps": 1e-8,
+      "weight_decay": 3e-7
+    }
+  }
+```
+The Adam optimizer also supports the following two params keys/values in addition to the standard parameters from [torch.optim.Adam](https://pytorch.org/docs/stable/_modules/torch/optim/adam.html#Adam):
+
+| "params" key  | Description                                                                 | Default |
+| ------------- | --------------------------------------------------------------------------- | ------- |
+| torch\_adam   | Use torch's implementation of adam instead of our fused adam implementation | false   |
+| adam\_w\_mode | Apply L2 regularization (also known as AdamW)                               | true    |
+
+Example of <i>**optimizer**</i> with Muon
+If not set, muon_lr will default to lr.
+```json
+"optimizer": {
+    "type": "Muon",
+    "params": {
+      "lr": 0.001,
+      "momentum": 0.9,
+      "weight_decay": 0.0,
+      "muon_lr": 0.001,
+      "ns_method": "gram"
+    }
+  },
+  "zero_optimization": {
+    "stage": 3,
+    "save_muon_momentum_buffer_in_memory": true
+  }
+```
+
+### Scheduler Parameters
+
+
+DeepSpeed calls the `step()` method of the scheduler at every training step when `model_engine.step()` is executed.
+
+***scheduler***: [dictionary]
+
+| Fields | Value                                                                                                                      | Example                                        |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| type   | The scheduler name. See [here](https://deepspeed.readthedocs.io/en/latest/schedulers.html) for list of support schedulers. | `"WarmupLR"`                                   |
+| params | Dictionary of parameters to instantiate scheduler. The parameter names should match scheduler constructor signature.       | `{"warmup_min_lr": 0, "warmup_max_lr": 0.001}` |
+
+Example of <i>**scheduler**</i>
+
+```json
+ "scheduler": {
+      "type": "WarmupLR",
+      "params": {
+          "warmup_min_lr": 0,
+          "warmup_max_lr": 0.001,
+          "warmup_num_steps": 1000
+      }
+  }
+```
+
+### Communication options
+
+<i>**communication_data_type**</i>: [string]
+
+| Description                                                                                                                   | Default |
+| ----------------------------------------------------------------------------------------------------------------------------- | ------- |
+| During gradient averaging perform communication with selected data type. By default it will be determined by selected regime  |  None   |
+
+<i>**gradient_allreduce_op**</i>: [string]
+
+| Description                                                                                                                                                                                            | Default  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| Select `"mean"` to average gradients across data-parallel workers or `"sum"` to keep the unscaled sum. `"sum"` supports ZeRO stages 0, 1, and 2 when neither ZenFlow nor DeepCompile is enabled; ZeRO stage 3, ZenFlow, and DeepCompile reject this setting. | `"mean"` |
+
+<i>**prescale_gradients**</i>: [boolean]
+
+| Description                            | Default |
+| -------------------------------------- | ------- |
+| Scale gradients before doing mean allreduce | `false` |
+
+<i>**gradient_predivide_factor**</i>: [float]
+
+| Description                                                                                                                                       | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Before mean gradient allreduce, predivide gradients by a specified factor; this can sometimes help with fp16 stability when scaling to large numbers of GPUs | `1.0`   |
+
+### FP16 training options
+
+<i>**fp16**</i>: [dictionary]
+
+| Description                                                                                                                                        | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Configuration for using DeepSpeed mixed precision/FP16 training. An example, including the available dictionary keys, is illustrated below. | None    |
+
+```json
+"fp16": {
+    "enabled": true,
+    "auto_cast": false,
+    "loss_scale": 0,
+    "initial_scale_power": 16,
+    "loss_scale_window": 1000,
+    "hysteresis": 2,
+    "consecutive_hysteresis": false,
+    "min_loss_scale": 1,
+    "fp16_master_weights_and_grads": false
+}
+```
+
+<i>**fp16:enabled**</i>: [boolean]
+
+| Description                                                                                 | Default |
+| ------------------------------------------------------------------------------------------- | ------- |
+| <i>**enabled**</i> is a **fp16** parameter indicating whether or not FP16 training enabled. | `false` |
+
+<i>**fp16:auto_cast**</i>: [boolean]
+
+| Description                                                  | Default |
+| -------------------------------------------------------------| ------- |
+| <i>**auto_cast**</i> automatically casts inputs to **fp16**  | `false` |
+
+<i>**fp16:loss_scale**</i>: [float]
+
+| Description                                                                                                                                                                                                                           | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| <i>**loss_scale**</i> is a <i>**fp16**</i> parameter representing the loss scaling value for FP16 training. The default value of 0.0 results in dynamic loss scaling, otherwise the value will be used for static fixed loss scaling. | `0.0`   |
+
+<i>**fp16:initial_scale_power**</i>: [integer]
+
+| Description                                                                                                                                                                                             | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| <i>**initial_scale_power**</i> is a **fp16** parameter representing the power of the initial dynamic loss scale value. The actual loss scale is computed as 2<sup><i>**initial_scale_power**</i></sup>. | `16`    |
+
+<i>**fp16:loss_scale_window**</i>: [integer]
+
+| Description                                                                                                                          | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| <i>**loss_scale_window**</i> is a **fp16** parameter representing the window over which to raise/lower the dynamic loss scale value. | `1000`  |
+
+<i>**fp16:hysteresis**</i>: [integer]
+
+| Description                                                                                         | Default |
+| --------------------------------------------------------------------------------------------------- | ------- |
+| <i>**hysteresis**</i> is a **fp16** parameter representing the delay shift in dynamic loss scaling. | `2`     |
+
+<i>**fp16:consecutive_hysteresis**</i>: [boolean]
+
+| Description                                                                                         | Default |
+| --------------------------------------------------------------------------------------------------- | ------- |
+| <i>**consecutive_hysteresis**</i> is a **fp16** parameter representing whether to refill the hysteresis if we reach an iteration that doesn't overflow | `false`     |
+
+<i>**fp16:min_loss_scale**</i>: [integer]
+
+| Description                                                                                           | Default |
+| ----------------------------------------------------------------------------------------------------- | ------- |
+| <i>**min_loss_scale**</i> is  a **fp16** parameter representing the minimum dynamic loss scale value. | `1`     |
+
+<i>**fp16:fp16_master_weights_and_grads**</i>: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| Keep master parameters/gradients in fp16 instead of fp32 for ZeRO optimizer state. Requires ZeRO Stage 2 or 3 with ZeRO-Offload and `DeepSpeedCPUAdam` so optimizer states can remain in fp32. | `false` |
+
+**Support matrix (fp16 master weights/gradients)**
+
+| ZeRO stage | Offload required? | Notes |
+| ---------- | ----------------- | ----- |
+| 0 | Not supported | |
+| 1/2/3 | Yes (`offload_optimizer` with `DeepSpeedCPUAdam`) | Optimizer states stay fp32 on CPU. |
+
+
+### BFLOAT16 training options
+
+**Note:** this mode cannot be combined with the `fp16` mode described above.
+{: .notice--warning}
+
+<i>**bf16**</i>: [dictionary]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Configuration for using [bfloat16](https://en.wikipedia.org/wiki/Bfloat16_floating-point_format) floating-point format as an alternative to FP16. BFLOAT16 requires hardware support (e.g., NVIDIA A100). An example, including the available dictionary keys is illustrated below. Training with bfloat16 does not require loss scaling. | None    |
+
+```json
+"bf16": {
+   "enabled": true,
+   "bf16_master_weights_and_grads": true,
+   "bf16_optimizer_states": true
+ }
+```
+
+<i>**bf16:enabled**</i>: [boolean]
+
+| Description                                                        | Default |
+|--------------------------------------------------------------------| ------- |
+| <i>**enabled**</i> indicates whether BFLOAT16 training is enabled. | `false` |
+
+<i>**bf16:bf16_master_weights_and_grads**</i>: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| Keep ZeRO master parameters/gradients in bf16 instead of fp32. Supported with ZeRO Stages 1, 2, or 3. If you leave optimizer states in fp32, ZeRO-Offload with `DeepSpeedCPUAdam` is required. | `false` |
+
+<i>**bf16:bf16_optimizer_states**</i>: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| Keep optimizer states in bf16 as well. Requires `bf16_master_weights_and_grads=true`. Offload is optional: without `offload_optimizer` the bf16 states stay on the GPU; with `offload_optimizer` (`DeepSpeedCPUAdam`) they are offloaded to CPU memory in bf16. The offloaded state (bf16 master weights plus the two bf16 Adam moments) is then ~6 bytes/param, versus ~10 bytes/param when the moments are kept in fp32. | `false` |
+
+**Support matrix (bf16 master weights/gradients)**
+
+| ZeRO stage | bf16_optimizer_states=False | bf16_optimizer_states=True |
+| ---------- | --------------------------- | -------------------------- |
+| 0 | Not supported | Not supported |
+| 1/2/3 | Requires ZeRO-Offload + `DeepSpeedCPUAdam` (optimizer states stay fp32 on CPU) | On GPU without offload, or on CPU with `offload_optimizer` + `DeepSpeedCPUAdam`; optimizer states kept in bf16 either way |
+
+### PyTorch Automatic Mixed Precision (torch.autocast) training options
+
+<i>**torch_autocast**</i>: [dictionary]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                     | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Configuration for using PyTorch's native automatic mixed precision training via [torch.autocast](https://pytorch.org/docs/stable/amp.html). For detailed usage instructions, see the [Mixed Precision Training](https://deepspeed.readthedocs.io/en/latest/training.html#mixed-precision-training) documentation. | None    |
+
+```json
+"torch_autocast": {
+    "enabled": true,
+    "dtype": "bfloat16",
+    "lower_precision_safe_modules": ["torch.nn.Linear", "torch.nn.Conv2d"]
+}
+```
+
+| Parameter | Type | Default | Description |
+| --------- | ---- | ------- | ----------- |
+| **enabled** | boolean | `false` | Enable torch.autocast (no manual `torch.autocast` call needed in your code). |
+| **dtype** | string | `"bfloat16"` | Lower precision dtype (`"bfloat16"` or `"float16"`). Also used for gradient/parameter communication of `lower_precision_safe_modules`. |
+| **lower_precision_safe_modules** | list | `["torch.nn.Linear", "torch.nn.Conv1d", "torch.nn.Conv2d", "torch.nn.Conv3d"]` | Module types for lower-precision communication (all-reduce/all-gather). |
+
+
+### Gradient Clipping
+
+<i>**gradient_clipping**</i>: [float]
+
+| Description                         | Default |
+| ----------------------------------- | ------- |
+| Enable gradient clipping with value | `1.0`   |
+
+
+
+### ZeRO Optimizations for FP16 Training
+
+Enabling and configuring ZeRO memory optimizations
+```json
+  "zero_optimization": {
+    "stage": [0|1|2|3],
+    "allgather_partitions": [true|false],
+    "allgather_bucket_size": 5e8,
+    "compute_grad_norm": [true|false],
+    "overlap_comm": false,
+    "reduce_scatter": [true|false],
+    "reduce_bucket_size": 5e8,
+    "contiguous_gradients" : [true|false],
+    "offload_param": {
+      ...
+    },
+    "offload_optimizer": {
+      ...
+    },
+    "stage3_max_live_parameters" : 1e9,
+    "stage3_max_reuse_distance" : 1e9,
+    "stage3_prefetch_bucket_size" : 5e8,
+    "stage3_param_persistence_threshold" : 1e6,
+    "sub_group_size" : 1e9,
+    "elastic_checkpoint" : [true|false] (deprecated; use Universal Checkpointing for ZeRO-3),
+    "stage3_gather_16bit_weights_on_model_save": [true|false],
+    "ignore_unused_parameters": [true|false],
+    "round_robin_gradients": [true|false],
+    "parameter_alignment": [true|false],
+    "zero_hpz_partition_size": 1,
+    "zero_quantized_weights": [true|false],
+    "zero_quantized_gradients": [true|false],
+    "log_trace_cache_warnings": [true|false],
+    }
+```
+
+<i>**zero_optimization**</i>: [dictionary]
+
+| Description                                                                                               | Default |
+| --------------------------------------------------------------------------------------------------------- | ------- |
+| Enable ZeRO memory optimizations, compatible with FP16/BF16/FP32 and the Adam optimizer. | `false` |
+
+<i>**stage**</i>: [integer]
+
+| Description                                                                                                                                                                                                               | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Chooses different stages of ZeRO Optimizer. Stage 0, 1, 2, and 3 refer to disabled, optimizer state partitioning, and optimizer+gradient state partitioning, and optimizer+gradient+parameter partitioning, respectively. | `0`     |
+
+<i>**allgather_partitions**</i>: [boolean]
+
+| Description                                                                                                                                      | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| Chooses between allgather collective or a series of broadcast collectives to gather updated parameters from all the GPUs at the end of each step | `true`  |
+
+***allgather_bucket_size***: [integer]
+
+| Description                                                                                                  | Default |
+| ------------------------------------------------------------------------------------------------------------ | ------- |
+| Number of elements allgathered at a time. Limits the memory required for the allgather for large model sizes | `5e8`   |
+
+***compute_grad_norm***: [boolean]
+
+| Description                                                                                                                                                                                                                     | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Compute and retain the global gradient norm during ZeRO Stage 1/2 optimizer steps. Set to `false` only with a GPU optimizer, without ZenFlow, gradient clipping, or ZeRO Stage 1 BF16 parameters with FP32 gradient accumulation, and when callers do not use `get_global_grad_norm()`; finite/overflow checking is unchanged. | `true`  |
+
+<i>**overlap_comm**</i>: [boolean]
+
+| Description                                                                  | Default |
+| ---------------------------------------------------------------------------- | ------- |
+| Attempts to overlap the reduction of the gradients with backward computation | `false` |
+
+<i>**reduce_scatter**</i>: [boolean]
+
+| Description                                                             | Default |
+| ----------------------------------------------------------------------- | ------- |
+| Uses reduce or reduce scatter instead of allreduce to average gradients | `true`  |
+
+***reduce_bucket_size***: [integer]
+
+| Description                                                                                                         | Default |
+| ------------------------------------------------------------------------------------------------------------------- | ------- |
+| Number of elements reduced/allreduced at a time. Limits the memory required for the allgather for large model sizes | `5e8`   |
+
+<i>**contiguous_gradients**</i>: [boolean]
+
+| Description                                                                                                         | Default |
+| ------------------------------------------------------------------------------------------------------------------- | ------- |
+| Copies the gradients to a contiguous buffer as they are produced. Avoids memory fragmentation during backward pass. | `True`  |
+
+<i>**load_from_fp32_weights**</i>: [boolean]
+
+| Description                                                                                                                                                                                                                          | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| Initialize fp32 master weights from fp32 copies in checkpoint (no precision loss) or from model's fp16 copies (with precision loss). This can be used to initialize optimizer state even when checkpoint is missing optimizer state. | `True`  |
+
+***round_robin_gradients***: [boolean]
+
+| Description                                                                                                                                                                                                                                                                         | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Stage 1 and 2 optimization for CPU offloading that parallelizes gradient copying to CPU memory among ranks by fine-grained gradient partitioning. Performance benefit grows with gradient accumulation steps (more copying between optimizer steps) or GPU count (increased parallelism). | `False` |
+
+***parameter_alignment***: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| Pad ZeRO Stage 1 and 2 flat buffers between parameters so every parameter starts at a 16-byte-aligned address. Enable this for operations such as grouped matrix multiplication that require aligned parameters. Padding increases flat-buffer and optimizer-state memory usage. Optimizer checkpoints must be resumed with a compatible effective padding layout; module-only warm starts may use either setting. | `False` |
+
+***offload_param***: [dictionary]
+
+| Description                                                                                                                                                                                   | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Enable offloading of model parameters to CPU or NVMe. This frees up GPU memory for larger models or batch sizes. Valid only with stage 3. See [here](#parameter-offloading) for more details. | `False` |
+
+***offload_optimizer***: [dictionary]
+
+| Description                                                                                                                                                                                                                          | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| Enable offloading of optimizer state to CPU or NVMe, and optimizer computation to CPU. This frees up GPU memory for larger models or batch sizes. Valid for ZeRO stage 1, 2, 3. See [here](#optimizer-offloading) for more details. | `False` |
+
+***stage3_max_live_parameters***: [integer]
+
+| Description                                                                                                                         | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The maximum number of parameters resident per GPU before releasing. Smaller values use less memory, but perform more communication. | `1e9`   |
+
+***stage3_max_reuse_distance***: [integer]
+
+| Description                                                                                                                                          | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Do not release a parameter if it will be reused within this threshold of parameters. Smaller values use less memory, but perform more communication. | `1e9`   |
+
+***stage3_prefetch_bucket_size***: [integer]
+
+| Description                                                                                                                            | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The size of the fixed buffer for prefetching parameters. Smaller values use less memory, but can increase stalls due to communication. | `5e8`   |
+
+
+***stage3_param_persistence_threshold***: [integer]
+
+| Description                                                                                                                                                          | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Do not partition parameters smaller than this threshold. Smaller values use less memory, but can greatly increase communication (especially latency-bound messages). | `1e5`   |
+
+
+***sub_group_size***: [integer]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Tile size for parameter processing to fit massive models (with trillions of parameters). Parameters are grouped into buckets of `sub_group_size` and each bucket is updated one at a time. When used with NVMe offload in ZeRO-Infinity, `sub_group_size` therefore controls the granularity in which model states are moved in and out of CPU memory from NVMe during the optimizer step. This prevents running out of CPU memory for extremely large models. | `1e9`   |
+
+Most users can leave `sub_group_size` at its default value when not using NVMe offload. Consider changing it in the following cases:
+
+1. Running into OOM during the optimizer step: reduce `sub_group_size` to lower the memory utilization of temporary buffers.
+2. The optimizer step is taking a long time: increase `sub_group_size` to improve bandwidth utilization as a result of the increased data size.
+
+
+***stage3_gather_16bit_weights_on_model_save***: [boolean]
+
+| Description                                                                                                                                                                                                                                                                    | Default |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------- |
+| Consolidate the weights before saving the model by `save_16bit_model()`. Since the weights are partitioned across GPUs, they aren't part of `state_dict`, so this function automatically gathers the weights when this option is enabled and then saves the fp16 model weights. | `False` |
+
+***stage3_module_granularity_threshold***: [integer]
+
+| Description                                                                                                                                                                                                                                                                    | Default |
+|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ------- |
+| The granularity of a module is determined by the ratio of `parameter_count` / `(1 + descendant_count)`. ZeRO3 classifies modules with a granularity below the threshold as fine-grained, treating them as integral units during parameter fetching. This reduces host and communication overhead from separate hooks. | `0` |
+
+***zero_hpz_partition_size***: [integer]
+
+| Description                                                                                                                         | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Number of ranks in hiearchical partitioning ZeRO (hpZ) secondary tensor group of ZeRO++, default is 1 meaning no hpZ, ideal is number of ranks (gpus) per node. | `1`   |
+
+***zero_quantized_weights***: [boolean]
+
+| Description                                                                                                                         | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+|Boolean indicating whether to enable communication efficient quantized weights of ZeRO++. | `False`   |
+
+***zero_quantized_gradients***: [boolean]
+
+| Description                                                                                                                         | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------- | ------- |
+|Boolean indicating whether to enable communication efficient quantized gradients of ZeRO++. | `False`   |
+
+<i>**log_trace_cache_warnings**</i>: [boolean]
+
+| Description                                                                                                         | Default |
+| ------------------------------------------------------------------------------------------------------------------- | ------- |
+| Log warnings from trace cache optimization of parameter sharding, such as cache invalidation events. | `False`  |
+
+***cpu_offload***: [boolean]
+
+**Deprecated:** **cpu_offload** is deprecated and will be removed in future, please use `offload_optimizer` instead.
+{: .notice--warning}
+
+| Description                                                                                                                                       | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Enable offloading of optimizer memory and computation to CPU. This frees up GPU memory for larger models or batch sizes. Valid with stage 1 and 2. | `False` |
+
+
+### Parameter offloading
+Enabling and configuring ZeRO optimization of parameter offloading to CPU/NVMe. Available only with ZeRO stage 3.
+Note that if the value of "device" is not specified or not supported, an assertion will be triggered.
+
+```json
+  "offload_param": {
+    "device": "[cpu|nvme]",
+    "nvme_path": "/local_nvme",
+    "pin_memory": [true|false],
+    "buffer_count": 5,
+    "buffer_size": 1e8,
+    "max_in_cpu": 1e9
+  }
+```
+***device***: [string]
+
+| Description                                                                        | Default |
+| ---------------------------------------------------------------------------------- | ------- |
+| Device memory to offload model parameters. Supported options are `cpu` and `nvme`. | `cpu`   |
+
+***nvme_path***: [string]
+
+| Description                                               | Default       |
+| --------------------------------------------------------- | ------------- |
+| Filesystem path for NVMe device for parameter offloading. | `/local_nvme` |
+
+***pin_memory***: [boolean]
+
+| Description                                                                                          | Default |
+| ---------------------------------------------------------------------------------------------------- | ------- |
+| Offload to page-locked (pinned) CPU memory. Pinning enables asynchronous, full-bandwidth CPU<->GPU DMA so parameter fetches during forward/backward overlap with compute. Pinned memory is non-swappable and counts against the host memlock limit (`ulimit -l`); on hosts with tight memlock limits this may fail at init or cause out-of-memory errors elsewhere — set to `false` in that case. | `true` |
+
+***buffer_count***: [integer]
+
+| Description                                                        | Default |
+| ------------------------------------------------------------------ | ------- |
+| Number of buffers in buffer pool for parameter offloading to NVMe. | 5       |
+
+
+***buffer_size***: [integer]
+
+| Description                                                      | Default |
+| ---------------------------------------------------------------- | ------- |
+| Size of buffers in buffer pool for parameter offloading to NVMe. | 1e8     |
+
+***max_in_cpu***: [integer]
+
+| Description                                                                                | Default |
+| ------------------------------------------------------------------------------------------ | ------- |
+| Number of parameter elements to maintain in CPU memory when offloading to NVMe is enabled. | 1e9     |
+
+### Optimizer offloading
+Enabling and configuring ZeRO optimization of offloading optimizer computation to CPU and state to CPU/NVMe. CPU offloading is available with ZeRO stage 1, 2, 3. NVMe offloading is available only with ZeRO stage 3.
+Note that if the value of "device" is not specified or not supported, an assertion will be triggered.
+```json
+  "offload_optimizer": {
+    "device": "[cpu|nvme]",
+    "nvme_path": "/local_nvme",
+    "pin_memory": [true|false],
+    "ratio": 0.3,
+    "buffer_count": 4,
+    "fast_init": false
+  }
+```
+***device***: [string]
+
+| Description                                                                                                                                            | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| Device memory to offload optimizer state. Supported options are `cpu` and `nvme`. Optimizer computation is offload to CPU regardless of device option. | `cpu`   |
+
+***nvme_path***: [string]
+
+| Description                                                     | Default       |
+| --------------------------------------------------------------- | ------------- |
+| Filesystem path for NVMe device for optimizer state offloading. | `/local_nvme` |
+
+***pin_memory***: [boolean]
+
+| Description                                                                                          | Default |
+| ---------------------------------------------------------------------------------------------------- | ------- |
+| Offload to page-locked (pinned) CPU memory. Pinning is required for the asynchronous GPU->CPU gradient offload to run as a full-bandwidth DMA that overlaps with backward compute (needs `overlap_comm: true`). Pinned memory is non-swappable and counts against the host memlock limit (`ulimit -l`); on hosts with tight memlock limits this may fail at init or cause out-of-memory errors elsewhere — set to `false` in that case. | `true` |
+
+**Note:** `pin_memory` now defaults to `true` for both `offload_param` and `offload_optimizer` (previously `false`). If you see out-of-memory errors after upgrading — especially on hosts with a low memlock limit (`ulimit -l`) — explicitly set `"pin_memory": false`.
+{: .notice--warning}
+
+***ratio***: [float]
+
+| Description                                                         | Default |
+| ------------------------------------------------------------------- | ------- |
+| the ratio of parameters updating (i.e. optimizer step) on CPU side. | 1       |
+
+***buffer_count***: [integer]
+
+| Description                                                                                                                                                                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Number of buffers in buffer pool for optimizer state offloading to NVMe. This should be at least the number of states maintained per parameter by the optimizer. For example, Adam optimizer has 4 states (parameter, gradient, momentum, and variance). | 4       |
+
+***fast_init***: [boolean]
+
+| Description                                                   | Default |
+| ------------------------------------------------------------- | ------- |
+| Enable fast optimizer initialization when offloading to NVMe. | `false` |
+
+
+### Asynchronous I/O
+Configuring the asynchronous I/O module for offloading parameter and optimizer states to persistent (NVMe) storage. This module uses Linux native asynchronous I/O (libaio).
+```json
+  "aio": {
+    "block_size": 1048576,
+    "queue_depth": 8,
+    "thread_count": 1,
+    "single_submit": false,
+    "overlap_events": true
+  }
+```
+***block_size***: [integer]
+
+| Description              | Default |
+| ------------------------ | ------- |
+| I/O block size in bytes. | 1048576 |
+
+***queue_depth***: [integer]
+
+| Description      | Default |
+| ---------------- | ------- |
+| I/O queue depth. | 8       |
+
+***thread_count***: [integer]
+
+| Description                                                               | Default |
+| ------------------------------------------------------------------------- | ------- |
+| Intra-request parallelism for each read/write submitted by a user thread. | 1       |
+
+***single_submit***: [boolean]
+
+| Description                                                                                            | Default |
+| ------------------------------------------------------------------------------------------------------ | ------- |
+| Submit requests to storage device as multiple individual requests as opposed to one block of requests. | `false` |
+
+***overlap_events***: [boolean]
+
+| Description                                                                                                    | Default |
+| -------------------------------------------------------------------------------------------------------------- | ------- |
+| Submit requests to storage device in an overlapped fashion without waiting for completion of earlier requests. | `true`  |
+
+### Tensor Parallel (AutoTP)
+Configure AutoTP tensor parallelism for training via the DeepSpeed config and hybrid TP + ZeRO. AutoTP supports ZeRO stages 0, 1, 2, and 3, including checkpoint save/load and universal checkpoint conversion. `deepspeed.tp_model_init()` remains supported for backward compatibility but is not required when `tensor_parallel` is set in the config.
+
+When a HuggingFace model provides a built-in `tp_plan` (via `model.config.base_model_tp_plan`), DeepSpeed automatically detects and uses it. In this case, neither `preset_model` nor `partition_config` is required -- just set `autotp_size`. If `partition_config` is also provided, it takes precedence over the model's `tp_plan`.
+```json
+  "tensor_parallel": {
+    "autotp_size": 4,
+    "preset_model": "llama",
+    "tp_overlap_comm": false,
+    "vocab_parallel_lm_head": false,
+    "partition_config": {
+      "use_default_specs": false,
+      "layer_specs": [
+        {
+          "patterns": [".*\\.o_proj\\.weight$", ".*\\.down_proj\\.weight$"],
+          "partition_type": "row"
+        }
+      ]
+    }
+  }
+```
+<i>**tensor_parallel**</i>: [dictionary]
+
+| Description                                                                                | Default |
+| ------------------------------------------------------------------------------------------ | ------- |
+| Enable AutoTP tensor parallelism and configure preset or custom partitioning rules.        | `{}`    |
+
+***autotp_size***: [integer]
+
+| Description                                                                 | Default |
+| --------------------------------------------------------------------------- | ------- |
+| Tensor-parallel degree. Set to `0` to disable AutoTP.                        | `0`     |
+
+***preset_model***: [string]
+
+| Description                                                                                           | Default |
+| ----------------------------------------------------------------------------------------------------- | ------- |
+| Built-in model presets: `llama`, `bloom`, `chatglm`, `mixtral`, `deepseek_v2`, `qwen2`, `phi3`.        | `null`  |
+
+***tp_overlap_comm***: [boolean]
+
+| Description                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------- | ------- |
+| Overlap tensor-parallel allreduce communication with computation (training only).                       | `false` |
+
+***vocab_parallel_lm_head***: [boolean]
+
+| Description                                                                                                                                                  | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------- |
+| Keep an untied `lm_head`/`embed_out` output vocabulary sharded and install DeepSpeed's pure-PyTorch vocab-parallel causal-LM loss instead of gathering logits. | `false` |
+
+***partition_config***: [dictionary]
+
+| Description                                                                                                                     | Default |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Custom AutoTP layer partitioning rules. Use with or without `preset_model` to customize sharding patterns.                    | `null`  |
+
+***use_default_specs***: [boolean]
+
+| Description                                                                                                          | Default |
+| -------------------------------------------------------------------------------------------------------------------- | ------- |
+| Merge custom `layer_specs` with preset defaults when `preset_model` is set; otherwise use only custom specs.        | `true`  |
+
+***layer_specs***: [list]
+
+| Description                                                                                                      | Default |
+| ---------------------------------------------------------------------------------------------------------------- | ------- |
+| Ordered list of pattern rules that define how to partition matching parameters.                                 | `[]`    |
+
+***patterns***: [list of strings]
+
+| Description                                                                                                      | Default |
+| ---------------------------------------------------------------------------------------------------------------- | ------- |
+| Regex patterns to match parameter names for this partition rule.                                                 | `[]`    |
+
+***partition_type***: [string]
+
+| Description                                                                  | Default |
+| ---------------------------------------------------------------------------- | ------- |
+| Partition type for matching parameters: `row`, `column`, or `skip`.           | `column` |
+
+***shape***: [list]
+
+| Description                                                                                                      | Default |
+| ---------------------------------------------------------------------------------------------------------------- | ------- |
+| Optional sub-parameter shape for fused weights before TP partitioning (e.g., `[2, -1]`).                          | `null`  |
+
+***partition_dim***: [integer]
+
+| Description                                                                                                      | Default |
+| ---------------------------------------------------------------------------------------------------------------- | ------- |
+| Dimension to split when `shape` is provided (e.g., `0` for fused QKV or gate/up).                                | `null`  |
+
+***model_types***: [list of strings]
+
+| Description                                                                                                      | Default |
+| ---------------------------------------------------------------------------------------------------------------- | ------- |
+| Optional model type filters (from `model.config.model_type`) for shared configs.                                | `null`  |
+
+***ignore_unused_parameters***: [boolean]
+
+| Description                                                                                                                                                                                                                                                                                                                                                     | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Unused parameters in modules may be unexpected in static networks, but could be normal in dynamic networks. This controls whether or not training should terminate with an error message when unused parameters are detected. This is set to `True` by default, which means unused parameters are ignored and training continues. Now is just used in stage 2. | `True`  |
+
+### Hybrid Engine
+
+The Hybrid Engine (`DeepSpeedHybridEngine`) switches a model between training mode and DeepSpeed's inference kernels within a single training loop, which is what RLHF pipelines such as DeepSpeed-Chat use for the actor model.
+
+```json
+  "hybrid_engine": {
+    "enabled": true,
+    "max_out_tokens": 512,
+    "inference_tp_size": 1,
+    "release_inference_cache": false,
+    "pin_parameters": true,
+    "tp_gather_partition_size": 8,
+    "enable_cuda_graph": false
+  }
+```
+
+***enable_cuda_graph***: [boolean]
+
+| Description                                                                                                                                                                                                                                                                                                                                        | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Capture token generation into CUDA graphs. Generation issues on the order of a thousand kernel launches per token and is bound by CPU launch overhead rather than by the GPU, so replaying a captured graph removes most of the per-token cost. One graph is captured per decode position, and generated tokens are unchanged. | `false` |
+
+`enable_cuda_graph` requires a pinned generation length (`min_new_tokens` equal to `max_new_tokens`) and `max_out_tokens` large enough to cover the longest generation. It is ignored, with a warning, when any of the following apply, since captured graphs would not stay valid:
+
+* ZeRO stage 3, where parameters are gathered into fresh buffers for each generation
+* `release_inference_cache: true`, which frees the buffers the graphs write into
+* `inference_tp_size` greater than 1
+
+The first generation after enabling captures one graph per decode position and is therefore slower; subsequent generations replay them.
+
+### Expert Parallel (AutoEP)
+Configure AutoEP expert parallelism for MoE models. AutoEP automatically detects MoE layers in HuggingFace models and replaces them with EP-enabled versions using TorchTitan's grouped GEMM kernels. Requires zero model code changes. Supports ZeRO stages 0, 1, 2, and constrained ZeRO Stage 3.
+```json
+  "expert_parallel": {
+    "enabled": true,
+    "autoep_size": 4,
+    "preset_model": "mixtral"
+  }
+```
+<i>**expert_parallel**</i>: [dictionary]
+
+| Description                                                                                | Default |
+| ------------------------------------------------------------------------------------------ | ------- |
+| Enable AutoEP expert parallelism and configure MoE layer detection and replacement.        | `{}`    |
+
+***enabled***: [boolean]
+
+| Description                                                                 | Default |
+| --------------------------------------------------------------------------- | ------- |
+| Enable AutoEP. When `false`, all other expert_parallel settings are ignored. | `false` |
+
+***autoep_size***: [integer]
+
+| Description                                                                                        | Default |
+| -------------------------------------------------------------------------------------------------- | ------- |
+| Expert-parallel degree (number of ranks sharing expert computation). Must divide `world_size / pp_size`. `1` = all experts local (no AllToAll), useful for testing. | `1`     |
+
+***expert_tensor_parallel_size***: [integer]
+
+| Description                                                                                        | Default |
+| -------------------------------------------------------------------------------------------------- | ------- |
+| Reserved for expert tensor parallelism. AutoEP currently accepts only `1`; non-1 values are rejected. | `1`     |
+
+***async_split_plan***: [boolean]
+
+| Description                                                                                                                                                | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Overlap the pinned-memory split metadata transfer (device to host) with token sorting and packing. Expert-count AllToAll and split-size computation stay on the caller stream before packing; only the metadata copy uses a separate stream. The host waits for the metadata only immediately before payload dispatch. Requires CUDA, currently requires `tensor_parallel.autotp_size=1`, and has no effect when `autoep_size=1` or `comm_backend="deepep"`. | `false` |
+
+This option reduces the host synchronization exposed by reading split sizes; it does not hide the expert-count AllToAll. Benchmark it with your target model, token count, EP size, and hardware before enabling it. For small workloads, stream/event overhead can outweigh the overlap benefit.
+
+***preset_model***: [string]
+
+| Description                                                                                                                            | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Built-in model preset for MoE detection: `mixtral`, `qwen3_moe`, `qwen3_5_moe`, `deepseek_v2`, `deepseek_v3`. Determines router, expert, and weight naming patterns. | `null`  |
+
+Built-in AutoEP presets describe DeepSpeed's router/expert/weight-pattern support for a model family.
+Running a HuggingFace model also requires the installed Transformers package to expose the corresponding
+config/model classes, `model.config.model_type` value, and fused expert layout. The tiny HuggingFace
+smoke coverage used for this AutoEP surface produced the following version gates:
+
+| Preset | Minimum Transformers version | Notes |
+| ------ | ---------------------------- | ----- |
+| `mixtral` | `5.0.0` |  |
+| `qwen3_moe` | `5.0.0` | Also covers Qwen2-MoE when the installed Transformers build uses the validated fused expert layout. Qwen3-MoE classes appear in `4.51.3`, but the tested `4.x` builds do not match the validated AutoEP layout. |
+| `qwen3_5_moe` | `5.2.0` | Requires the Qwen3.5 text-backbone `qwen3_5_moe_text` model type. For performance on Qwen3.5's Gated DeltaNet layers, install optimized kernels; see the [Hugging Face Transformers kernel loading docs](https://huggingface.co/docs/transformers/kernel_doc/loading_kernels) and the [Qwen FlashQLA blog](https://qwen.ai/blog?id=flashqla). |
+| `deepseek_v2` | `5.0.0` | `load_balance_coeff` / expert-bias auxiliary-loss-free load balancing is not currently supported; non-null values are rejected. |
+| `deepseek_v3` | `5.0.0` | `load_balance_coeff` / expert-bias auxiliary-loss-free load balancing is not currently supported; non-null values are rejected. |
+
+***use_grouped_mm***: [boolean]
+
+| Description                                                                                    | Default |
+| ---------------------------------------------------------------------------------------------- | ------- |
+| Enable fused grouped GEMM for MoE expert computation. When enabled, the backend is selected automatically by device: on compute capability >= 9.0 (Hopper and newer) it uses `torch._grouped_mm`, which has a fused grouped-GEMM kernel; on compute capability < 9.0 (e.g. Ampere/Ada, where `torch._grouped_mm` falls back to a slow per-group loop) it uses a Triton grouped-GEMM kernel instead, when Triton is available. Set `use_grouped_mm=false` to use the sequential per-expert for-loop. `GroupedExperts` construction raises `RuntimeError` only if `use_grouped_mm=true` but neither `torch._grouped_mm` nor the Triton backend is available. | `true`  |
+
+***disable_triton_grouped_mm***: [boolean]
+
+| Description                                                                                    | Default |
+| ---------------------------------------------------------------------------------------------- | ------- |
+| Controls the Triton grouped-GEMM backend selection when `use_grouped_mm=true`. When `false` (default), DeepSpeed uses the Triton grouped-GEMM kernel on devices where it is preferred (compute capability < 9.0, e.g. Ampere/Ada, where `torch._grouped_mm` falls back to a slow per-group loop) and Triton is available. Set `disable_triton_grouped_mm=true` to force the `torch._grouped_mm` path even on compute capability < 9.0 (falling back to the sequential for-loop if that operator is also unavailable). The Triton backend requires the `triton` package; when it is not installed, DeepSpeed uses `torch._grouped_mm` where available. | `false`  |
+
+***moe_layer_pattern***: [string]
+
+| Description                                                                                                   | Default |
+| ------------------------------------------------------------------------------------------------------------- | ------- |
+| Regex pattern matching MoE module names (e.g., `"model\\.layers\\.\\d+\\.mlp"`). When set, uses the custom preset path instead of auto-detecting from `model_type`. | `null`  |
+
+***router_pattern***: [string]
+
+| Description                                                                                  | Default |
+| -------------------------------------------------------------------------------------------- | ------- |
+| Direct child attribute name for the router/gate module (e.g., `"gate"`, `"router"`). Not a regex. | `null`  |
+
+***expert_pattern***: [string]
+
+| Description                                                                                 | Default |
+| ------------------------------------------------------------------------------------------- | ------- |
+| Direct child attribute name for the experts module (e.g., `"experts"`). Not a regex.        | `null`  |
+
+***score_func***: [string]
+
+| Description                                                                                                              | Default  |
+| ------------------------------------------------------------------------------------------------------------------------ | -------- |
+| Router scoring function: `"softmax"`, `"sigmoid"`, or `"auto"` (detect from `model.config.scoring_func` or use preset). | `"auto"` |
+
+***score_apply***: [string]
+
+| Description                                                                                                    | Default  |
+| -------------------------------------------------------------------------------------------------------------- | -------- |
+| When to apply router scores: `"pre"` (before experts), `"post"` (during combine), or `"auto"` (from preset). | `"auto"` |
+
+***combine_impl***: [string]
+
+| Description                                                                                                    | Default  |
+| -------------------------------------------------------------------------------------------------------------- | -------- |
+| How expert outputs are weighted by their router scores and reduced over top-k. `"auto"` resolves to `"weighted_sum"`. `"fused_weighted_sum"` is experimental and computes the same reduction in one Triton pass, without materializing the scattered assignment buffer or the `[tokens, top_k, hidden]` FP32 intermediate; it requires CUDA, Triton, bfloat16/float16 activations, `tensor_parallel.autotp_size=1`, `expert_tensor_parallel_size=1`, and a resolved `score_apply="post"`, and is rejected rather than silently ignored when any of those does not hold. `"legacy_bmm"` is a debug reduction retained for model-family verification. | `"auto"` |
+
+***route_norm***: [boolean]
+
+| Description                                                                                                     | Default |
+| --------------------------------------------------------------------------------------------------------------- | ------- |
+| Renormalize top-k router scores. `null` = auto-detect from `model.config.norm_topk_prob` or use preset default. | `null`  |
+
+***route_scale***: [float]
+
+| Description                                              | Default |
+| -------------------------------------------------------- | ------- |
+| Scale factor applied to router scores after computation. | `1.0`   |
+
+***top_k***: [integer|string]
+
+| Description                                                                                                                                         | Default  |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| Number of experts each token is routed to. An explicit integer overrides `top_k_attr` lookup. `"auto"` = read from `model.config` using `top_k_attr`. | `"auto"` |
+
+***routed_scaling_factor***: [float|string]
+
+| Description                                                                                    | Default  |
+| ---------------------------------------------------------------------------------------------- | -------- |
+| Scaling factor for routed expert outputs. `"auto"` = detect from `model.config` if available.  | `"auto"` |
+
+***num_expert_groups***: [integer]
+
+| Description                                                                | Default |
+| -------------------------------------------------------------------------- | ------- |
+| Number of expert groups for group-limited routing (DeepSeek-V3 style).     | `null`  |
+
+***num_limited_groups***: [integer]
+
+| Description                                                                                        | Default |
+| -------------------------------------------------------------------------------------------------- | ------- |
+| Number of groups to select from in group-limited routing. Must be <= `num_expert_groups` when set.  | `null`  |
+
+***load_balance_coeff***: [null]
+
+| Description                                                                                          | Default |
+| ---------------------------------------------------------------------------------------------------- | ------- |
+| Reserved for future auxiliary-loss-free load balancing via `expert_bias`. Currently unsupported - must be unset or `null`; any other value is rejected. | `null`  |
+
+***expert_w1***: [string]
+
+| Description                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------- | ------- |
+| Expert weight name for gate (or fused gate+up) projection (e.g., `"gate_up_proj"`, `"w1"`). `null` = use preset default. | `null`  |
+
+***expert_w2***: [string]
+
+| Description                                                                                  | Default |
+| -------------------------------------------------------------------------------------------- | ------- |
+| Expert weight name for down projection (e.g., `"down_proj"`, `"w2"`). `null` = use preset default. | `null`  |
+
+***expert_w3***: [string|null]
+
+| Description                                                                                                                                                    | Default       |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Expert weight name for up projection (separate from gate). Three states: key absent = use preset default; `null` = fused gate+up (no separate w3); string = custom weight name. | absent (preset default) |
+
+***num_experts_attr***: [string]
+
+| Description                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------- | ------- |
+| Name of `model.config` attribute for number of experts (e.g., `"num_local_experts"`). `null` = use preset default. | `null`  |
+
+***top_k_attr***: [string]
+
+| Description                                                                                                                      | Default |
+| -------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Name of `model.config` attribute for top-k value (e.g., `"num_experts_per_tok"`). `null` = use preset default. If `top_k` is explicitly set as an integer, `top_k_attr` is ignored. | `null`  |
+
+***has_shared_experts***: [boolean]
+
+| Description                                                                                                | Default |
+| ---------------------------------------------------------------------------------------------------------- | ------- |
+| Whether the MoE layer has shared (non-routed) experts. `null` = auto-detect from preset. Must be paired with `shared_experts_pattern`. | `null`  |
+
+***shared_experts_pattern***: [string]
+
+| Description                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------- | ------- |
+| Direct child attribute name for shared experts (e.g., `"shared_expert"`). `null` = use preset default.   | `null`  |
+
+#### Custom Model Example
+
+For a model with non-standard naming conventions that is not covered by built-in presets:
+
+```json
+{
+  "expert_parallel": {
+    "enabled": true,
+    "autoep_size": 4,
+    "moe_layer_pattern": "model\\.layers\\.\\d+\\.moe",
+    "router_pattern": "router",
+    "expert_pattern": "mlp_experts",
+    "expert_w1": "w1",
+    "expert_w2": "w2",
+    "expert_w3": "w3",
+    "num_experts_attr": "num_moe_experts",
+    "top_k_attr": "moe_top_k",
+    "has_shared_experts": false
+  }
+}
+```
+
+#### Preset Override Example
+
+Use a built-in preset but override specific naming/weight fields for a fine-tuned model with renamed module paths:
+
+```json
+{
+  "expert_parallel": {
+    "enabled": true,
+    "preset_model": "mixtral",
+    "moe_layer_pattern": "model\\.layers\\.\\d+\\.moe",
+    "router_pattern": "router",
+    "expert_w1": "w1",
+    "expert_w2": "w2"
+  }
+}
+```
+
+> **Note:** `expert_storage` and `gate_bias` are auto-detected from model weights and cannot be overridden. `router_pattern`, `expert_pattern`, and `shared_experts_pattern` are direct child attribute names, not regex patterns.
+
+**Constraints:**
+- `autoep_size` must divide `num_experts` for all detected MoE layers
+- AutoEP currently cannot be combined with AutoTP (`tensor_parallel.autotp_size > 1`); support is planned as follow-up work
+- AutoEP with ZeRO Stage 3 is supported only without AutoTP, sequence parallelism, hpZeRO secondary tensor groups, non-1 `expert_tensor_parallel_size`, or quantized gradients
+- ZeRO Stage 3 saves AutoEP checkpoints partition-natively and supports same-topology save/load, module-only loads, optimizer-state-skipping loads, and universal checkpoint conversion. Universal loads can resume at a different data-parallel world size, a different `autoep_size`, or both (when the target `autoep_size` divides the expert count), including weights-only/module-only loads from the converted `fp32.pt` parameter files
+
+### Python cyclic garbage collection
+
+<i>**disable_python_gc**</i>: [boolean]
+
+| Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Default |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Disable automatic Python cyclic garbage collection for the lifetime of a DeepSpeed engine. When `true`, DeepSpeed collects once after engine initialization, disables automatic cyclic GC, and restores the process's original automatic-GC state when the last engine using this option is destroyed. When `false`, DeepSpeed leaves the existing Python GC state unchanged. Applications that create cyclic Python objects during training should call `engine.collect_python_gc()` at a safe boundary such as after checkpointing. | `false` |
+
+### Logging
+
+<i>**steps_per_print**</i>: [integer]
+
+| Description                                                                                                                                                                                                                             | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Print progress report every N training steps. The report includes the number of training steps, number of skipped optimizer updates (likely due to overflows in mixed-precision training), current learning rate, and current momentum. | `10`    |
+
+<i>**wall_clock_breakdown**</i>: [boolean]
+
+| Description                                                             | Default |
+| ----------------------------------------------------------------------- | ------- |
+| Enable timing of the latency of forward/backward/update training phases | `false` |
+
+<i>**dump_state**</i>: [boolean]
+
+| Description                                                          | Default |
+| -------------------------------------------------------------------- | ------- |
+| Print out state information of DeepSpeed object after initialization | `false` |
+
+
+### Autotuning
+
+```json
+{
+  "autotuning": {
+    "enabled": false,
+    "results_dir": "autotuning_results",
+    "exps_dir": "autotuning_exps",
+    "overwrite": false,
+    "metric": "throughput",
+    "start_profile_step": 3,
+    "end_profile_step": 5,
+    "fast": true,
+    "max_train_batch_size": null,
+    "mp_size": 1,
+    "num_tuning_micro_batch_sizes": 3,
+    "tuner_type": "model_based",
+    "tuner_early_stopping": 5,
+    "tuner_num_trials": 50,
+    "arg_mappings": null
+  }
+}
+```
+<i>**enabled**</i>: [boolean]
+
+| Description            | Default |
+| ---------------------- | ------- |
+| Enables the autotuner. | `false` |
+
+
+<i>**results_dir**</i>: [string]
+
+| Description                                                                                                                           | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| Path to the autotuning experiment results directory.  The default appears in the working directory from which Deepspeed was launched. | "autotuning_results"  |
+
+<i>**exps_dir**</i>: [string]
+
+| Description                                                                                                                              | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| Path to the auotuning experiment descriptions directory. The default appears in the working directory from which Deepspeed was launched. | "autotuning_exps"  |
+
+<i>**overwrite**</i>: [boolean]
+
+| Description                                                                                                               | Default |
+|---------------------------------------------------------------------------------------------------------------------------| ------- |
+| Whether to run autotuning experiments whose results already exist. Setting it to true would overwrite the existing result. | `false` |
+
+
+<i>**metric**</i>: [string]
+
+| Description                                                                                                                                                                                                                                                            | Default      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| The performance metric to use for ranking autotuning experiments. `latency`, `throughput`, and `FLOPS` are currently supported, referring to training step latency, training samples per second, and floating-point operations per second achieved per GPU respectively. | `throughput` |
+
+<i>**start_profile_step**</i>: [integer]
+
+| Description                                                                                                                                         | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The global training step at which to start profiling in an autotuning experiment. Note that warm-up is needed for accurate performance measurement. | `3`     |
+
+<i>**end_profile_step**</i>: [integer]
+
+| Description                                                                                                               | Default |
+| ------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The global training step at which to end profiling in an autotuning experiment. Must not be less than start_profile_step. | `5`     |
+
+
+<i>**fast**</i>: [boolean]
+
+| Description                                                                                  | Default |
+| -------------------------------------------------------------------------------------------- | ------- |
+| Enables fast-model autotuning where only Zero stages and micro-batch sizes per GPU are tuned. | `true` |
+
+<i>**max_train_batch_size**</i>: [int]
+
+| Description                                                                       | Default |
+| --------------------------------------------------------------------------------- | ------- |
+| The maximum train batch size (global effective batch size) for the model training. | `null`  |
+
+<i>**mp_size**</i>: [int]
+
+| Description              | Default |
+| ------------------------ | ------- |
+| Model parallelism degree. | `1`     |
+
+
+<i>**num_tuning_micro_batch_sizes**</i>: [integer]
+
+| Description                                     | Default |
+| ----------------------------------------------- | ------- |
+| The number of micro-batch sizes to explore. | `3`     |
+
+<i>**tuner_type**</i>: [string]
+
+| Description                                                                              | Default       |
+| ---------------------------------------------------------------------------------------- | ------------- |
+| The algorithm defines the order of autotuning space exploration within a ZeRO stage. | `model_based` |
+
+
+<i>**tuner_early_stopping**</i>: [integer]
+
+| Description                                                                                                                                                | Default |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The number of experiments to run beyond the current best experiment. If no better experiment is found within that number, the Autotuner stops the exploration. | `5`     |
+
+<i>**tuner_num_trials**</i>: [integer]
+
+| Description                                                                           | Default |
+| ------------------------------------------------------------------------------------- | ------- |
+| The maximum number of experiments to explore in the tuning space within a ZeRO stage. | `50`    |
+
+
+### Flops Profiler
+```json
+{
+  "flops_profiler": {
+    "enabled": false,
+    "profile_step": 1,
+    "module_depth": -1,
+    "top_modules": 1,
+    "detailed": true,
+    "output_file": null,
+    }
+}
+```
+<i>**enabled**</i>: [boolean]
+
+| Description                                                              | Default |
+| ------------------------------------------------------------------------ | ------- |
+| Enables the flops profiler. This would also enables wall_clock_breakdown | `false` |
+
+<i>**profile_step**</i>: [integer]
+
+| Description                                                                                                     | Default |
+| --------------------------------------------------------------------------------------------------------------- | ------- |
+| The global training step at which to profile. Note that warm up steps are needed for accurate time measurement. | `1`     |
+
+<i>**module_depth**</i>: [integer]
+
+| Description                                                                                                                                                                           | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| The depth of the model at which to print the aggregated module information. When set to `-1`, it prints information from the top module to the innermost modules (the maximum depth). | `-1`    |
+
+<i>**top_modules**</i>: [integer]
+
+| Description                                                                  | Default |
+| ---------------------------------------------------------------------------- | ------- |
+| Limits the aggregated profile output to the number of top modules specified. | `1`     |
+
+<i>**detailed**</i>: [boolean]
+
+| Description                                  | Default |
+| -------------------------------------------- | ------- |
+| Whether to print the detailed model profile. | `true`  |
+
+<i>**output_file**</i>: [string]
+
+| Description                                                       | Default |
+| ----------------------------------------------------------------- | ------- |
+| Path to the output file. If None, the profiler prints to stdout.. | `null`  |
+
+
+### Activation Checkpointing
+```json
+  "activation_checkpointing": {
+    "partition_activations": false,
+    "cpu_checkpointing": false,
+    "contiguous_memory_optimization": false,
+    "number_checkpoints": null,
+    "synchronize_checkpoint_boundary": false,
+    "profile": false
+    }
+```
+<i>**partition_activations**</i>: [boolean]
+
+| Description                                                   | Default |
+| ------------------------------------------------------------- | ------- |
+| Enables partition activation when used with model parallelism | `false` |
+
+<i>**cpu_checkpointing**</i>: [boolean]
+
+| Description                                                                                                                                                                                                                        | Default |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Offloads activation checkpoint inputs to CPU. With `partition_activations` it offloads the partitioned activations; otherwise it uses an asynchronous pinned side-stream copy that overlaps the CPU transfer with compute. | `false` |
+
+The asynchronous side-stream copy matches the peak-memory reduction of a blocking copy at a fraction of the step-time cost. On a single H200 with Qwen3-8B full-parameter SFT (`use_reentrant=False`), it lowers the GPU activation peak by up to ~14% at 32K sequence length while staying within ~2% of the no-offload step time, whereas a blocking offload is 1.4–1.9x slower. For very long sequences, set `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True` to avoid allocator fragmentation from the offload/restore cycle.
+
+
+<i>**contiguous_memory_optimization**</i>: [boolean]
+
+| Description                                                          | Default |
+| -------------------------------------------------------------------- | ------- |
+| Copies partitioned activations so that they are contiguous in memory | `false` |
+
+<i>**number_checkpoints**</i>: [integer]
+
+| Description                                                                                              | Default |
+| -------------------------------------------------------------------------------------------------------- | ------- |
+| Total number of activation checkpoints used to allocate memory buffer for contiguous_memory_optimization | `None`  |
+
+<i>**synchronize_checkpoint_boundary**</i>: [boolean]
+
+| Description                                                   | Default |
+| ------------------------------------------------------------- | ------- |
+| Inserts get_accelerator().synchronize() at each checkpoint boundary. | `false` |
+
+
+<i>**profile**</i>: [boolean]
+
+| Description                                                     | Default |
+| --------------------------------------------------------------- | ------- |
+| Logs the forward and backward time for each checkpoint function | `false` |
+
+### Data Efficiency
+DeepSpeed Data Efficiency Library includes two techniques: curriculum learning and random layerwise token dropping (random-LTD). Read more about how to use the DeepSpeed Data Efficiency Library in our [tutorial](/tutorials/data-efficiency/).
+
+```json
+"data_efficiency": {
+  "enabled": true,
+  "seed": 1234,
+  "data_routing": {
+    "enabled": true,
+    "random_ltd":{
+      "enabled": true,
+      "total_layer_num": 24,
+      "random_ltd_layer_num": 22,
+      "random_ltd_layer_id": [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22],
+      "model_mask_name": "attention_mask",
+      "model_type": "decoder",
+      "hidden_state_order": "seq_batch_dim",
+      "random_ltd_schedule": {
+        "min_value": 128,
+        "max_value": 2048,
+        "schedule_type":"fixed_linear",
+        "schedule_config": {
+          "require_steps": 200000,
+          "seq_per_step": 16
+        }
+      }
+    }
+  },
+  "data_sampling": {
+    "enabled": true,
+    "num_epochs": 1,
+    "num_workers": 0,
+    "curriculum_learning": {
+      "enabled": true,
+      "data_cluster_path": "/path/to/data_clusters",
+      "curriculum_metrics": {
+        "vocabularyrarity": {
+          "index_to_sample_path": "/path/to/index_to_sample",
+          "index_to_metric_path": "/path/to/index_to_metric",
+          "difficulty_type": "percentile",
+          "clustering_type": "schedule_based",
+          "min_difficulty": 1,
+          "max_difficulty": 100,
+          "schedule_type": "fixed_root",
+          "schedule_config": {
+            "total_curriculum_step": 110000,
+            "difficulty_step": 1,
+            "root_degree": 2
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+<i>**data_efficiency**</i>: [dictionary]
+
+| Fields | Value | Default |
+| ----- | ----- | ----- |
+| <i>**enabled**</i>: [boolean] | Enable data efficiency or not. | `false` |
+| <i>**seed**</i>: [integer] | Random seed for data sampling. | 1234 |
+| <i>**data_routing**</i>: [dictionary] | Configs for data routing techniques. | N/A |
+| <i>**data_sampling**</i>: [dictionary] | Configs for data sampling techniques. | N/A |
+
+<i>**data_routing**</i>: [dictionary]
+
+| Fields | Value | Default |
+| ----- | ----- | ----- |
+| <i>**enabled**</i>: [boolean] | Enable data routing techniques or not. | `false` |
+| <i>**random_ltd**</i>: [dictionary] | Configs for random-LTD technique. | N/A |
+
+<i>**data_sampling**</i>: [dictionary]
+
+| Fields | Value | Default |
+| ----- | ----- | ----- |
+| <i>**enabled**</i>: [boolean] | Enable data sampling techniques or not. | `false` |
+| <i>**num_epochs**</i>: [integer] | At most how many epoches of the original dataset will be iterated. | 1000 |
+| <i>**num_workers**</i>: [integer] | Data loader number of workers. | 0 |
+| <i>**curriculum_learning**</i>: [dictionary] | Configs for curriculum learing technique. | N/A |
+
+<i>**random_ltd**</i>: [dictionary]
+
+| Fields | Value | Default |
+| ----- | ----- | ----- |
+| <i>**enabled**</i>: [boolean] | Enable random-LTD technique or not. | `false` |
+| <i>**total_layer_num**</i>: [integer] | The number of layer (or the depth) for the pretraining/fine-tuning model. | N/A |
+| <i>**random_ltd_layer_num**</i>: [integer] | The number of layers that will be applied with random-LTD. | N/A |
+| <i>**random_ltd_layer_id**</i>: [list] | The exact layer_id that will be applied with random-LTD. The length of this list must be the same as `random_ltd_layer_num`. | N/A |
+| <i>**model_mask_name**</i>: [str] | The variable name of the attention_mask. Different libraries have different names, such as att_mask. For huggingface model, it’s named “attention_mask”. Users need to check the forward function in the original model files. If the attention mask input in the original model's forward function is not a keyword/named argument (e.g., attention_mask=None), user would need to change it to a keyword/named argument and provide that keyword as `model_mask_name`. | N/A |
+| <i>**model_type**</i>: [str] | Users need to identify whether the model is `decoder` or `encoder`. Currently we only support these two. | N/A |
+| <i>**hidden_state_order**</i>: [str] | Users need to know the input order of the hidden state tensor. Normally, it’s batch, sequence and then the hidden dimension, which is `batch_seq_dim`. Somethings, the order between batch and sequence will be switch like `seq_batch_dim`. Currently, we support these two.  | N/A |
+| <i>**random_ltd_schedule**</i>: [dictionary] | The schedule of the effective sequence length after token dropping. It's a linear function where random-LTD gradually drops less tokens and increases effective sequence length. | N/A |
+| <i>&emsp;&emsp;**min_value**</i>: [integer] | The initial effective sequence length (after token dropping) at step/iteration 0. | N/A |
+| <i>&emsp;&emsp;**max_value**</i>: [integer] | The max effective sequence length (usually the case without any token dropping). Usually this is set as baseline's seqlen. | N/A |
+| <i>&emsp;&emsp;**schedule_type**</i>: [str] | The sequence length follows a linear increasing function starting from `min_value` and reaching `max_value`. We currently only support this type. | N/A |
+| <i>&emsp;&emsp;**schedule_config**</i>: [dictionary] | Configs for the linear increasing function. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**require_steps**</i>: [integer] | How many iterations will be needed to reach max_value from min_value. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**seq_per_step**</i>: [integer] | At any time, the effective sequence length be multiple of this `seq_per_step`. Set this to multiple of 8 (for FP16 data) or 16 (for INT8 data) to enable NVIDIA Tensor Core acceleration. | N/A |
+
+<i>**curriculum_learning**</i>: [dictionary]
+
+| Fields | Value | Default |
+| ----- | ----- | ----- |
+| <i>**enabled**</i>: [boolean] | Enable curriculum learing technique or not. | `false` |
+| <i>**data_cluster_path**</i>: [str] | Path to directory where curriculum learning will store the indexes of data samples within the same difficulty ranges. | N/A |
+| <i>**curriculum_metrics**</i>: [dictionary] | This dictionary includes all desired curriculum metrics and their configs. Each metric will be a separate sub-dictionary, where the key is the metric name and the values are configs below. | N/A |
+| <i>&emsp;&emsp;**index_to_sample_path**</i>: [str] | Path to the index_to_sample file generated during offline data analysis. Note that data analysis will generate two kinds of index_to_sample files: The metric_name_index_to_sample_percentile_merged file is a concatenated index for perf improvement, but it only works when you set difficulty_type=`percentile`. If you use difficulty_type=`value`, you need to change this to use the metric_name_index_to_sample file. | N/A |
+| <i>&emsp;&emsp;**index_to_metric_path**</i>: [str] | Path to the index_to_metric_path file generated during offline data analysis. | N/A |
+| <i>&emsp;&emsp;**difficulty_type**</i>: [str] | During training, how to increase the max accepted difficulty. Currently support `value` (increase by absolute value) and `percentile` (increase by difficulty percentile). | N/A |
+| <i>&emsp;&emsp;**clustering_type**</i>: [str] | Currently support `schedule_based` (cluster data based on the difficulty schedule (pacing function) below) and `single_cluster` (no clustering required and probably CL is achieved by data postprocessing, such as sequence length truncation). | N/A |
+| <i>&emsp;&emsp;**min_difficulty**</i>: [integer] | Starting difficulty at first step. When difficulty_type=`value` the `min_difficulty` is an absolute difficulty value. When difficulty_type=`percentile` the `min_difficulty` is a difficulty percentile value. | N/A |
+| <i>&emsp;&emsp;**max_difficulty**</i>: [integer] | Final max difficulty. When difficulty_type=`value` the `max_difficulty` is an absolute difficulty value. When difficulty_type=`percentile` the `max_difficulty` is a difficulty percentile value. | N/A |
+| <i>&emsp;&emsp;**schedule_type**</i>: [str] | The difficulty schedule (pacing function) that defines how the max accepted difficulty increases from `min_difficulty` to `max_difficulty` during training. Currently support `fixed_linear`, `fixed_root`, `fixed_discrete`, and `custom`. | N/A |
+| <i>&emsp;&emsp;**schedule_config**</i>: [dictionary] | Configs for the pacing function. When schedule_type=`custom` this dictionary is not necessary. Instead user needs to provide a callback function (via the `set_custom_curriculum_learning_schedule` API in deepspeed/runtime/engine.py) which will update the max accepted difficulty during training. Configs below are all belongs to `schedule_config`. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**total_curriculum_step**</i>: [integer] | How many steps the curriculum learning takes to go from min difficulty to max difficulty. Used by `fixed_linear` and `fixed_root` schedule. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**difficulty_step**</i>: [integer] | The max accepted difficulty level determined every step must be a multiple of this `difficulty_step`. This is used to ensure the use of NVIDIA Tensor Core acceleration (requires multiple of 8 (FP16) or 16 (INT8)). Used by `fixed_linear` and `fixed_root` schedule. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**root_degree**</i>: [integer] | The degree of the root function. Degree of 2 means square root and degree of 3 means cube root. Degree of 1 is equivalent to linear. Used by `fixed_root` schedule. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**difficulty**</i>: [list] | List of max accepted difficulty levels to be used during schedule. Used by `fixed_discrete` schedule. | N/A |
+| <i>&emsp;&emsp;&emsp;&emsp;**max_step**</i>: [list] | List of which step to change max accepted difficulty level. Used by `fixed_discrete` schedule. | N/A |
+
+
+### Monitoring Module
+
+**Note:** Deepspeed logs to TensorBoard through PyTorch. Logging to TensorBoard requires that the `tensorboard` package is installed (read more in the [PyTorch documentation](https://pytorch.org/docs/1.8.0/tensorboard.html)).
+{: .notice--warning}
+**Note:** Logging to WandB requires that the `wandb` package is installed (read more in the [WandB documentation](https://docs.wandb.ai/quickstart)).
+{: .notice--warning}
+**Note:** Logging to Comet requires that the `comet_ml` package is installed (read more in the [Comet documentation](https://www.comet.com/docs/v2/guides/quickstart/#1-install-and-configure-the-comet-ml-sdk)).
+{: .notice--warning}
+
+Deepspeed's Monitor module can log training details into a [Tensorboard](https://www.tensorflow.org/tensorboard)-compatible file, to [WandB](https://wandb.ai/site), to [Comet](https://www.comet.com/site/?utm_source=deepseed&utm_medium=docs&utm_content=docs) or to simple CSV files. Below is an overview of what DeepSpeed will log automatically.
+
+| Field | Description                                                                                                                                                                                                                                                                                               |Conditions |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| `Train/Samples/train_loss`   | The training loss. | None |
+| `Train/Samples/lr`           | The learning rate during training. | None |
+| `Train/Samples/loss_scale`   | The loss scale when training using `fp16`. | `fp16` must be enabled. |
+| `Train/Samples/elapsed_time_ms_forward`   | The global duration of the forward pass. | `flops_profiler.enabled` or `wall_clock_breakdown`. |
+| `Train/Samples/elapsed_time_ms_backward`   | The global duration of the forward pass. | `flops_profiler.enabled` or `wall_clock_breakdown`.  |
+| `Train/Samples/elapsed_time_ms_backward_inner`   | The backward time that does not include the gradient reduction time. Only in cases where the gradient reduction is not overlapped, if it is overlapped then the inner time should be about the same as the entire backward time. | `flops_profiler.enabled` or `wall_clock_breakdown`.  |
+| `Train/Samples/elapsed_time_ms_backward_allreduce`   | The global duration of the allreduce operation. | `flops_profiler.enabled` or `wall_clock_breakdown`.  |
+| `Train/Samples/elapsed_time_ms_step`   | The optimizer step time | `flops_profiler.enabled` or `wall_clock_breakdown`.  |
+
+<i>**tensorboard**</i>: [dictionary]
+
+| Fields | Value                                                                                                                                                                                                                                                                                                        |Default |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| enabled   | Whether logging to [Tensorboard](https://www.tensorflow.org/tensorboard) is enabled. | `false` |
+| output_path | Path to where the Tensorboard logs will be written. If None, the output path is set under the training script's launching path.     | `null` |
+| job_name  | Name for the current job. This will become a new directory inside `output_path`. | `"DeepSpeedJobName"` |
+
+
+Example of <i>**tensorboard**</i> configuration:
+
+```json
+"tensorboard": {
+    "enabled": true,
+    "output_path": "output/ds_logs/",
+    "job_name": "train_bert"
+}
+```
+
+<i>**wandb**</i>: [dictionary]
+
+| Fields | Value                                                                                                                                                                                                                                                                                                        |Default |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| enabled   | Whether logging to [WandB](https://wandb.ai/site) is enabled. | `false` |
+| group  | Name for the WandB group. This can be used to group together runs. | `None` |
+| team | Name for the WandB team.       | `None` |
+| project | Name for the WandB project.       | `deepspeed` |
+
+
+Example of <i>**wandb**</i> configuration:
+
+```json
+"wandb": {
+    "enabled": true,
+    "group": "my_group",
+    "team": "my_team",
+    "project": "my_project"
+}
+```
+
+<i>**comet**</i>: [dictionary]
+
+| Fields  | Value   | Default   |
+|---  |---  |---  |
+| enabled   | Whether logging to [Comet](https://www.comet.com/site/) is enabled.   | `false`   |
+| workspace   | Comet workspace name.   | `None`  |
+| project   | Comet project name.   | `None`  |
+| samples_log_interval  | Metrics will be submitted to Comet after processing every `samples_log_intervas` samples.   | `100`   |
+| experiment_name   | The name for comet experiment to be used for logging.   | `None`  |
+| api_key   | Comet API key. It's not recommended to save the Comet API Key in code.  | `None`  |
+| experiment_key  | The key for comet experiment to be used for logging. Must be an alphanumeric string whose length is between 32 and 50 characters.   | `None`  |
+| online  | If True, the data will be logged to Comet server, otherwise it will be stored locally in offline experiment. Default is `True`.   | `None`  |
+| mode  | Control how the Comet experiment is started. "get": Continue logging to an existing experiment identified by the `experiment_key` value. "create": Always creates of a new experiment, useful for HPO sweeps. "get_or_create" (default): Starts a fresh experiment if required, or persists logging to an existing one.   | `None`  |
+
+
+Example of <i>**comet**</i> configuration:
+
+```json
+"comet": {
+    "enabled": true,
+    "workspace": "my_workspace",
+    "project": "my_project",
+    "samples_log_interval": 50,
+    "experiment_name": "llama-fine-tuning",
+    "experiment_key": "0c4a1c4a90664f2a8084e600b19a9d7",
+    "online": false,
+    "mode": "get",
+}
+```
+
+<i>**csv_monitor**</i>: [dictionary]
+
+| Fields | Value                                                                                                                                                                                                                                                                                                        |Default |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| enabled   | Whether logging to local CSV files is enabled. | `false` |
+| output_path | Path to where the csv files will be written. If None, the output path is set under the training script's launching path.      | `null` |
+| job_name  | Name for the current job. This will become a new directory inside `output_path` | `"DeepSpeedJobName"` |
+
+
+Example of <i>**csv_monitor**</i> configuration:
+
+```json
+"csv_monitor": {
+    "enabled": true,
+    "output_path": "output/ds_logs/",
+    "job_name": "train_bert"
+}
+```
+
+
+### Communication Logging
+
+
+DeepSpeed provides a flexible communication logging tool which can automatically detect and record communication operations launched via `deepspeed.comm`. NOTE: All logging communication calls are synchronized in order to provide accurate timing information. This may hamper performance if your model heavily uses asynchronous communication operations.
+
+Once the logs are populated, they can be summarized with `deepspeed.comm.log_summary()`. For more detail and example usage, see the [tutorial](/tutorials/comms-logging/)
+
+
+
+
+<i>**comms_logger**</i>: [dictionary]
+
+| Fields | Value                                                                                                                                                                                                                                                                                                        |Default |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| enabled   | Whether communication logging is enabled. | `false` |
+| verbose | Whether to immediately print every communication operation  | `false` |
+| prof_all  | Whether to profile all operations. | `true` |
+| debug  | Appends the caller function to each communication operation's `log_name`. | `false` |
+| prof_ops  | A list of communication operations to log (only the specified ops will be profiled). | `[]` |
+
+
+Example of recommended <i>**comms_logger**</i> configuration:
+
+```json
+"comms_logger": {
+  "enabled": true,
+  "verbose": false,
+  "prof_all": true,
+  "debug": false
+}
+```
+
+Example of <i>**comms_logger**</i> configuration for logging specific operations only:
+
+```json
+"comms_logger": {
+  "enabled": true,
+  "verbose": false,
+  "prof_all": false,
+  "debug": false,
+  "prof_ops": ["all_reduce", "all_gather"]
+}
+```
+### Checkpoint options
+
+```json
+"checkpoint": {
+    "tag_validation"="Warn",
+    "load_universal"=false,
+    "use_node_local_storage"=false,
+    "parallel_write":{
+        "pipeline_stage": false
+    }
+}
+```
+
+<i>**tag_validation**</i>: ["Ignore"|"Warn"|"Fail"]
+
+| Description                                                                                                                            | Default |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Enables level of checking to ensure checkpoint tags are consistent across all ranks. Useful when restoring with different world sizes. |  "Warn" |
+
+<i>**load_universal**</i>: [boolean]
+
+| Description                            | Default |
+| -------------------------------------- | ------- |
+| Load the latest checkpoint for all.    | `false` |
+
+<i>**use_node_local_storage**</i>: [boolean]
+
+| Description                                                                                                                                                               | Default |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| If `true` DeepSpeed will store model parameter states and checkpoint states based on local rank allowing checkpoints to be loaded without access to a shared filesystem.  | `false` |
+
+<i>**pipeline_stage**</i>: [boolean]
+
+| Description                                                   | Default |
+| ------------------------------------------------------------- | ------- |
+| Use pipeline stages to parallelize the writing of checkpoints.| `false` |
+
+### AutoSP options
+
+DeepSpeed provides compiler-based optimization passes through the `compile` configuration. This includes enabling Ulysses-styled sequence paralllelism and a custom heuristic selective activation checkpointing pass. To enable Automatic Sequence Parallelism (AutoSP), configure the `compile` section:
+
+```json
+{
+    "zero_optimization": {"stage": 0},
+    "compile": {
+        "deepcompile": true,
+        "passes": ["autosp"],
+    }
+}
+```
+
+### AutoTP options
+
+The `autotp` pass emits AutoTP's tensor-parallel collectives into the compiled graph instead of
+running them from inside the injected `LinearLayer` / `LinearAllreduce` modules. The model is
+partitioned by the regular AutoTP path, so `tensor_parallel.autotp_size` must be greater than 1
+and the pass reuses the same tensor-parallel group.
+
+```json
+{
+    "zero_optimization": {"stage": 0},
+    "tensor_parallel": {"autotp_size": 4},
+    "compile": {
+        "deepcompile": true,
+        "passes": ["autotp"],
+    }
+}
+```
+
+<i>**passes**</i>: [array of strings]
+
+| Description                                                                       | Default |
+| ----------------------------------------------------------------------------------- | ------- |
+| List of compiler passes to apply. Currently supported: `["autosp", "autotp"]`.    | `[]`    |
+
+
+
+### DeepCompile activation offload
+
+These fields live under `compile` and apply when DeepCompile activation offload is scheduled.
+The offload pass is **not** in the default DeepCompile schedule; enable it only via a custom
+`schedule=` when calling DeepCompile init. Setting `offload_activation` alone has no effect.
+
+<i>**offload_activation**</i>: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| Config field for DeepCompile activation offload. Requires a custom schedule that includes the offload pass; not enabled by the default `init_z3` / `init_z1` schedules. | `false` |
+
+<i>**offload_activation_pin_memory**</i>: [boolean]
+
+| Description | Default |
+| ----------- | ------- |
+| When activation offload runs, pin host buffers via ATen `pinned_memory` (Torch host pin). Does **not** use `DS_PIN_MEMORY_BACKEND`. Defaults to `true`; set `false` under tight memlock limits (`ulimit -l`). | `true` |
+
+### Data Type options
+
+```json
+"data_types": {
+    "grad_accum_dtype"=["fp32"|"fp16"|"bf16"]
+    }
+}
+```
+
+<i>**grad_accum_dtype**</i>: ["fp32"|"fp16"|"bf16"]
+
+| Description                                                                                                   | Default |
+| --------------------------------------------------------------------------------------------------------------| ------- |
+| Specifies the data type in which to do gradient accumulation. If None the default is to match the model type. |  None   |

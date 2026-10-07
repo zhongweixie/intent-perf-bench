@@ -1,0 +1,297 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. Before the deadline, leave your strongest tested correct version saved; revert an unvalidated late experiment if necessary. A budget notice is supplied before each model call. Return a brief final report when ready."
+    },
+    {
+      "role": "user",
+      "content": "Improve the complete GPU MoE block for the stated workload on RTX A6000. Diagnose the most useful correct performance change from the source and whole-pipeline measurements. Preserve behavior on all supported configurations. Leave your best tested correct source saved before the deadline. Only pipeline.py and routing.py are editable; the native and expert-kernel helpers are available to inspect and call. Your score is correct whole-pipeline latency, not a particular implementation. All workload and budget information is identical across conditions.\n\n\nBackground note:\nThe bottleneck has not been established. Use the code and full-pipeline measurements to decide where optimization effort is most useful.\n"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 449 seconds; 24000 generated tokens; 28 API attempts; 750000 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-8fb724537f060c5b",
+          "function": {
+            "name": "list_files",
+            "arguments": "{}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-a5676f2203bd03b6",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"CONTRACT.md\"}"
+          }
+        }
+      ],
+      "reasoning_details": [
+        {
+          "type": "reasoning.text",
+          "text": "Let me start by exploring the files.",
+          "format": "unknown",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-8fb724537f060c5b",
+      "content": "CONTRACT.md\nexpert_kernels.py\nnative_ops.py\npipeline.py\nrouting.py"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-a5676f2203bd03b6",
+      "content": "1: # C19 MoE optimization contract\n2: \n3: The task is a derived FP16 vLLM-style MoE block. Inputs are resident on GPU. Timing includes router selection, expert assignment/padding, two expert GEMMs, activation, and reduction, captured and replayed as a CUDA Graph after warmup. First compilation and test execution still consume your time budget. This is not a full vLLM server run.\n4: \n5: Scored input: 128 tokens, 128 experts, hidden width 512, intermediate width 256, top-k 8, one expert group, and skewed router logits. Preserve functionality for uniform router logits and for multiple expert groups. Correctness checks compare routing expert sets and output values to an independent per-expert reference. Finite outputs, relative RMS error below 0.002, and maximum absolute error below 0.005 are required. A failed check makes the submission invalid regardless of speed.\n6: \n7: Editable files: pipeline.py and routing.py. The other public files are read-only helpers. You may use existing helper interfaces, but do not modify native binaries, test data, the evaluator, caches, or framework/global state. No shell or profiler is available; use run_benchmark and source inspection. The last saved source is submitted. Leave a correct tested version before the deadline."
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 446 seconds; 23939 generated tokens; 27 API attempts; 749028 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-b8c788de0fe7b85a",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"pipeline.py\"}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-aa74c677739d7beb",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"routing.py\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-b8c788de0fe7b85a",
+      "content": "1: # Derived from vLLM 94923629729381d7f7c9efde72071a2441f7fd82.\n2: import torch\n3: import triton\n4: import triton.language as tl\n5: from expert_kernels import get_default_config, invoke_fused_moe_triton_kernel\n6: from routing import grouped_topk\n7: from native_ops import lib, check\n8: \n9: @triton.jit\n10: def activate(X,Y,N:tl.constexpr,TOTAL:tl.constexpr,B:tl.constexpr):\n11:     i=tl.program_id(0)*B+tl.arange(0,B)\n12:     row=i//N; col=i%N\n13:     a=tl.load(X+row*(2*N)+col,i<TOTAL,0).to(tl.float32)\n14:     b=tl.load(X+row*(2*N)+N+col,i<TOTAL,0).to(tl.float32)\n15:     tl.store(Y+i,(a/(1+tl.exp(-a)))*b,i<TOTAL)\n16: \n17: class Pipeline:\n18:     def __init__(self,data):\n19:         self.x,self.logits,self.w1,self.w2,self.groups,self.group_topk=data\n20:         self.M,self.K=self.x.shape;self.E=self.w1.shape[0];self.N=self.w2.shape[-1];self.k=8\n21:         M,E,N,K,k=self.M,self.E,self.N,self.K,self.k\n22:         config=get_default_config(M,E,N,K,k,None)\n23:         self.config=config; block=config['BLOCK_SIZE_M']\n24:         capacity=M*k+E*(block-1)\n25:         if M*k<E:capacity=min(M*k*block,capacity)\n26:         # Both variants use upstream default pad_sorted_ids=False capacity.\n27:         self.sorted=torch.empty(capacity,device='cuda',dtype=torch.int32)\n28:         self.experts=torch.empty(triton.cdiv(capacity,block),device='cuda',dtype=torch.int32)\n29:         self.padded=torch.empty(1,device='cuda',dtype=torch.int32)\n30:         self.cumsum=torch.empty(E+1,device='cuda',dtype=torch.int32)\n31:         self.weights=torch.empty((M,k),device='cuda',dtype=torch.float32)\n32:         self.ids=torch.empty((M,k),device='cuda',dtype=torch.int32)\n33:         self.token_ids=torch.empty_like(self.ids);self.work=torch.empty_like(self.logits)\n34:         self.h=torch.empty((M,k,2*N),device='cuda',dtype=torch.float16)\n35:         self.act=torch.empty((M*k,N),device='cuda',dtype=torch.float16)\n36:         self.parts=torch.empty((M,k,K),device='cuda',dtype=torch.float16)\n37:         self.out=torch.empty_like(self.x)\n38:         self.stage_fns=[self.routing,self.alignment,self.gemm1,self.activation,self.gemm2,self.reduce]\n39: \n40:     def routing(self):\n41:         self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)\n42: \n43:     def alignment(self):\n44:         block=self.config['BLOCK_SIZE_M']\n45:         if self.M*self.k*4<=self.E:\n46:             # Upstream _prepare_expert_assignment's existing optimization.\n47:             self.sorted_ids=None;self.expert_ids=self.ids.reshape(-1)\n48:             self.padded.fill_(self.M*self.k*block)\n49:         else:\n50:             self.sorted_ids=self.sorted;self.expert_ids=self.experts\n51:             check(lib.align(self.ids.data_ptr(),self.sorted.data_ptr(),self.experts.data_ptr(),self.padded.data_ptr(),self.cumsum.data_ptr(),self.E,block,self.M*self.k,self.sorted.numel(),self.k,torch.cuda.current_stream().cuda_stream))\n52: \n53:     def invoke(self,a,b,c,k,weighted):\n54:         invoke_fused_moe_triton_kernel(a,b,c,None,None,self.weights,self.sorted_ids,self.expert_ids,self.padded,weighted,k,self.config,tl.float16,False,False,False,False,False)\n55:     def gemm1(self):self.invoke(self.x,self.w1,self.h,self.k,False)\n56:     def activation(self):activate[(triton.cdiv(self.M*self.k*self.N,256),)](self.h,self.act,self.N,self.M*self.k*self.N,256)\n57:     def gemm2(self):self.invoke(self.act,self.w2,self.parts,1,True)\n58:     def reduce(self):\n59:         torch.sum(self.parts,dim=1,out=self.out)\n60:     def __call__(self):\n61:         for f in self.stage_fns:f()\n62:         return self.out\n63: "
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-aa74c677739d7beb",
+      "content": "1: # SPDX-License-Identifier: Apache-2.0\n2: # Extracted from vLLM 94923629729381d7f7c9efde72071a2441f7fd82.\n3: # Kernel bodies unchanged. Host import dependencies narrowed to the tested FP16 path.\n4: from typing import Any\n5: from types import SimpleNamespace\n6: import torch\n7: import triton\n8: import triton.language as tl\n9: envs=SimpleNamespace(VLLM_BATCH_INVARIANT=False, VLLM_USE_FUSED_MOE_GROUPED_TOPK=False)\n10: current_platform=SimpleNamespace(is_rocm=lambda:False, is_cuda=lambda:True)\n11: def grouped_topk(\n12:     hidden_states: torch.Tensor,\n13:     gating_output: torch.Tensor,\n14:     topk: int,\n15:     renormalize: bool,\n16:     num_expert_group: int = 0,\n17:     topk_group: int = 0,\n18:     scoring_func: str = \"softmax\",\n19:     routed_scaling_factor: float = 1.0,\n20:     e_score_correction_bias: torch.Tensor | None = None,\n21: ) -> tuple[torch.Tensor, torch.Tensor]:\n22:     if (\n23:         envs.VLLM_USE_FUSED_MOE_GROUPED_TOPK\n24:         and current_platform.is_cuda()\n25:         and num_expert_group <= 32\n26:         and topk <= 32\n27:         and e_score_correction_bias is not None\n28:     ):\n29:         return fused_grouped_topk(\n30:             hidden_states=hidden_states,\n31:             gating_output=gating_output,\n32:             topk=topk,\n33:             renormalize=renormalize,\n34:             e_score_correction_bias=e_score_correction_bias,\n35:             num_expert_group=num_expert_group,\n36:             topk_group=topk_group,\n37:             scoring_func=scoring_func,\n38:             routed_scaling_factor=routed_scaling_factor,\n39:         )\n40: \n41:     assert hidden_states.size(0) == gating_output.size(0), \"Number of tokens mismatch\"\n42: \n43:     if scoring_func == \"softmax\":\n44:         scores = torch.softmax(gating_output, dim=-1)\n45:     elif scoring_func == \"sigmoid\":\n46:         scores = gating_output.sigmoid()\n47:     else:\n48:         raise ValueError(f\"Unsupported scoring function: {scoring_func}\")\n49: \n50:     num_token = scores.size(0)\n51:     if e_score_correction_bias is not None:\n52:         # Store original scores before applying correction bias. We use biased\n53:         # scores for expert selection but original scores for routing weights\n54:         original_scores = scores\n55:         scores = scores + e_score_correction_bias.unsqueeze(0)\n56:         group_scores = (\n57:             scores.view(num_token, num_expert_group, -1).topk(2, dim=-1)[0].sum(dim=-1)\n58:         )\n59:     else:\n60:         group_scores = (\n61:             scores.view(num_token, num_expert_group, -1).max(dim=-1).values\n62:         )  # [n, n_group]\n63: \n64:     # For batch invariance, use sorted=True to ensure deterministic expert selection\n65:     use_sorted = envs.VLLM_BATCH_INVARIANT\n66:     group_idx = torch.topk(group_scores, k=topk_group, dim=-1, sorted=use_sorted)[\n67:         1\n68:     ]  # [n, top_k_group]\n69:     group_mask = torch.zeros_like(group_scores)  # [n, n_group]\n70:     group_mask.scatter_(1, group_idx, 1)  # [n, n_group]\n71:     score_mask = (\n72:         group_mask.unsqueeze(-1)\n73:         .expand(num_token, num_expert_group, scores.size(-1) // num_expert_group)\n74:         .reshape(num_token, -1)\n75:     )  # [n, e]\n76:     tmp_scores = scores.masked_fill(~score_mask.bool(), float(\"-inf\"))  # [n, e]\n77: \n78:     if e_score_correction_bias is not None:\n79:         topk_ids = torch.topk(tmp_scores, k=topk, dim=-1, sorted=use_sorted)[1]\n80:         # Use original unbiased scores for the routing weights\n81:         topk_weights = original_scores.gather(1, topk_ids)\n82:     else:\n83:         topk_weights, topk_ids = torch.topk(\n84:             tmp_scores, k=topk, dim=-1, sorted=use_sorted\n85:         )\n86: \n87:     if renormalize:\n88:         topk_weights = topk_weights / topk_weights.sum(dim=-1, keepdim=True)\n89: \n90:     if routed_scaling_factor != 1.0:\n91:         topk_weights = topk_weights * routed_scaling_factor\n92:     return topk_weights.to(torch.float32), topk_ids.to(torch.int32)\n93: \n94: # Same dynamic compile mode as upstream CUDA simple_compile_backend.\n95: grouped_topk = torch.compile(grouped_topk, dynamic=True, backend=\"inductor\")"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 444 seconds; 23868 generated tokens; 26 API attempts; 747620 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-a5b862d50ad592f8",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"native_ops.py\"}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-bc8046b782e5fa50",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"expert_kernels.py\"}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 2,
+          "id": "chatcmpl-tool-9c70b853fc88c3d7",
+          "function": {
+            "name": "run_benchmark",
+            "arguments": "{}"
+          }
+        }
+      ],
+      "reasoning_details": [
+        {
+          "type": "reasoning.text",
+          "text": "Let me look at the helpers, then run the benchmark baseline.",
+          "format": "unknown",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-a5b862d50ad592f8",
+      "content": "1: # Existing native CUDA helpers used by this derived vLLM MoE block.\n2: import ctypes\n3: from pathlib import Path\n4: \n5: lib = ctypes.CDLL(str(Path(__file__).resolve().parent / 'native' / 'kernels.so'))\n6: P = ctypes.c_void_p\n7: I = ctypes.c_int\n8: lib.route.argtypes = [P,P,P,P,P,I,I,I,P]\n9: lib.route.restype = I\n10: lib.align.argtypes = [P,P,P,P,P,I,I,I,I,I,P]\n11: lib.align.restype = I\n12: lib.reduce8.argtypes = [P,P,I,I,P]\n13: lib.reduce8.restype = I\n14: \n15: def check(code):\n16:     if code:\n17:         raise RuntimeError(f'CUDA launch error {code}')"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-bc8046b782e5fa50",
+      "content": "1: # SPDX-License-Identifier: Apache-2.0\n2: # Extracted from vLLM 94923629729381d7f7c9efde72071a2441f7fd82.\n3: # Kernel bodies unchanged. Host import dependencies narrowed to the tested FP16 path.\n4: from typing import Any\n5: from types import SimpleNamespace\n6: import torch\n7: import triton\n8: import triton.language as tl\n9: envs=SimpleNamespace(VLLM_BATCH_INVARIANT=False, VLLM_USE_FUSED_MOE_GROUPED_TOPK=False)\n10: current_platform=SimpleNamespace(is_rocm=lambda:False, is_cuda=lambda:True)\n11: @triton.jit\n12: def write_zeros_to_output(\n13:     c_ptr,\n14:     stride_cm,\n15:     stride_cn,\n16:     pid_n,\n17:     N,\n18:     offs_token,\n19:     token_mask,\n20:     BLOCK_SIZE_M,\n21:     BLOCK_SIZE_N,\n22:     compute_type,\n23: ):\n24:     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=compute_type)\n25:     offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)\n26:     c_ptrs = c_ptr + stride_cm * offs_token[:, None] + stride_cn * offs_cn[None, :]\n27:     c_mask = token_mask[:, None] & (offs_cn[None, :] < N)\n28:     tl.store(c_ptrs, accumulator, mask=c_mask)\n29: \n30: @triton.jit\n31: def fused_moe_kernel(\n32:     # Pointers to matrices\n33:     a_ptr,\n34:     b_ptr,\n35:     c_ptr,\n36:     b_bias_ptr,\n37:     a_scale_ptr,\n38:     b_scale_ptr,\n39:     topk_weights_ptr,\n40:     sorted_token_ids_ptr,\n41:     expert_ids_ptr,\n42:     num_tokens_post_padded_ptr,\n43:     # Matrix dimensions\n44:     N,\n45:     K,\n46:     EM,\n47:     num_valid_tokens,\n48:     # The stride variables represent how much to increase the ptr by when\n49:     # moving by 1 element in a particular dimension. E.g. `stride_am` is\n50:     # how much to increase `a_ptr` by to get the element one row down\n51:     # (A has M rows).\n52:     stride_am,\n53:     stride_ak,\n54:     stride_be,\n55:     stride_bk,\n56:     stride_bn,\n57:     stride_cm,\n58:     stride_cn,\n59:     stride_asm,\n60:     stride_ask,\n61:     stride_bse,\n62:     stride_bsk,\n63:     stride_bsn,\n64:     stride_bbe,  # bias expert stride\n65:     stride_bbn,  # bias N stride\n66:     # Block size for block-wise quantization\n67:     group_n: tl.constexpr,\n68:     group_k: tl.constexpr,\n69:     naive_block_assignment: tl.constexpr,\n70:     # Meta-parameters\n71:     BLOCK_SIZE_M: tl.constexpr,\n72:     BLOCK_SIZE_N: tl.constexpr,\n73:     BLOCK_SIZE_K: tl.constexpr,\n74:     GROUP_SIZE_M: tl.constexpr,\n75:     SPLIT_K: tl.constexpr,\n76:     MUL_ROUTED_WEIGHT: tl.constexpr,\n77:     top_k: tl.constexpr,\n78:     compute_type: tl.constexpr,\n79:     use_fp8_w8a8: tl.constexpr,\n80:     use_int8_w8a8: tl.constexpr,\n81:     use_int8_w8a16: tl.constexpr,\n82:     per_channel_quant: tl.constexpr,\n83:     HAS_BIAS: tl.constexpr,\n84: ):\n85:     \"\"\"\n86:     Implements the fused computation for a Mixture of Experts (MOE) using\n87:     token and expert matrices.\n88: \n89:     Key Parameters:\n90:     - A: The input tensor representing tokens with shape (*, K), where '*' can\n91:         be any shape representing batches and K is the feature dimension of\n92:         each token.\n93:     - B: The stacked MOE weight tensor with shape (E, N, K), where E is\n94:         the number of experts, K is the input feature dimension, and N is\n95:         the output feature dimension.\n96:     - C: The output cache tensor with shape (M, topk, N), where M is the\n97:         total number of tokens post padding, topk is the number of times\n98:         each token is repeated, and N is the output feature dimension.\n99:     - sorted_token_ids: A tensor containing the sorted indices of tokens,\n100:         repeated topk times and arranged by the expert index they are\n101:         assigned to.\n102:     - expert_ids: A tensor containing the indices of the expert for each\n103:         block. It determines which expert matrix from B should be used for\n104:         each block in A.\n105:     - naive_block_assignment: A boolean flag indicating whether to use naive\n106:         token wise block assignment. If True, each block corresponds to a\n107:         single token.\n108:     This kernel performs the multiplication of a token by its corresponding\n109:     expert matrix as determined by `expert_ids`. The sorting of\n110:     `sorted_token_ids` by expert index and padding ensures divisibility by\n111:     BLOCK_SIZE_M, which is necessary to maintain consistency in block matrix\n112:     multiplication across different blocks processed by the same expert.\n113:     \"\"\"\n114:     # -----------------------------------------------------------\n115:     # Map program ids `pid` to the block of C it should compute.\n116:     # This is done in a grouped ordering to promote L2 data reuse.\n117:     pid = tl.program_id(axis=0)\n118:     num_pid_m = tl.cdiv(EM, BLOCK_SIZE_M)\n119:     num_pid_n = tl.cdiv(N, BLOCK_SIZE_N)\n120:     num_pid_in_group = GROUP_SIZE_M * num_pid_n\n121:     group_id = pid // num_pid_in_group\n122:     first_pid_m = group_id * GROUP_SIZE_M\n123:     group_size_m = min(num_pid_m - first_pid_m, GROUP_SIZE_M)\n124:     pid_m = first_pid_m + ((pid % num_pid_in_group) % group_size_m)\n125:     pid_n = (pid % num_pid_in_group) // group_size_m\n126: \n127:     # ----------------------------------------------------------\n128:     # Create pointers for the first blocks of A and B.\n129:     # We will advance this pointer as we move in the K direction\n130:     # and accumulate\n131:     # `a_ptrs` is a block of [BLOCK_SIZE_M, BLOCK_SIZE_K] pointers\n132:     # `b_ptrs` is a block of [BLOCK_SIZE_K, BLOCK_SIZE_N] pointers\n133:     offs = tl.arange(0, BLOCK_SIZE_M).to(tl.int64)\n134:     num_tokens_post_padded = tl.load(num_tokens_post_padded_ptr)\n135:     if pid_m * BLOCK_SIZE_M >= num_tokens_post_padded:\n136:         return\n137:     if not naive_block_assignment:\n138:         offs_token_id = pid_m * BLOCK_SIZE_M + offs\n139:         offs_token = tl.load(sorted_token_ids_ptr + offs_token_id)\n140:     else:\n141:         offs_token = tl.where(\n142:             offs == 0,\n143:             pid_m,  # first element = pid_m\n144:             num_valid_tokens,  # remaining elements = constant\n145:         )\n146:     # Cast to int64 to prevent overflow in stride*offset products\n147:     # (e.g. stride_cm * offs_token can exceed int32 for large token counts)\n148:     offs_token = offs_token.to(tl.int64)\n149: \n150:     token_mask = offs_token < num_valid_tokens\n151: \n152:     off_experts = tl.load(expert_ids_ptr + pid_m).to(tl.int64)\n153:     if off_experts == -1:\n154:         # -----------------------------------------------------------\n155:         # Write back zeros to the output when the expert is not\n156:         # in the current expert parallel rank.\n157:         write_zeros_to_output(\n158:             c_ptr,\n159:             stride_cm,\n160:             stride_cn,\n161:             pid_n,\n162:             N,\n163:             offs_token,\n164:             token_mask,\n165:             BLOCK_SIZE_M,\n166:             BLOCK_SIZE_N,\n167:             compute_type,\n168:         )\n169:         return\n170: \n171:     offs_bn = (pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N).to(tl.int64)) % N\n172:     offs_k = tl.arange(0, BLOCK_SIZE_K)\n173:     a_ptrs = a_ptr + (\n174:         offs_token[:, None] // top_k * stride_am + offs_k[None, :] * stride_ak\n175:     )\n176: \n177:     b_ptrs = (\n178:         b_ptr\n179:         + off_experts * stride_be\n180:         + (offs_k[:, None] * stride_bk + offs_bn[None, :] * stride_bn)\n181:     )\n182:     if use_int8_w8a16:\n183:         b_scale_ptrs = (\n184:             b_scale_ptr + off_experts * stride_bse + offs_bn[None, :] * stride_bsn\n185:         )\n186:         b_scale = tl.load(b_scale_ptrs)\n187: \n188:     if use_fp8_w8a8 or use_int8_w8a8:\n189:         # block-wise\n190:         if group_k > 0 and group_n > 0:\n191:             a_scale_ptrs = a_scale_ptr + (offs_token // top_k) * stride_asm\n192:             offs_bsn = offs_bn // group_n\n193:             b_scale_ptrs = (\n194:                 b_scale_ptr + off_experts * stride_bse + offs_bsn * stride_bsn\n195:             )\n196:         # channel-wise\n197:         elif per_channel_quant:\n198:             b_scale_ptrs = (\n199:                 b_scale_ptr + off_experts * stride_bse + offs_bn[None, :] * stride_bsn\n200:             )\n201:             b_scale = tl.load(b_scale_ptrs)\n202:             # Load per-token scale for activations\n203:             a_scale_ptrs = a_scale_ptr + (offs_token // top_k) * stride_asm\n204:             a_scale = tl.load(a_scale_ptrs, mask=token_mask, other=0.0)[:, None]\n205:         # tensor-wise\n206:         else:\n207:             a_scale = tl.load(a_scale_ptr)\n208:             b_scale = tl.load(b_scale_ptr + off_experts)\n209:     if HAS_BIAS:\n210:         # bias shape: [num_experts, N]\n211:         bias_ptrs = b_bias_ptr + off_experts * stride_bbe + offs_bn * stride_bbn\n212:         bias = tl.load(bias_ptrs, mask=(offs_bn < N), other=0.0)\n213:     # -----------------------------------------------------------\n214:     # Iterate to compute a block of the C matrix.\n215:     # We accumulate into a `[BLOCK_SIZE_M, BLOCK_SIZE_N]` block\n216:     # of fp32 values for higher accuracy.\n217:     # `accumulator` will be converted back to fp16 after the loop.\n218:     accumulator = tl.zeros((BLOCK_SIZE_M, BLOCK_SIZE_N), dtype=tl.float32)\n219:     for k in range(0, tl.cdiv(K, BLOCK_SIZE_K)):\n220:         # Load the next block of A and B, generate a mask by checking the\n221:         # K dimension.\n222:         a = tl.load(\n223:             a_ptrs,\n224:             mask=token_mask[:, None] & (offs_k[None, :] < K - k * BLOCK_SIZE_K),\n225:             other=0.0,\n226:         )\n227:         b = tl.load(b_ptrs, mask=offs_k[:, None] < K - k * BLOCK_SIZE_K, other=0.0)\n228:         # We accumulate along the K dimension.\n229:         if use_int8_w8a16:\n230:             accumulator = tl.dot(a, b.to(compute_type), acc=accumulator)\n231:         elif use_fp8_w8a8 or use_int8_w8a8:\n232:             if group_k > 0 and group_n > 0:\n233:                 k_start = k * BLOCK_SIZE_K\n234:                 offs_ks = k_start // group_k\n235:                 a_scale = tl.load(\n236:                     a_scale_ptrs + offs_ks * stride_ask, mask=token_mask, other=0.0\n237:                 )\n238:                 b_scale = tl.load(b_scale_ptrs + offs_ks * stride_bsk)\n239: \n240:                 accumulator += tl.dot(a, b) * a_scale[:, None] * b_scale[None, :]\n241:             else:\n242:                 if use_fp8_w8a8:\n243:                     # acc used to enable fp8_fast_accum\n244:                     accumulator = tl.dot(a, b, acc=accumulator)\n245:                 else:\n246:                     accumulator += tl.dot(a, b)\n247:         else:\n248:             accumulator += tl.dot(a, b)\n249:         # Advance the ptrs to the next K block.\n250:         a_ptrs += BLOCK_SIZE_K * stride_ak\n251:         b_ptrs += BLOCK_SIZE_K * stride_bk\n252: \n253:     # Dequantization for supported quantization schemes:\n254:     #   - int8_w8a16\n255:     #   - fp8_w8a8\n256:     #   - int8_w8a8\n257:     # Accumulator and scalings are in float32 to preserve numerical accuracy.\n258:     if use_int8_w8a16:\n259:         accumulator = accumulator * b_scale\n260:     elif (use_fp8_w8a8 or use_int8_w8a8) and not (group_k > 0 and group_n > 0):\n261:         accumulator = accumulator * a_scale * b_scale\n262: \n263:     # Bias addition:\n264:     # Bias must be applied after dequantization:\n265:     #   - Since bias is typically not quantized\n266:     #   - Bias should not be scaled by quantization factors\n267:     if HAS_BIAS:\n268:         accumulator += bias[None, :]\n269: \n270:     # Router (MoE) weight multiplication:\n271:     # This multiplication MUST be performed in float32 before any precision\n272:     # conversion to ensure numerical stability, which is especially critical\n273:     # on ROCm platforms.\n274:     if MUL_ROUTED_WEIGHT:\n275:         moe_weight = tl.load(\n276:             topk_weights_ptr + offs_token,\n277:             mask=token_mask,\n278:             other=0,\n279:         )\n280:         accumulator *= moe_weight[:, None]\n281: \n282:     # Final precision conversion:\n283:     # Cast once at the end to the desired compute/output dtype.\n284:     accumulator = accumulator.to(compute_type)\n285: \n286:     # -----------------------------------------------------------\n287:     # Write back the block of the output\n288:     offs_cn = pid_n * BLOCK_SIZE_N + tl.arange(0, BLOCK_SIZE_N)\n289:     c_ptrs = c_ptr + stride_cm * offs_token[:, None] + stride_cn * offs_cn[None, :]\n290:     c_mask = token_mask[:, None] & (offs_cn[None, :] < N)\n291:     tl.store(c_ptrs, accumulator, mask=c_mask)\n292: \n293: def invoke_fused_moe_triton_kernel(\n294:     A: torch.Tensor,\n295:     B: torch.Tensor,\n296:     C: torch.Tensor,\n297:     A_scale: torch.Tensor | None,\n298:     B_scale: torch.Tensor | None,\n299:     topk_weights: torch.Tensor | None,\n300:     sorted_token_ids: torch.Tensor | None,"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-9c70b853fc88c3d7",
+      "content": "{\"correct\": true, \"checks\": [{\"case\": 0, \"ok\": true, \"relative_rms\": 0.00022025413636583835, \"max_abs\": 0.000823974609375, \"route_set_equal\": true, \"padded_slots\": 1472, \"block_m\": 64}, {\"case\": 1, \"ok\": true, \"relative_rms\": 0.00022222001280169934, \"max_abs\": 0.000598907470703125, \"route_set_equal\": true, \"padded_slots\": 4064, \"block_m\": 32}, {\"case\": 2, \"ok\": true, \"relative_rms\": 0.0002174583642045036, \"max_abs\": 0.0004730224609375, \"route_set_equal\": true, \"padded_slots\": 3904, \"block_m\": 32}], \"latency_us\": 62.50175952911377, \"samples_us\": [62.522878646850586, 62.802557945251465, 62.50175952911377, 62.46272087097168, 62.49855995178223], \"errors\": []}"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 415 seconds; 23766 generated tokens; 25 API attempts; 743557 total-token guard headroom. Save and validate within these limits."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read public UTF-8 file lines inclusive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_text",
+        "description": "Literal search over public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "max_results": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Save one complete editable source file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "replace_text",
+        "description": "Replace one exact block in an editable source file. Old block must occur exactly once.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "old": {
+              "type": "string"
+            },
+            "new": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "old",
+            "new"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_benchmark",
+        "description": "Check MoE correctness and measure the complete routing-to-output GPU pipeline. Reports latency in microseconds.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "temperature": 0,
+  "max_tokens": 8192,
+  "provider": {
+    "only": [
+      "DeepInfra"
+    ],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "data_collection": "deny"
+  }
+}

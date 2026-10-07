@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-Rw4ffAsvHnvfj9DTyXnp4qZo",
+  "object": "chat.completion",
+  "created": 1791035510,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Now let me update `auto_ep_layer.py` to use the fused kernels with fallbacks:",
+        "reasoning_content": "Now update auto_ep_layer.py to use these kernels with proper fallbacks. I need to preserve all original behavior for CPU, pre, legacy_bmm, non-contiguous, etc.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "write_file:0",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"auto_ep_layer.py\",\"content\":\"# SPDX-License-Identifier: Apache-2.0\\n# DeepSpeed Team. Export of upstream local token functions; only import paths adapted.\\nfrom __future__ import annotations\\nimport torch\\nfrom typing import Literal\\n\\ndef permute_by_local_expert(tokens: torch.Tensor, local_counts: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:\\n    \\\"\\\"\\\"Reorder tokens so they are grouped contiguously by local expert ID.\\n\\n    Uses TorchTitan's Triton kernel for permutation index generation.\\n\\n    Returns:\\n        tokens_permuted: [N_padded, H] (alignment-padded)\\n        permuted_indices: [N_padded] (maps padded positions -> original positions)\\n        aligned_counts: [E_local] aligned token counts per expert (for expert computation)\\n        n_tokens: original token count before padding (for unpermute)\\n    \\\"\\\"\\\"\\n    from ep_kernels import generate_permute_indices, TOKEN_GROUP_ALIGN_SIZE_M\\n    if local_counts.ndim == 1:\\n        ep_degree = 1\\n        num_local_experts = local_counts.shape[0]\\n        local_counts_flat = local_counts\\n    elif local_counts.ndim == 2:\\n        ep_degree, num_local_experts = local_counts.shape\\n        local_counts_flat = local_counts.reshape(-1)\\n    else:\\n        raise ValueError(f'local_counts must have shape [E_local] or [ep_degree, E_local], got {tuple(local_counts.shape)}')\\n    n_tokens = tokens.shape[0]\\n    alignment = TOKEN_GROUP_ALIGN_SIZE_M\\n    x_padded_per_expert = n_tokens + num_local_experts * alignment\\n    padded_max_len = (x_padded_per_expert + alignment - 1) // alignment * alignment\\n    use_cpu = tokens.device.type == 'cpu'\\n    counts_for_permute = local_counts_flat.cpu() if use_cpu else local_counts_flat\\n    with torch.no_grad():\\n        permuted_indices, m_sizes, _offsets = generate_permute_indices(counts_for_permute, num_local_experts, ep_degree, padded_max_len, alignment, use_cpu=use_cpu)\\n    if not use_cpu:\\n        permuted_indices = permuted_indices.to(tokens.device)\\n        m_sizes = m_sizes.to(tokens.device)\\n    if not use_cpu:\\n        import combine_kernels as _ck\\n        if _ck._TRITON_AVAILABLE:\\n            src = tokens if tokens.is_contiguous() else tokens.contiguous()\\n            tokens_permuted = _ck.gather_zero_triton(src, permuted_indices)\\n            return (tokens_permuted, permuted_indices, m_sizes, n_tokens)\\n    tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))\\n    tokens_permuted = tokens_padded[permuted_indices, :]\\n    return (tokens_permuted, permuted_indices, m_sizes, n_tokens)\\n\\ndef unpermute_by_local_expert(expert_output: torch.Tensor, permuted_indices: torch.Tensor, n_tokens: int) -> torch.Tensor:\\n    \\\"\\\"\\\"Reverse permute_by_local_expert: restore original token order and strip padding.\\n\\n    Args:\\n        expert_output: [N_padded, H] from expert computation\\n        permuted_indices: [N_padded] index mapping from permute_by_local_expert\\n        n_tokens: original token count before alignment padding\\n    \\\"\\\"\\\"\\n    if expert_output.device.type != 'cpu':\\n        import combine_kernels as _ck\\n        if _ck._TRITON_AVAILABLE:\\n            src = expert_output if expert_output.is_contiguous() else expert_output.contiguous()\\n            return _ck.scatter_drop_triton(src, permuted_indices, n_tokens)\\n    out_unpermuted = expert_output.new_zeros((n_tokens + 1, expert_output.shape[-1]))\\n    out_unpermuted[permuted_indices, :] = expert_output\\n    return out_unpermuted[:-1]\\n\\ndef combine_from_routed(expert_output: torch.Tensor, top_scores: torch.Tensor, token_indices_sorted: torch.Tensor, top_k: int, score_apply: Literal['pre', 'post'], combine_impl: Literal['weighted_sum', 'legacy_bmm'], shape: tuple[int, int, int]) -> torch.Tensor:\\n    \\\"\\\"\\\"Scatter-add expert outputs back to original token positions.\\\"\\\"\\\"\\n    if (expert_output.device.type != 'cpu' and score_apply == 'post'\\n            and combine_impl == 'weighted_sum'):\\n        import combine_kernels as _ck\\n        if _ck._TRITON_AVAILABLE:\\n            E = expert_output if expert_output.is_contiguous() else expert_output.contiguous()\\n            S = top_scores if top_scores.is_contiguous() else top_scores.contiguous()\\n            idx = token_indices_sorted if token_indices_sorted.is_contiguous() else token_indices_sorted.contiguous()\\n            return _ck.combine_post_triton(E, S, idx, top_k, shape)\\n    bsz, seqlen, hdim = shape\\n    T = bsz * seqlen\\n    output = torch.zeros(T * top_k, hdim, dtype=expert_output.dtype, device=expert_output.device)\\n    output[token_indices_sorted] = expert_output\\n    output = output.reshape(T, top_k, hdim)\\n    if score_apply == 'post':\\n        if combine_impl == 'legacy_bmm':\\n            output = torch.bmm(top_scores.reshape(-1, 1, top_k).float(), output.float()).to(expert_output.dtype).squeeze(1)\\n        else:\\n            output = (output.float() * top_scores.reshape(T, top_k, 1).float()).sum(dim=1).to(expert_output.dtype)\\n    else:\\n        output = output.sum(dim=1)\\n    return output.reshape(bsz, seqlen, hdim)\\n\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 25892,
+    "total_tokens": 27205,
+    "completion_tokens": 1313,
+    "estimated_cost": 0.03734469,
+    "prompt_tokens_details": {
+      "cached_tokens": 21504,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 41
+    }
+  }
+}

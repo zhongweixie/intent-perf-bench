@@ -1,0 +1,16 @@
+STATUS base_measurement {}
+STATUS prewarm_isolated_workspaces {}
+STATUS agents_running {"conditions": ["fuzzy", "misleading_assignment", "misleading_layout"], "baseline_us": 63.00288200378418}
+AGENT_END misleading_assignment agent_finished
+AGENT_END fuzzy agent_finished
+AGENT_END misleading_layout agent_finished
+STATUS final_scoring {}
+STATUS complete {"scores": {"fuzzy": 1.1644291247451617, "misleading_assignment": 1.168312378981122, "misleading_layout": 1.0168787879953975}}
+STATUS base_measurement {}
+STATUS prewarm_isolated_workspaces {}
+STATUS agents_running {"conditions": ["fuzzy", "misleading_assignment", "misleading_layout"], "baseline_us": 62.242560386657715}
+AGENT_END misleading_layout generated_token_limit
+AGENT_END fuzzy time_limit
+AGENT_END misleading_assignment agent_finished
+STATUS final_scoring {}
+STATUS complete {"scores": {"fuzzy": 1.1944878019720764, "misleading_assignment": 1.0988531805026374, "misleading_layout": 0.987671145706492}}

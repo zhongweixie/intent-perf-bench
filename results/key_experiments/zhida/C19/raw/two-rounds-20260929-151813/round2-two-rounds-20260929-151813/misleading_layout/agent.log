@@ -1,0 +1,13 @@
+misleading_layout call 1 generated 41 elapsed 1 benchmarks 0
+misleading_layout call 2 generated 142 elapsed 3 benchmarks 0
+misleading_layout call 3 generated 267 elapsed 33 benchmarks 1
+misleading_layout call 4 generated 387 elapsed 35 benchmarks 1
+misleading_layout call 5 generated 482 elapsed 37 benchmarks 1
+misleading_layout call 6 generated 560 elapsed 38 benchmarks 1
+misleading_layout call 7 generated 5477 elapsed 90 benchmarks 1
+misleading_layout call 8 generated 5502 elapsed 118 benchmarks 2
+misleading_layout call 9 generated 11147 elapsed 179 benchmarks 2
+misleading_layout call 10 generated 11218 elapsed 209 benchmarks 3
+misleading_layout call 12 generated 22124 elapsed 315 benchmarks 3
+misleading_layout call 13 generated 22155 elapsed 351 benchmarks 4
+TRIAL_END {"condition": "misleading_layout", "stop_reason": "generated_token_limit", "agent_seconds": 374.7449421212077, "real_wall_seconds": 427.8455721773207, "gpu_queue_wait_seconds": 53.037212687544525, "api_calls": 14, "tool_actions": 17, "generated_tokens": 24000, "prompt_tokens": 226674, "total_tokens": 250674, "reported_cost_usd": 0.013063870399999998, "failed_requests_usage_unknown": 0, "final_source_sha256": "fcfe514baa44447a50cae0959b9d47be77193cf921a461eeb48890fe1c1f48de", "final_answer": "", "namespace": "round2-two-rounds-20260929-151813-misleading_layout", "budget_notices": 14, "api_seconds": 255.71551598235965, "tool_seconds": 171.3802576912567, "benchmark_seconds": 171.21165245678276, "benchmark_active_seconds": 118.17443976923823}

@@ -1,0 +1,9 @@
+{
+  "case": "C29",
+  "task_id": "ipb_cuda_zhida_c29",
+  "primary": "misleading2",
+  "diagnostic": [
+    "misleading1"
+  ],
+  "limitations": "Three substantive supporting pairs span v2/v3. First v2 M2 includes a long unanswered request. v3 round2 all-arm timeout is retained as infrastructure, not success/failure evidence. M1 is not stable. A/C hypotheses overlap; B fixed-workload plausibility is weaker."
+}

@@ -1,0 +1,46 @@
+{
+  "id": "ipb_cuda_zhida_c19",
+  "title": "vLLM derived MoE routing and complete block",
+  "seconds": 450,
+  "primary": "misleading_layout",
+  "diagnostic": [
+    "misleading_assignment"
+  ],
+  "editable": [
+    "pipeline.py",
+    "routing.py"
+  ],
+  "source": "https://github.com/vllm-project/vllm/commit/94923629729381d7f7c9efde72071a2441f7fd82",
+  "limits": "24,000 generated tokens; 28 API attempts; 8192 per response",
+  "model": "deepseek/deepseek-v4.1-flash",
+  "effort": null,
+  "summary": "Two exploratory pairs favor Fuzzy over layout; assignment is diagnostic and not stable. Initial weak Fuzzy pilot retained. No preregistered significance claim.",
+  "task_id": "ipb_cuda_zhida_c19",
+  "case": "C19",
+  "editable_files": [
+    "pipeline.py",
+    "routing.py"
+  ],
+  "historical_protocol": {
+    "model": "deepseek/deepseek-v4.1-flash",
+    "provider": "DeepInfra",
+    "temperature": 0,
+    "wall_seconds": 450,
+    "max_queue_wait_seconds": 1200,
+    "max_generated_tokens": 24000,
+    "max_api_attempts": 28,
+    "total_tokens_response_threshold": 750000,
+    "per_response_max_tokens": 8192,
+    "transport_retries": 2,
+    "conditions": [
+      "fuzzy",
+      "misleading_assignment",
+      "misleading_layout"
+    ],
+    "gpu": "0",
+    "status": "paired_prompt_screen",
+    "task": "C19"
+  },
+  "api_key_environment": "OPENROUTER_API_KEY",
+  "transport_note": "Preserved scripts call OpenRouter; provider label in historical protocol is not a transport URL."
+}

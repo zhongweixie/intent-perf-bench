@@ -1,0 +1,9 @@
+{
+  "phase": "complete",
+  "at": "2026-09-29T15:53:51.509055",
+  "scores": {
+    "fuzzy": 1.1944878019720764,
+    "misleading_assignment": 1.0988531805026374,
+    "misleading_layout": 0.987671145706492
+  }
+}

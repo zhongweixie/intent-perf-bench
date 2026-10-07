@@ -1,0 +1,39 @@
+{
+  "correct": true,
+  "latency_ms": 24.777440437756617,
+  "cases": [
+    {
+      "name": "local-4096-top8",
+      "latency_ms": 17.638866207562387,
+      "samples_ms": [
+        17.67311547882855,
+        17.661206424236298,
+        17.63208396732807,
+        17.64064864255488,
+        17.633846029639244,
+        17.637083772569895
+      ]
+    },
+    {
+      "name": "local-8192-top8",
+      "latency_ms": 34.80504627805203,
+      "samples_ms": [
+        34.7871130798012,
+        34.79771129786968,
+        34.80643476359546,
+        34.8084713332355,
+        34.899330930784345,
+        34.8036577925086
+      ]
+    }
+  ],
+  "checks": [
+    "48-upstream-combine-forward-and-both-gradients",
+    "24-empty-expert-and-hidden-shape-reorder-cases",
+    "cpu-strided-input-and-pre-legacy-fallbacks"
+  ],
+  "errors": [],
+  "gpu": "NVIDIA RTX A6000",
+  "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+  "worker_seconds": 17.064683809876442
+}

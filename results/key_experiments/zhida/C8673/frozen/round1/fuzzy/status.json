@@ -1,0 +1,124 @@
+{
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "condition": "fuzzy",
+  "round": 1,
+  "generated_tokens": 11269,
+  "prompt_tokens": 1237837,
+  "model_responses": 45,
+  "usage_notifications": 45,
+  "tool_actions": 34,
+  "stop_reason": "completed",
+  "transport_errors": [
+    {
+      "error": {
+        "message": "Reconnecting... 2/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-out}, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e5662f168485-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8df3-7500-9fab-ae29cea14a4e",
+      "turnId": "01a11014-8e89-76c3-8ea8-189a8cb66df2"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 3/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e56e9c992907-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8df3-7500-9fab-ae29cea14a4e",
+      "turnId": "01a11014-8e89-76c3-8ea8-189a8cb66df2"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 4/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s e, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e577dba2ddc5-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8df3-7500-9fab-ae29cea14a4e",
+      "turnId": "01a11014-8e89-76c3-8ea8-189a8cb66df2"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 5/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.con, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e581af19643b-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8df3-7500-9fab-ae29cea14a4e",
+      "turnId": "01a11014-8e89-76c3-8ea8-189a8cb66df2"
+    }
+  ],
+  "benchmarks": [
+    {
+      "elapsed_seconds": 186.98499999986961,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_fuzzy/_pilot_records.pt",
+      "latency_ms": 6.5778480768203735,
+      "samples_ms": [
+        6.592751979827881,
+        6.562944173812866
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 389.0629999998491,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_fuzzy/_pilot_records.pt",
+      "latency_ms": 3.632416009902954,
+      "samples_ms": [
+        3.6348960399627686,
+        3.6299359798431396
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 428.92199999978766,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_fuzzy/_pilot_records.pt",
+      "latency_ms": 3.6141679286956787,
+      "samples_ms": [
+        3.6174079179763794,
+        3.610927939414978
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    }
+  ],
+  "infrastructure_affected": false,
+  "isolation": "environments=[]; only dynamic public tools; native shell/apps/web disabled",
+  "thread_id": "01a11014-8df3-7500-9fab-ae29cea14a4e",
+  "agent_seconds": 457.7349999998696,
+  "reasoning_output_tokens": 5871,
+  "turn_status": "completed",
+  "turn_error": null,
+  "cutoff_agent_seconds": 457.7349999998696,
+  "submission_sha256": "fcad2fd76f111cca15f7e3dad7e2a36195c1d655ec6a773a3dde237a123ad46a",
+  "shutdown_elapsed_seconds": 457.7819999998901,
+  "gpu_queue_wait_seconds": 340.28100000019185,
+  "real_wall_seconds": 798.063000000082
+}

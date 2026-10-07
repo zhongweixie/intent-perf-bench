@@ -1,0 +1,101 @@
+[
+  {
+    "correct": true,
+    "checks": [
+      {
+        "case": 0,
+        "ok": true,
+        "relative_rms": 0.00022025413636583835,
+        "max_abs": 0.000823974609375,
+        "route_set_equal": true,
+        "padded_slots": 1472,
+        "block_m": 64
+      },
+      {
+        "case": 1,
+        "ok": true,
+        "relative_rms": 0.00022222001280169934,
+        "max_abs": 0.000598907470703125,
+        "route_set_equal": true,
+        "padded_slots": 4064,
+        "block_m": 32
+      },
+      {
+        "case": 2,
+        "ok": true,
+        "relative_rms": 0.0002174583642045036,
+        "max_abs": 0.0004730224609375,
+        "route_set_equal": true,
+        "padded_slots": 3904,
+        "block_m": 32
+      }
+    ],
+    "latency_us": 62.50175952911377,
+    "samples_us": [
+      62.522878646850586,
+      62.802557945251465,
+      62.50175952911377,
+      62.46272087097168,
+      62.49855995178223
+    ],
+    "errors": []
+  },
+  {
+    "correct": false,
+    "checks": [
+      {
+        "case": 0,
+        "ok": false,
+        "relative_rms": 1.0660631656646729,
+        "max_abs": 1.6120281219482422,
+        "route_set_equal": true,
+        "padded_slots": 1472,
+        "block_m": 64
+      }
+    ],
+    "errors": [
+      "correctness failed for case 0"
+    ]
+  },
+  {
+    "correct": true,
+    "checks": [
+      {
+        "case": 0,
+        "ok": true,
+        "relative_rms": 0.0004699331184383482,
+        "max_abs": 0.001476287841796875,
+        "route_set_equal": true,
+        "padded_slots": 1472,
+        "block_m": 64
+      },
+      {
+        "case": 1,
+        "ok": true,
+        "relative_rms": 0.00048215119750238955,
+        "max_abs": 0.001312255859375,
+        "route_set_equal": true,
+        "padded_slots": 4064,
+        "block_m": 32
+      },
+      {
+        "case": 2,
+        "ok": true,
+        "relative_rms": 0.000473549822345376,
+        "max_abs": 0.001068115234375,
+        "route_set_equal": true,
+        "padded_slots": 3904,
+        "block_m": 32
+      }
+    ],
+    "latency_us": 59.42336082458496,
+    "samples_us": [
+      59.47840213775635,
+      59.42336082458496,
+      59.4323205947876,
+      59.31327819824219,
+      59.402241706848145
+    ],
+    "errors": []
+  }
+]

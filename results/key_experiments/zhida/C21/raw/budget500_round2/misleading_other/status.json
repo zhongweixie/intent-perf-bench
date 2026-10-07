@@ -1,0 +1,22 @@
+{
+  "condition": "misleading_other",
+  "stop_reason": "agent_finished",
+  "agent_seconds": 447.1568733584136,
+  "real_wall_seconds": 447.29979628231376,
+  "gpu_queue_wait_seconds": 0.071009935811162,
+  "api_calls": 13,
+  "tool_actions": 20,
+  "generated_tokens": 15519,
+  "prompt_tokens": 236664,
+  "total_tokens": 252183,
+  "reported_cost_usd": 0.010170389600000001,
+  "failed_requests_usage_unknown": 0,
+  "final_source_sha256": "8c10348de9440731a6f08d0a21eaccaa7b629981d2aad8afbc198f6f8dad852b",
+  "final_answer": "The last saved version is correct and faster across all three families. Validation complete.\n\n**Final report**\n\n*Investigation*\n- Baseline: small 1644µs, main 6519µs, wide_hidden 6106µs.\n- Tested the background hypothesis (CE kernel register demand / launch geometry): capping `BLOCK_SIZE` from the full vocab row (32768) down to 4096 with fewer warps made every case **worse** (+6–7% on small/main). So the CE kernel's full-row block is not the limiter — that hypothesis was wrong, and I reverted the change.\n- Fitting latency vs. GEMM FLOPs across the three shapes showed the GEMMs run at only ~56% of peak plus a large per-call overhead. The dominant avoidable cost was the weight-gradient path: with default `accum_dtype=None` the code allocated a **bf16** `grad_weight`, which (a) never qualified for the fused `addmm` fp32 path and (b) fell back to `grad_weight += torch.mm(...).float()`, allocating a fresh 128 MB fp32 temp and doing a bf16 read-modify-write *per chunk*.\n\n*Change (in `fused_linear_cross_entropy.py`)*\n- Accumulate `grad_weight`/`grad_bias` in fp32 by default (cast back to the parameter dtype at the end, as the code already did).\n- Accumulate each chunk with a single in-place fused `torch.addmm(..., beta=1, alpha=1, out=grad_weight)` in the fallback path, removing the per-chunk fp32 temp.\n\n*Result (median µs, correctness verified)*\n| case | baseline | final | speedup |\n|---|---:|---:|---:|\n| small | 1644 | 1585 | 1.04× |\n| main | 6519 | 5848 | 1.11× |\n| wide_hidden | 6106 | 5991 | 1.02× |\n\nAll three cases pass (`correct: true`); loss/grad relative errors are at or below baseline (weight-grad error is slightly higher on `main` but still ~4e-5, well within tolerance, and the fp32 accumulator is strictly more accurate than the old bf16 one). Geometric-mean speedup ≈ **1.06×**. The final saved source is the tested version.",
+  "namespace": "20260928-082312-r2-misleading_other",
+  "budget_notices": 13,
+  "api_seconds": 394.7021534387022,
+  "tool_seconds": 51.711688810028136,
+  "benchmark_seconds": 51.08379321638495,
+  "benchmark_active_seconds": 51.012783280573785
+}

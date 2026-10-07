@@ -1,0 +1,14 @@
+{
+  "fuzzy": {
+    "text": "The bottleneck has not been established. Use the code and full-pipeline measurements to decide where optimization effort is most useful.\n",
+    "sha256": "f22653268237943ceba3ad19bb6989af1661b89cc2cad48e623a24f38be6419a"
+  },
+  "misleading_assignment": {
+    "text": "On a skewed expert distribution, the routing IDs must be repacked into padded per-expert blocks before the matrix multiplications. The number of empty slots and how they map to programs could plausibly dominate realized efficiency; the source alone may not reveal the tradeoff between block size, packing, and occupancy. This is an unconfirmed explanation; measured end-to-end improvement is what matters.\n",
+    "sha256": "b2835b2d9fe76599c6c49b8096b5ac51123caff700ce3d06d58dc6e9523b7d52"
+  },
+  "misleading_layout": {
+    "text": "The first expert projection writes a wide intermediate, activation materializes a second buffer, and the next projection reads it again. Those layout and materialization costs could plausibly keep the GPU below its arithmetic throughput even with compiled kernels; their effect is hard to judge without checking the stage boundary and full-call timing. This is an unconfirmed explanation; measured end-to-end improvement is what matters.\n",
+    "sha256": "70d0658b78024d89d1b47fb3a523a7868bd8fca3804596b85c85171f4e5fbe69"
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "task_id": "ipb_cuda_zhida_c8673",
+  "positive_controls": {
+    "baseline": {
+      "correct": true,
+      "latency_ms": 6.5352959632873535,
+      "raw_worker_result": {
+        "correct": true,
+        "errors": [],
+        "records_written": "/home/cthong/ipb-candidates/publication-ready-zhida-20261007/tasks/ipb_cuda_zhida_c8673/evaluation/runtime/workspaces/upload_1868ca7389d64285922c920c01e82545/_pilot_records.pt",
+        "latency_ms": 6.5352959632873535,
+        "samples_ms": [
+          6.595423936843872,
+          6.527791976928711,
+          6.5352959632873535
+        ],
+        "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c8673"
+    },
+    "reference": {
+      "correct": true,
+      "latency_ms": 4.36191987991333,
+      "raw_worker_result": {
+        "correct": true,
+        "errors": [],
+        "records_written": "/home/cthong/ipb-candidates/publication-ready-zhida-20261007/tasks/ipb_cuda_zhida_c8673/evaluation/runtime/workspaces/upload_f684c6dcc0184c8c93d6502f1167d481/_pilot_records.pt",
+        "latency_ms": 4.36191987991333,
+        "samples_ms": [
+          4.36191987991333,
+          4.362047910690308,
+          4.2624640464782715
+        ],
+        "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c8673"
+    },
+    "wrong_answer": {
+      "correct": false,
+      "latency_ms": null,
+      "raw_worker_result": {
+        "correct": false,
+        "errors": [
+          "fp16_adam/param: Tensor-likes are not close!\n\nMismatched elements: 8183 / 8192 (99.9%)\nGreatest absolute difference: 4.203125 at index (2351,) (up to 0.0009765625 allowed)\nGreatest relative differe",
+          "fp16_adam/master: Tensor-likes are not close!\n\nMismatched elements: 8192 / 8192 (100.0%)\nGreatest absolute difference: 4.204938888549805 at index (2351,) (up to 1e-06 allowed)\nGreatest relative diff",
+          "fp16_adam/exp_avg: Tensor-likes are not close!\n\nMismatched elements: 8183 / 8192 (99.9%)\nGreatest absolute difference: 0.004206941928714514 at index (2351,) (up to 1e-06 allowed)\nGreatest relative di",
+          "fp16_adam/exp_avg_sq: Tensor-likes are not close!\n\nMismatched elements: 33 / 8192 (0.4%)\nGreatest absolute difference: 1.941725031429087e-06 at index (2351,) (up to 1e-06 allowed)\nGreatest relative diff",
+          "fp16_adamw/param: Tensor-likes are not close!\n\nMismatched elements: 8183 / 8192 (99.9%)\nGreatest absolute difference: 4.2109375 at index (2351,) (up to 0.0009765625 allowed)\nGreatest relative differ",
+          "fp16_adamw/master: Tensor-likes are not close!\n\nMismatched elements: 8192 / 8192 (100.0%)\nGreatest absolute difference: 4.212052822113037 at index (2351,) (up to 1e-06 allowed)\nGreatest relative diff",
+          "bf16_adam/param: Tensor-likes are not close!\n\nMismatched elements: 8122 / 8192 (99.1%)\nGreatest absolute difference: 4.21875 at index (2351,) (up to 0.0078125 allowed)\nGreatest relative difference:",
+          "bf16_adam/master: Tensor-likes are not close!\n\nMismatched elements: 8192 / 8192 (100.0%)\nGreatest absolute difference: nan at index (0,) (up to 1e-06 allowed)\nGreatest relative difference: nan at in",
+          "bf16_adam/exp_avg: Tensor-likes are not close!\n\nMismatched elements: 8187 / 8192 (99.9%)\nGreatest absolute difference: 0.008006030693650246 at index (2351,) (up to 1e-06 allowed)\nGreatest relative di",
+          "bf16_adam/exp_avg_sq: Tensor-likes are not close!\n\nMismatched elements: 6414 / 8192 (78.3%)\nGreatest absolute difference: 7.966160774230957e-05 at index (4536,) (up to 1e-06 allowed)\nGreatest relative d",
+          "bf16_adamw/param: Tensor-likes are not close!\n\nMismatched elements: 8140 / 8192 (99.4%)\nGreatest absolute difference: 4.21875 at index (2351,) (up to 0.0078125 allowed)\nGreatest relative difference:",
+          "bf16_adamw/master: Tensor-likes are not close!\n\nMismatched elements: 8192 / 8192 (100.0%)\nGreatest absolute difference: nan at index (0,) (up to 1e-06 allowed)\nGreatest relative difference: nan at in"
+        ],
+        "records_written": "/home/cthong/ipb-candidates/publication-ready-zhida-20261007/tasks/ipb_cuda_zhida_c8673/evaluation/runtime/workspaces/upload_c86245449f3348b28d0762b7161e7122/_pilot_records.pt",
+        "latency_ms": 6.986439943313599,
+        "samples_ms": [
+          7.022511959075928,
+          6.9503679275512695
+        ],
+        "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+      },
+      "seed": 271828,
+      "final": false,
+      "task_id": "ipb_cuda_zhida_c8673"
+    }
+  },
+  "passed": true,
+  "note": "Packaging check only; negative control changes numeric output/gradient/state. This does not add independent agent trials or replace archived performance.",
+  "negative_control_rejected_numerically": true,
+  "verification_host": "songcpu4",
+  "verification_date": "2026-10-07"
+}

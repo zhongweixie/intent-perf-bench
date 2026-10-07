@@ -1,0 +1,29 @@
+{
+  "base_commit": "94923629729381d7f7c9efde72071a2441f7fd82",
+  "A": {
+    "pr": 49618,
+    "status": "merged",
+    "adaptation": "bias-free softmax, group=1, topk_group=1, scale=1 factory route bypass"
+  },
+  "B": {
+    "pr": 55225,
+    "status": "open",
+    "adaptation": "only FP16 default tile heuristics hunks, NOT complete PR"
+  },
+  "C": {
+    "pr": 44835,
+    "status": "open",
+    "adaptation": "existing moe_sum template specialization for topk8"
+  },
+  "scope": "controlled derived MoE pipeline, not full vLLM server reproduction",
+  "source_sha256": {
+    "expert_kernels.py": "f917a753a9d7715e713c9ea98fa5f246c6f6ec56902bcfa7abc248be4d214363",
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "routing.py": "ef52bddd1a3d429120958d6d06be2b40b5cead0efacd2f6bcfc2227ef4a3be06",
+    "native\\align.cu": "8841052e07bfcc71b2d06fbae25d8be114c14b3ae7c1f32b187c5883f872560e",
+    "native\\cub_helpers.h": "91bd3c5f862387c475806a13245f0353369439a4e83962d2798e820314c48c31",
+    "native\\cuda_compat.h": "959bc9e0e73e020d777530b18bf12160d35cc4eb976335955395729700b2f975",
+    "native\\topk.cu": "9911c608a6fb5c3470c7df372ec483f9a66b89dbd463026fea659390e04caad4",
+    "native\\core\\math.hpp": "b80a3ffbbe5944c865331da95261696e430981b623d447adf24f272241104f59"
+  }
+}

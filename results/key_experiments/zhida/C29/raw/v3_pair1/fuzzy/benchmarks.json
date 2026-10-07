@@ -1,0 +1,61 @@
+[
+  {
+    "correct": true,
+    "latency_ms": 24.811304331113277,
+    "cases": [
+      {
+        "name": "local-4096-top8",
+        "latency_ms": 17.682412872090936,
+        "samples_ms": [
+          17.726970138028264,
+          17.766084522008896,
+          17.637855606153607,
+          17.62356422841549
+        ]
+      },
+      {
+        "name": "local-8192-top8",
+        "latency_ms": 34.81429978273809,
+        "samples_ms": [
+          34.841637359932065,
+          34.826330142095685,
+          34.799757646396756,
+          34.802269423380494
+        ]
+      }
+    ],
+    "checks": [
+      "48-upstream-combine-forward-and-both-gradients",
+      "24-empty-expert-and-hidden-shape-reorder-cases",
+      "cpu-strided-input-and-pre-legacy-fallbacks"
+    ],
+    "errors": [],
+    "gpu": "NVIDIA RTX A6000",
+    "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+    "worker_seconds": 24.461226426064968
+  },
+  {
+    "correct": false,
+    "errors": [
+      "AssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-fuzzy/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-fuzzy/_pilot_grade.py\", line 51, in main\n    torch.testing.assert_close(actual, expected, **tol)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)\n",
+    "worker_seconds": 14.432390541769564
+  },
+  {
+    "correct": false,
+    "errors": [
+      "NameError: name 'T' is not defined",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-fuzzy/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-fuzzy/_pilot_grade.py\", line 52, in main\n    ag = torch.autograd.grad(actual, (a, s), upstream)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/__init__.py\", line 503, in grad\n    result = _engine_run_backward(\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/graph.py\", line 829, in _engine_run_backward\n    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/function.py\", line 311, in apply\n    return user_fn(self, *args)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-fuzzy/combine_kernels.py\", line 207, in backward\n    gs = torch.empty((T * K,), dtype=s.dtype, device=s.device)\nNameError: name 'T' is not defined\n",
+    "worker_seconds": 17.622895311564207
+  },
+  {
+    "correct": false,
+    "errors": [
+      "benchmark timed out before trial deadline"
+    ]
+  }
+]

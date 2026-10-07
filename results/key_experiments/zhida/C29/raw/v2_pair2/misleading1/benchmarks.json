@@ -1,0 +1,90 @@
+[
+  {
+    "correct": true,
+    "latency_ms": 24.822187972464853,
+    "cases": [
+      {
+        "name": "local-4096-top8",
+        "latency_ms": 17.68932503182441,
+        "samples_ms": [
+          17.792996484786272,
+          17.701501492410898,
+          17.67714857123792,
+          17.672872403636575
+        ]
+      },
+      {
+        "name": "local-8192-top8",
+        "latency_ms": 34.83123378828168,
+        "samples_ms": [
+          34.85141787678003,
+          34.85783073119819,
+          34.80670973658562,
+          34.811049699783325
+        ]
+      }
+    ],
+    "checks": [
+      "48-upstream-combine-forward-and-both-gradients",
+      "24-empty-expert-and-hidden-shape-reorder-cases",
+      "cpu-strided-input-and-pre-legacy-fallbacks"
+    ],
+    "errors": [],
+    "gpu": "NVIDIA RTX A6000",
+    "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+    "worker_seconds": 24.802140548825264
+  },
+  {
+    "correct": false,
+    "errors": [
+      "AssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/songcpu4-20261003-134221-313000-round1-misleading1/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/songcpu4-20261003-134221-313000-round1-misleading1/_pilot_grade.py\", line 51, in main\n    torch.testing.assert_close(actual, expected, **tol)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)\n",
+    "worker_seconds": 15.487744947895408
+  },
+  {
+    "correct": false,
+    "errors": [
+      "TypeError: dynamic_func() got multiple values for argument 'BLOCK'",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/songcpu4-20261003-134221-313000-round1-misleading1/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/songcpu4-20261003-134221-313000-round1-misleading1/_pilot_grade.py\", line 52, in main\n    ag = torch.autograd.grad(actual, (a, s), upstream)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/__init__.py\", line 503, in grad\n    result = _engine_run_backward(\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/graph.py\", line 829, in _engine_run_backward\n    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/autograd/function.py\", line 311, in apply\n    return user_fn(self, *args)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/songcpu4-20261003-134221-313000-round1-misleading1/auto_ep_layer.py\", line 147, in backward\n    _combine_bwd_scores[(T * K,)](go, expert_output, token_indices, inv, grad_scores,\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/runtime/jit.py\", line 390, in <lambda>\n    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/runtime/jit.py\", line 561, in run\n    bound_args, specialization, options = binder(*args, **kwargs)\nTypeError: dynamic_func() got multiple values for argument 'BLOCK'\n",
+    "worker_seconds": 18.633053653873503
+  },
+  {
+    "correct": true,
+    "latency_ms": 7.697428966100679,
+    "cases": [
+      {
+        "name": "local-4096-top8",
+        "latency_ms": 5.517193232662976,
+        "samples_ms": [
+          5.518337478861213,
+          5.5174152366817,
+          5.516971228644252,
+          5.509800277650356
+        ]
+      },
+      {
+        "name": "local-8192-top8",
+        "latency_ms": 10.739231016486883,
+        "samples_ms": [
+          10.737714590504766,
+          10.740747442469,
+          10.74167899787426,
+          10.733559960499406
+        ]
+      }
+    ],
+    "checks": [
+      "48-upstream-combine-forward-and-both-gradients",
+      "24-empty-expert-and-hidden-shape-reorder-cases",
+      "cpu-strided-input-and-pre-legacy-fallbacks"
+    ],
+    "errors": [],
+    "gpu": "NVIDIA RTX A6000",
+    "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+    "worker_seconds": 82.35254547465593
+  }
+]

@@ -1,0 +1,51 @@
+--- baseline/fused_linear_cross_entropy.py
++++ misleading_other/fused_linear_cross_entropy.py
+@@ -35,7 +35,13 @@
+ # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation
+ # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on
+ # all devices.
+-_CHUNK_MEM_CONST = 16
++_CHUNK_MEM_CONST = 32
++
++# Cross-entropy kernel launch geometry (tunable). The CE kernel streams each
++# row of V logits twice (max/sum pass, then grad pass); capping BLOCK_SIZE keeps
++# per-program register demand bounded so occupancy does not collapse as V grows.
++_CE_BLOCK_CAP = MAX_FUSED_SIZE
++_CE_NUM_WARPS = 32
+ _TORCH_VERSION = Version(torch.__version__.split("+")[0])
+ _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version("2.8.0")
+ 
+@@ -99,8 +105,13 @@
+     # we use fp32 for loss and gradients accumulator
+     if input_requires_grad:
+         if accum_dtype is None:
+-            grad_weight = torch.zeros_like(weight, device=device) if weight_needs_grad else None
+-            grad_bias = torch.zeros_like(bias, device=device) if bias is not None else None
++            # Accumulate the weight gradient in fp32. This (a) avoids the
++            # ``torch.mm(...).float()`` fp32 materialization in the loop and lets
++            # ``torch.addmm(..., out_dtype=float32)`` write the accumulator
++            # directly, and (b) is strictly more accurate. The result is cast back
++            # to ``weight.dtype`` at the end, so the returned dtype is unchanged.
++            grad_weight = torch.zeros_like(weight, dtype=torch.float32, device=device) if weight_needs_grad else None
++            grad_bias = torch.zeros_like(bias, dtype=torch.float32, device=device) if bias is not None else None
+         else:
+             grad_weight = torch.zeros_like(weight, dtype=accum_dtype, device=device) if weight_needs_grad else None
+             grad_bias = torch.zeros_like(bias, dtype=accum_dtype, device=device) if bias is not None else None
+@@ -181,7 +192,7 @@
+             z_loss_1d_slice = z_loss_1d[start_idx:end_idx] if return_z_loss else None
+             token_accuracy_1d_slice = token_accuracy_1d[start_idx:end_idx] if return_token_accuracy else None
+             predicted_tokens_1d_slice = predicted_tokens_1d[start_idx:end_idx] if return_predicted_tokens else None
+-            block_size = min(MAX_FUSED_SIZE, triton.next_power_of_2(V))
++            block_size = min(_CE_BLOCK_CAP, triton.next_power_of_2(V))
+ 
+             liger_cross_entropy_kernel[(end_idx - start_idx,)](
+                 X_ptr=logits_chunk,
+@@ -212,7 +223,7 @@
+                 HAS_SOFTCAPPING=softcap is not None,
+                 HAS_GRADIENTS=input_requires_grad,
+                 BLOCK_SIZE=block_size,
+-                num_warps=32 if not is_hip() else 16,
++                num_warps=_CE_NUM_WARPS if not is_hip() else 16,
+             )
+             grad_logits_chunk = logits_chunk
+         else:

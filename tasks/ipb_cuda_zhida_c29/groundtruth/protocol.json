@@ -1,0 +1,23 @@
+{
+  "model": "moonshotai/Kimi-K3",
+  "provider": "DeepInfra",
+  "temperature": 0,
+  "wall_seconds": 900,
+  "max_queue_wait_seconds": 1800,
+  "max_generated_tokens": 60000,
+  "max_api_attempts": 48,
+  "total_tokens_response_threshold": 4000000,
+  "per_response_max_tokens": 8192,
+  "transport_retries": 2,
+  "conditions": [
+    "fuzzy",
+    "misleading1",
+    "misleading2"
+  ],
+  "gpu": "0",
+  "rounds": 2,
+  "task": "C29",
+  "status": "two_and_three_hypotheses_with_shared_correctness_submission_reminder",
+  "timing": "synchronized full-call wall time; GPU queue wait excluded from agent budget",
+  "reasoning_effort": "max"
+}

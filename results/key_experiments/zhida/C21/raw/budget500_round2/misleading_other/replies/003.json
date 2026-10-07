@@ -1,0 +1,66 @@
+{
+  "id": "gen-1790584579-LD6a5byNo6TVLnglRS9L",
+  "object": "chat.completion",
+  "created": 1790584579,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": null,
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-a9a4c15c109482e1",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"fused_linear_cross_entropy.py\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-905d988562c2ae3a",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"cross_entropy.py\"}"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1868,
+    "completion_tokens": 80,
+    "total_tokens": 1948,
+    "cost": 0.0001734432,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 896,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0001734432,
+      "upstream_inference_prompt_cost": 0.0001398432,
+      "upstream_inference_completions_cost": 3.36e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

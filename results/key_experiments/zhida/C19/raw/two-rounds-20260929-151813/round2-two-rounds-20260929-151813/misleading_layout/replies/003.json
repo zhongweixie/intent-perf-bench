@@ -1,0 +1,83 @@
+{
+  "id": "gen-1790696550-rHE5k0bM609G58dONswd",
+  "object": "chat.completion",
+  "created": 1790696550,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Let me look at the helper files and run the benchmark to get a baseline.\n\nLet me read native_ops.py and expert_kernels.py, and run the baseline benchmark.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8c1a3a66f25d5c50",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"native_ops.py\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-852f438d3509e523",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"expert_kernels.py\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 2,
+            "id": "chatcmpl-tool-ba0331e11fce828d",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Let me look at the helper files and run the benchmark to get a baseline.\n\nLet me read native_ops.py and expert_kernels.py, and run the baseline benchmark.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4025,
+    "completion_tokens": 125,
+    "total_tokens": 4150,
+    "cost": 0.0004595584,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 1152,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0004595584,
+      "upstream_inference_prompt_cost": 0.0004070584,
+      "upstream_inference_completions_cost": 5.25e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 36,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

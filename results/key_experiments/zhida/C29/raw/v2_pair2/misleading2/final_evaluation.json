@@ -1,0 +1,9 @@
+{
+  "correct": false,
+  "errors": [
+    "AssertionError: row permutation/count/padding changed",
+    ""
+  ],
+  "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_pilot_grade.py\", line 73, in main\n    assert torch.equal(u, v), 'row permutation/count/padding changed'\nAssertionError: row permutation/count/padding changed\n",
+  "worker_seconds": 19.847855726256967
+}

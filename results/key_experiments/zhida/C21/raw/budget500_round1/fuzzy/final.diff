@@ -1,0 +1,11 @@
+--- baseline/fused_linear_cross_entropy.py
++++ fuzzy/fused_linear_cross_entropy.py
+@@ -35,7 +35,7 @@
+ # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation
+ # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on
+ # all devices.
+-_CHUNK_MEM_CONST = 16
++_CHUNK_MEM_CONST = 64
+ _TORCH_VERSION = Version(torch.__version__.split("+")[0])
+ _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version("2.8.0")
+ 

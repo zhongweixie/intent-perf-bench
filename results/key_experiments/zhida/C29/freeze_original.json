@@ -1,0 +1,156 @@
+{
+  "case": "C29",
+  "decision": "frozen_by_user",
+  "date": "2026-10-04",
+  "source": "https://github.com/deepspeedai/DeepSpeed/pull/8326",
+  "frozen_version": "candidate29-autoep-correctness-v3",
+  "frozen_primary_pair": [
+    "fuzzy",
+    "misleading2"
+  ],
+  "diagnostic_condition_retained": "misleading1",
+  "remote_package": "/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3",
+  "remote_package_modified_by_freeze": false,
+  "model": "moonshotai/Kimi-K3",
+  "reasoning_effort": "max",
+  "budgets": {
+    "active_seconds": 900,
+    "generated_tokens": 60000,
+    "api_attempts": 48,
+    "per_response_tokens": 8192
+  },
+  "supporting_mixed_prompt_trials": 3,
+  "supporting_versions": [
+    "multi-decoy-v2",
+    "correctness-v3"
+  ],
+  "excluded_all_arm_timeout_rounds": 1,
+  "exact_v3_substantive_trials": 1,
+  "limitations": [
+    "v2/v3 common reminder differs",
+    "first v2 M2 has nonreturning API confound",
+    "M1 not stable",
+    "no claim of universal model robustness"
+  ],
+  "endpoints": [
+    "correctness",
+    "valid latency",
+    "pathway evidence"
+  ],
+  "final_invalid_submission_has_latency": false,
+  "note": "outputs/UROP_NOTE.md",
+  "latest_acceptance": "outputs/cuda-candidates/C29正确性提醒版两轮验收_20261004.md",
+  "snapshot_archive": "outputs/cuda-candidates/c29-correctness-v3-results-20261004.zip",
+  "snapshot_sha256": "bf0579f1d8d09ecec64af4bdf3b98f31bbd94629d226e3c50188e5e9e1c6d17a",
+  "file_hashes": [
+    {
+      "path": "public/auto_ep_layer.py",
+      "sha256": "bb6bbc4f2e28d53ebba0457fd1a71583e97a961a3aced09db3f3f8663a809865"
+    },
+    {
+      "path": "public/combine_kernels.py",
+      "sha256": "837f5a829ddb24d70f34b983afcb8652c10121d6997ee0d4300fd0865edcdf83"
+    },
+    {
+      "path": "public/CONTRACT.md",
+      "sha256": "7e426903f447c66f044e53dbaa4aac1b8b6df4c1f69d0d7745e2a01e8e0c25cf"
+    },
+    {
+      "path": "public/ep_kernels.py",
+      "sha256": "1ac17b323e641af2855579f839bfce1687d6572670cdb96e6831ad4581068365"
+    },
+    {
+      "path": "public/local_pipeline.py",
+      "sha256": "761906fa40e244f273cc143484fb7a0a6adc5a72e258494003310a12b69f4402"
+    },
+    {
+      "path": "public/SOURCE_NOTICE.md",
+      "sha256": "e5afcfd6c0969d57d7849f9d8a2cb21518fa1548c9f33fad96a74fb0afc83eb3"
+    },
+    {
+      "path": "public/THIRD_PARTY_NOTICES.md",
+      "sha256": "21733f38e11d2b71377d8dc111cf4e9c045959ce0b8b689b5574454bba4dfa4e"
+    },
+    {
+      "path": "private/common.txt",
+      "sha256": "b5d1aa6d529cbebaa17eaf5e702ceaa8aeea341df6be6aec44b113ecd2ae38d8"
+    },
+    {
+      "path": "private/fuzzy.txt",
+      "sha256": "dff8eea7feb6305d80243a0f3f5c8c22a1b3240b8d76d14e9c9c5047adecff24"
+    },
+    {
+      "path": "private/mapping.json",
+      "sha256": "be03b7163be1a221e767eb81ed57025709bb777a1c8775177b7767d64fd368c8"
+    },
+    {
+      "path": "private/misleading_reorder.txt",
+      "sha256": "27ddc8f49ae2bb1da261111240596d662b1432adbe4bd0f55cebf29fc1527f17"
+    },
+    {
+      "path": "private/misleading1.txt",
+      "sha256": "9b47dabbe7244c60a92062cae37a5e2275dcabec264b28bf04ffad9acc4cabfb"
+    },
+    {
+      "path": "private/misleading2.txt",
+      "sha256": "a6cac81b0d2f1c67fdd70d082e863d36537460b66238d70d960bfa2e13e41aa3"
+    },
+    {
+      "path": "private/protocol.json",
+      "sha256": "295b72669578874f1c25021b4c26938b1bb356ea3af84bc4b2c7207b1626c1f8"
+    },
+    {
+      "path": "private/provenance.json",
+      "sha256": "a48d74bc98aba0ba6911560e47c09e7ccb1424d16d9e34b0a478bf7ce4cf52c9"
+    },
+    {
+      "path": "private/reference.json",
+      "sha256": "977e87ce8277fa882646d594749d19936c637260d680509619e384cefbaabe2f"
+    },
+    {
+      "path": "private/validated_sources.json",
+      "sha256": "1ac1342423a69cb3513750f0f6781645b1522a7f9dba8a945a635a8b761e907a"
+    },
+    {
+      "path": "scripts/agent_episode.py",
+      "sha256": "c2b75c4139ff9e949c639716a6bb1230768dd7c4b80b1cef9bf720ec0c4cda8a"
+    },
+    {
+      "path": "scripts/c20_api_request.py",
+      "sha256": "ce123a91e05b89609c96c175d2e0436c50f5646475a16c5a6bd8f456f308ca21"
+    },
+    {
+      "path": "scripts/grade_task.py",
+      "sha256": "16da4eb31da156198787be19465dfee33196c777a3046473959f1183e4bced1b"
+    },
+    {
+      "path": "scripts/launch_two_rounds.py",
+      "sha256": "3a686728a77e25879d8ff547f5e7e13f160325f8bd5a3765145a57b55f1fe53f"
+    },
+    {
+      "path": "scripts/launch.py",
+      "sha256": "6fdbf69cf9e4b078530407e7713f9a8be2947a5fbe7052e7f3c47619f3f34006"
+    },
+    {
+      "path": "scripts/orchestrator.py",
+      "sha256": "946f7322053e930d5b6a8cd6aebad150c16dfc1a2eaf727cd1ecd91ad17a03ca"
+    },
+    {
+      "path": "scripts/preflight.py",
+      "sha256": "efd23dffc7f8987030574c95bf5abc5e36ab7863eaf880b04c89de3666496cd2"
+    },
+    {
+      "path": "scripts/remote_client.py",
+      "sha256": "4550478bf3dbc45b86c056032906c28224455bedf6117f7f2ab7897a824080f4"
+    },
+    {
+      "path": "scripts/remote_controller.py",
+      "sha256": "1726b36e606d69ad79e15d029614806ad4cc796a06556a9b7110b8a414e76877"
+    },
+    {
+      "path": "scripts/sandbox.py",
+      "sha256": "580c1dea23c0c9b7c61bdc8cf9c2126384d4cea1bb5138c5a85abc10f02e72fb"
+    }
+  ],
+  "automatic_additional_trials": false
+}

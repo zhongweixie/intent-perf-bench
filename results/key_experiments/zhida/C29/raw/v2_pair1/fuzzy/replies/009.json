@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RvQu19IR9lUli56EblTOVDlW",
+  "object": "chat.completion",
+  "created": 1791033612,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Also remove dead line in combine forward. Then run benchmark immediately.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"auto_ep_layer.py\",\"old\":\"        ti32 = ti.to(torch.int32) if ti.dtype != torch.int32 else ti\\n        inv = ti32.new_empty(N) if False else inv\",\"new\":\"        ti32 = ti.to(torch.int32) if ti.dtype != torch.int32 else ti\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 24533,
+    "total_tokens": 24678,
+    "completion_tokens": 145,
+    "estimated_cost": 0.016827540000000002,
+    "prompt_tokens_details": {
+      "cached_tokens": 21504,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 17
+    }
+  }
+}

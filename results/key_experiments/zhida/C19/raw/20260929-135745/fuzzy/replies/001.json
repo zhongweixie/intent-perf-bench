@@ -1,0 +1,74 @@
+{
+  "id": "gen-1790690504-7V3dZI1q3oMTqE1Dl4OP",
+  "object": "chat.completion",
+  "created": 1790690504,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Let me start by exploring the files.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8fb724537f060c5b",
+            "function": {
+              "name": "list_files",
+              "arguments": "{}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-a5676f2203bd03b6",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"CONTRACT.md\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Let me start by exploring the files.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 911,
+    "completion_tokens": 61,
+    "total_tokens": 972,
+    "cost": 0.00015316,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.00015316,
+      "upstream_inference_prompt_cost": 0.00012754,
+      "upstream_inference_completions_cost": 2.562e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 8,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

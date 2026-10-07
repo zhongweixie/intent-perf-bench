@@ -1,0 +1,50 @@
+--- baseline/pipeline.py
++++ fuzzy/pipeline.py
+@@ -20,6 +20,10 @@
+         self.M,self.K=self.x.shape;self.E=self.w1.shape[0];self.N=self.w2.shape[-1];self.k=8
+         M,E,N,K,k=self.M,self.E,self.N,self.K,self.k
+         config=get_default_config(M,E,N,K,k,None)
++        # More, smaller tiles for better SM occupancy on this small-batch shape.
++        if config.get('BLOCK_SIZE_M')==64:
++            config['BLOCK_SIZE_M']=32
++            config['BLOCK_SIZE_N']=64
+         self.config=config; block=config['BLOCK_SIZE_M']
+         capacity=M*k+E*(block-1)
+         if M*k<E:capacity=min(M*k*block,capacity)
+--- baseline/routing.py
++++ fuzzy/routing.py
+@@ -39,6 +39,34 @@
+         )
+ 
+     assert hidden_states.size(0) == gating_output.size(0), "Number of tokens mismatch"
++
++    if num_expert_group <= 1:
++        # With a single expert group the group-selection stage is an exact
++        # no-op (every expert is in the selected group), so the masked group
++        # machinery reduces to a plain top-k over the scores. Computing it
++        # directly preserves identical ids/weights while removing several
++        # tiny kernels.
++        if scoring_func == "softmax":
++            scores = torch.softmax(gating_output, dim=-1)
++        elif scoring_func == "sigmoid":
++            scores = gating_output.sigmoid()
++        else:
++            raise ValueError(f"Unsupported scoring function: {scoring_func}")
++        use_sorted = envs.VLLM_BATCH_INVARIANT
++        if e_score_correction_bias is not None:
++            original_scores = scores
++            scores = scores + e_score_correction_bias.unsqueeze(0)
++            topk_ids = torch.topk(scores, k=topk, dim=-1, sorted=use_sorted)[1]
++            topk_weights = original_scores.gather(1, topk_ids)
++        else:
++            topk_weights, topk_ids = torch.topk(
++                scores, k=topk, dim=-1, sorted=use_sorted
++            )
++        if renormalize:
++            topk_weights = topk_weights / topk_weights.sum(dim=-1, keepdim=True)
++        if routed_scaling_factor != 1.0:
++            topk_weights = topk_weights * routed_scaling_factor
++        return topk_weights.to(torch.float32), topk_ids.to(torch.int32)
+ 
+     if scoring_func == "softmax":
+         scores = torch.softmax(gating_output, dim=-1)

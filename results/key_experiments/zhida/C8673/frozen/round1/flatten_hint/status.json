@@ -1,0 +1,148 @@
+{
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "condition": "flatten_hint",
+  "round": 1,
+  "generated_tokens": 13819,
+  "prompt_tokens": 1091600,
+  "model_responses": 41,
+  "usage_notifications": 41,
+  "tool_actions": 45,
+  "stop_reason": "completed",
+  "transport_errors": [
+    {
+      "error": {
+        "message": "Reconnecting... 2/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-out}, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e5676c199cf5-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8de6-7d22-a550-2d8a60e6c133",
+      "turnId": "01a11014-8e78-7720-bd0e-4731f6417844"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 3/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.c, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e56fab09e2f6-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8de6-7d22-a550-2d8a60e6c133",
+      "turnId": "01a11014-8e78-7720-bd0e-4731f6417844"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 4/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s eas, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e577ea8c04ab-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8de6-7d22-a550-2d8a60e6c133",
+      "turnId": "01a11014-8e78-7720-bd0e-4731f6417844"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 5/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.conta, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462e5830d66e2e1-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11014-8de6-7d22-a550-2d8a60e6c133",
+      "turnId": "01a11014-8e78-7720-bd0e-4731f6417844"
+    }
+  ],
+  "benchmarks": [
+    {
+      "elapsed_seconds": 176.37599999993108,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+      "latency_ms": 6.573536038398743,
+      "samples_ms": [
+        6.601871967315674,
+        6.5452001094818115
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 243.64099999982864,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+      "latency_ms": 6.665527939796448,
+      "samples_ms": [
+        6.6877758502960205,
+        6.643280029296875
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 395.8289999999106,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+      "latency_ms": 5.394743919372559,
+      "samples_ms": [
+        5.399199962615967,
+        5.39028787612915
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 542.8919999999925,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+      "latency_ms": 4.992400050163269,
+      "samples_ms": [
+        4.9905760288238525,
+        4.9942240715026855
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 682.6260000001639,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+      "latency_ms": 4.989856004714966,
+      "samples_ms": [
+        4.999408006668091,
+        4.980304002761841
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    }
+  ],
+  "infrastructure_affected": false,
+  "isolation": "environments=[]; only dynamic public tools; native shell/apps/web disabled",
+  "thread_id": "01a11014-8de6-7d22-a550-2d8a60e6c133",
+  "agent_seconds": 686.6730000001844,
+  "reasoning_output_tokens": 7996,
+  "turn_status": "completed",
+  "turn_error": null,
+  "cutoff_agent_seconds": 686.6730000001844,
+  "submission_sha256": "e6c4118c217e94d0861f074164ac5eeb2ab4205612e01587e507c1fbacbd4d39",
+  "shutdown_elapsed_seconds": 686.7040000001434,
+  "gpu_queue_wait_seconds": 228.2809999997262,
+  "real_wall_seconds": 914.9849999998696
+}

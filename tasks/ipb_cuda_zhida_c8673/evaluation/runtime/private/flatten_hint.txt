@@ -1,0 +1,1 @@
+The mixed-precision wrapper rebuilds flattened fp32 gradient buffers from low-precision parameter gradients on each step. Repeated conversion, temporary allocations, and packing may contribute substantially to the full-step latency at this workload size. Their share of measured time is unknown.

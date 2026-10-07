@@ -1,0 +1,51 @@
+--- baseline/fused_linear_cross_entropy.py
++++ fuzzy/fused_linear_cross_entropy.py
+@@ -35,7 +35,7 @@
+ # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation
+ # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on
+ # all devices.
+-_CHUNK_MEM_CONST = 16
++_CHUNK_MEM_CONST = 64
+ _TORCH_VERSION = Version(torch.__version__.split("+")[0])
+ _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version("2.8.0")
+ 
+@@ -281,6 +281,10 @@
+ 
+         if grad_weight is not None and input_requires_grad:
+             grad_logits_t = grad_logits_chunk.t()
++            # align operand dtypes (under AMP _input_chunk can be fp32 while grad_logits is bf16)
++            input_chunk = _input_chunk
++            if input_chunk.dtype != grad_logits_t.dtype:
++                input_chunk = input_chunk.to(grad_logits_t.dtype)
+             if (
+                 _ADDMM_SUPPORTS_OUT_DTYPE
+                 and grad_weight.device.type == "cuda"
+@@ -288,13 +292,6 @@
+                 and grad_weight.dtype == torch.float32
+                 and grad_logits_t.dtype in (torch.float16, torch.bfloat16)
+             ):
+-                # Unlike torch.mm, torch.addmm's out_dtype path does not participate in
+-                # autocast operand casting, so under AMP (fp32 params, no bias) _input_chunk
+-                # can stay fp32 while grad_logits is the autocast dtype. addmm requires mat1
+-                # and mat2 to share a dtype, so align _input_chunk before accumulating.
+-                input_chunk = _input_chunk
+-                if input_chunk.dtype != grad_logits_t.dtype:
+-                    input_chunk = input_chunk.to(grad_logits_t.dtype)
+                 torch.addmm(
+                     grad_weight,
+                     grad_logits_t,
+@@ -302,8 +299,13 @@
+                     out_dtype=torch.float32,
+                     out=grad_weight,
+                 )
++            elif grad_weight.dtype == grad_logits_t.dtype:
++                # accumulate straight into the (bf16/fp16) weight-gradient buffer with
++                # fp32 compute: avoids materializing a full fp32 copy of the V x H tile
++                # (a pure bandwidth tax) that the .float() form paid on every chunk.
++                torch.addmm(grad_weight, grad_logits_t, input_chunk, out=grad_weight)
+             else:
+-                grad_weight += torch.mm(grad_logits_chunk.t(), _input_chunk).float()
++                grad_weight += torch.mm(grad_logits_t, input_chunk).float()
+ 
+         if bias is not None and input_requires_grad:
+             torch.add(

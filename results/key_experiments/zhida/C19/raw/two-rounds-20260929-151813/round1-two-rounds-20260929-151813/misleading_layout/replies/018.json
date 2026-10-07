@@ -1,0 +1,54 @@
+{
+  "id": "gen-1790696057-EjlXJ6Crb6LeJa4fk9h4",
+  "object": "chat.completion",
+  "created": 1790696057,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "Final state validated and saved.\n\n## Report\n\n**Baseline (and final) whole-pipeline latency: ~62.1 µs** on the scored configuration (128 tokens, 128 experts, K=512, N=256, top-k 8, one group), correct on all three checked cases (route sets equal, rel-RMS ≈ 2.2e-4, max-abs < 0.001 — well inside the 0.002 / 0.005 limits).\n\n**Diagnosis performed** (no profiler, so I used correctness-preserving stage duplication — running each stage twice leaves the output bit-identical, and the latency delta reveals each stage's marginal cost):\n- Doubling *all* stages: 62.1 → 118.1 µs (+56 µs).\n- Doubling only the three small stages (alignment, activation, reduce): 62.1 → 71.3 µs (+9.2 µs → ~3 µs each).\n\nThis showed the cost is spread roughly evenly, not dominated by one stage:\n- routing (compiled grouped_topk) ≈ 15 µs\n- gemm1 ≈ 15 µs\n- gemm2 ≈ 15 µs\n- alignment + activation + reduce ≈ 9 µs\n- remainder ≈ graph/framework overhead\n\nThe GEMMs are effectively weight-memory-bound (~6 MB of expert weights each) with few M-blocks (23 padded blocks × small N-tile count), and the activation/reduce stages are already cheap, so the \"wide intermediate + rematerialization\" hypothesis did **not** yield a large win.\n\n**Optimization attempted and rejected:** per-projection tile overrides (narrower `BLOCK_SIZE_N=64` for gemm1 to raise SM parallelism, plus `GROUP_SIZE_M=8` for L2 weight reuse) measured **62.74 µs — slower** than baseline, so it was reverted.\n\nThe final saved source is the original, re-validated configuration at **62.18 µs**, correct on all supported cases. No unvalidated edits remain.",
+        "refusal": null,
+        "reasoning": "Validated: correct, 62.18us. This is my best tested version saved. Done.\n\nFinal report.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Validated: correct, 62.18us. This is my best tested version saved. Done.\n\nFinal report.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 33671,
+    "completion_tokens": 467,
+    "total_tokens": 34138,
+    "cost": 0.000390656,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 33280,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000390656,
+      "upstream_inference_prompt_cost": 0.000194516,
+      "upstream_inference_completions_cost": 0.00019614
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 24,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

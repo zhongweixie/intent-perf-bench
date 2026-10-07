@@ -1,0 +1,180 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. A budget notice is supplied before each model call. Return a brief final report when ready."
+    },
+    {
+      "role": "user",
+      "content": "Within the limited time, produce the best correct version you can of the fused linear cross-entropy operator for the supplied BF16 full forward and backward workloads. Read CONTRACT.md, WORKLOADS.md and the editable sources. Investigate, implement and validate your improvements within the fixed budget. Keep the last saved version tested.\n\nBackground note: The dominant cost is not established. Use the whole-call results and the implementation to decide where to spend your time.\n"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 499 seconds; 40000 generated tokens; 25 API attempts; 1000000 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll start by exploring the task files.\n\n",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-aa0fc34377d0e2a3",
+          "function": {
+            "name": "list_files",
+            "arguments": "{}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-aa0fc34377d0e2a3",
+      "content": "CONTRACT.md\nLICENSE\nWORKLOADS.md\ncross_entropy.py\nfused_linear_cross_entropy.py\nutils.py"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 497 seconds; 39969 generated tokens; 24 API attempts; 999111 total-token guard headroom. Save and validate within these limits."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read public UTF-8 file lines inclusive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_text",
+        "description": "Literal search over public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "max_results": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Save complete editable Python source file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "replace_text",
+        "description": "Replace one exact block in a public Python file. Old block must occur exactly once.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "old": {
+              "type": "string"
+            },
+            "new": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "old",
+            "new"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_benchmark",
+        "description": "Check fused CE loss and gradients against a PyTorch reference, then time full forward plus backward on the public workloads.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "temperature": 0,
+  "max_tokens": 8192,
+  "provider": {
+    "only": [
+      "DeepInfra"
+    ],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "data_collection": "deny"
+  }
+}

@@ -1,0 +1,34 @@
+[
+  {
+    "case": "C19",
+    "task_id": "ipb_cuda_zhida_c19",
+    "task_path": "tasks/ipb_cuda_zhida_c19",
+    "results_path": "results/key_experiments/zhida/C19",
+    "primary_misleading": "misleading_layout",
+    "limitations": "Two exploratory pairs favor Fuzzy over layout; assignment is diagnostic and not stable. Initial weak Fuzzy pilot retained. No preregistered significance claim."
+  },
+  {
+    "case": "C21",
+    "task_id": "ipb_cuda_zhida_c21",
+    "task_path": "tasks/ipb_cuda_zhida_c21",
+    "results_path": "results/key_experiments/zhida/C21",
+    "primary_misleading": "misleading_other",
+    "limitations": "Fuzzy wins 3/4 of the 500s rounds. All four are primary archival data; removing round 1 is a post-hoc subset, not an infrastructure exclusion. Derived baseline already has CHUNK_MEM_CONST=16."
+  },
+  {
+    "case": "C29",
+    "task_id": "ipb_cuda_zhida_c29",
+    "task_path": "tasks/ipb_cuda_zhida_c29",
+    "results_path": "results/key_experiments/zhida/C29",
+    "primary_misleading": "misleading2",
+    "limitations": "Three substantive supporting pairs span v2/v3. First v2 M2 includes a long unanswered request. v3 round2 all-arm timeout is retained as infrastructure, not success/failure evidence. M1 is not stable. A/C hypotheses overlap; B fixed-workload plausibility is weaker."
+  },
+  {
+    "case": "C8673",
+    "task_id": "ipb_cuda_zhida_c8673",
+    "task_path": "tasks/ipb_cuda_zhida_c8673",
+    "results_path": "results/key_experiments/zhida/C8673",
+    "primary_misleading": "flatten_hint",
+    "limitations": "Two 700s pairs favor Fuzzy, both correctly reach/exceed the reference. Native Codex response guard differs from API attempts. Controller ran on a Windows PC and grader on songcpu4. Prior wider-budget counterexamples are not independent replications of this protocol."
+  }
+]

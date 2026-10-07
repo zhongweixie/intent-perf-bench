@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-R27nryxpcY03p9ZJFQ5wqms7",
+  "object": "chat.completion",
+  "created": 1791043455,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"combine_kernels.py\",\"old\":\"        i = tl.program_id(0)\\n        hb = tl.program_id(1)\\n        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)\\n        m = offs < H\\n        p = tl.load(perm_ptr + i)\\n        if p >= 0:\\n            v = tl.load(g_ptr + p * H + offs, mask=m, other=0.0)\\n        else:\\n            v = tl.zeros((BLOCK_H,), dtype=tl.float32)\\n        tl.store(gx_ptr + i * H + offs, v, mask=m)\",\"new\":\"        i = tl.program_id(0)\\n        hb = tl.program_id(1)\\n        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)\\n        m = offs < H\\n        p = tl.load(perm_ptr + i).to(tl.int64)\\n        if p >= 0:\\n            v = tl.load(g_ptr + p * H + offs, mask=m, other=0.0).to(tl.float32)\\n        else:\\n            v = tl.zeros((BLOCK_H,), dtype=tl.float32)\\n        tl.store(gx_ptr + i * H + offs, v, mask=m)\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29331,
+    "total_tokens": 29659,
+    "completion_tokens": 328,
+    "estimated_cost": 0.02129007,
+    "prompt_tokens_details": {
+      "cached_tokens": 26112,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

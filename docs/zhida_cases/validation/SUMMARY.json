@@ -1,0 +1,38 @@
+[
+  {
+    "case": "C19",
+    "passed": true,
+    "baseline_ms": 0.06199808120727539,
+    "reference_ms": 0.05285247802734375,
+    "reference_speedup": 1.1730401964350674,
+    "expert_patch_applies": true,
+    "wrong_numeric_answer_rejected": true
+  },
+  {
+    "case": "C21",
+    "passed": true,
+    "baseline_ms": 4.085267774143596,
+    "reference_ms": 3.068643973373998,
+    "reference_speedup": 1.3312941512898326,
+    "expert_patch_applies": true,
+    "wrong_numeric_answer_rejected": true
+  },
+  {
+    "case": "C29",
+    "passed": true,
+    "baseline_ms": 24.73358182906179,
+    "reference_ms": 14.443553360963486,
+    "reference_speedup": 1.7124305363740413,
+    "expert_patch_applies": true,
+    "wrong_numeric_answer_rejected": true
+  },
+  {
+    "case": "C8673",
+    "passed": true,
+    "baseline_ms": 6.5352959632873535,
+    "reference_ms": 4.36191987991333,
+    "reference_speedup": 1.4982613489492171,
+    "expert_patch_applies": true,
+    "wrong_numeric_answer_rejected": true
+  }
+]

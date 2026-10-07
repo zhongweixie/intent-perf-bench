@@ -1,0 +1,22 @@
+{
+  "condition": "misleading2",
+  "stop_reason": "time_limit",
+  "agent_seconds": 900.0518174031749,
+  "real_wall_seconds": 922.5561141865328,
+  "gpu_queue_wait_seconds": 22.25626644678414,
+  "api_calls": 12,
+  "tool_actions": 9,
+  "generated_tokens": 13817,
+  "prompt_tokens": 77774,
+  "total_tokens": 91591,
+  "reported_cost_usd": 0.33581151000000004,
+  "failed_requests_usage_unknown": 2,
+  "final_source_sha256": "dcb97941b3a76d325d594d91b23777be2ee888a6002baf9cb5eac88195339905",
+  "final_answer": "",
+  "namespace": "songcpu4-20261003-130616-276929-round1-misleading2",
+  "budget_notices": 11,
+  "api_seconds": 855.4449045807123,
+  "tool_seconds": 64.15352581534535,
+  "benchmark_seconds": 64.04277361929417,
+  "benchmark_active_seconds": 41.78650717251003
+}

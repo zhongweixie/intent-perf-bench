@@ -1,0 +1,70 @@
+{
+  "family_median_us": {
+    "small": {
+      "base": 1582.049,
+      "fuzzy": 1002.203,
+      "misleading_other": 1208.62
+    },
+    "main": {
+      "base": 6628.961,
+      "fuzzy": 4461.986,
+      "misleading_other": 4605.355
+    },
+    "wide_hidden": {
+      "base": 6101.556,
+      "fuzzy": 4413.014,
+      "misleading_other": 4487.037
+    }
+  },
+  "final_geomean_speedup": {
+    "fuzzy": 1.480115464991718,
+    "misleading_other": 1.3683519598924008
+  },
+  "per_condition_status": {
+    "fuzzy": {
+      "condition": "fuzzy",
+      "stop_reason": "agent_finished",
+      "agent_seconds": 479.55994134396315,
+      "real_wall_seconds": 490.776000325568,
+      "gpu_queue_wait_seconds": 11.141089411452413,
+      "api_calls": 16,
+      "tool_actions": 20,
+      "generated_tokens": 27680,
+      "prompt_tokens": 372610,
+      "total_tokens": 400290,
+      "reported_cost_usd": 0.0159372528,
+      "failed_requests_usage_unknown": 0,
+      "final_source_sha256": "1030456123091f5e38ae1d5dcaa4ca9318e414fd0ccae4712d4ac62ff4520cc2",
+      "final_answer": "I'm out of budget for further edits. The last saved source was already validated by the final benchmark run (no edits since). Here is my report.\n\n## Final report\n\n**Result:** All three public workloads pass correctness (loss, input-grad, weight-grad relative errors well within tolerance) with substantial speedups vs. the frozen baseline:\n\n| Family | Baseline (µs) | Final (µs) | Speedup |\n|---|---:|---:|---:|\n| small | 1594.8 | 981.4 | **1.63×** |\n| main | 6525.6 | 4411.5 | **1.48×** |\n| wide_hidden | 6029.7 | 4286.6 | **1.41×** |\n\nGeometric-mean speedup ≈ **1.50×**.\n\n### What I changed (only `fused_linear_cross_entropy.py`)\n\n1. **Fused weight-gradient accumulation.** The old path did `grad_weight += torch.mm(grad_logits.T, input).float()` into a bf16 accumulator — materializing a bf16 mm output *and* a full fp32 `V×H` upcast purely to add it straight back into a bf16 buffer (a rounding no-op). Replaced with a single `torch.addmm(grad_weight, grad_logits.T, input, out=grad_weight)` that accumulates in fp32 inside cuBLAS and rounds once. This was the single largest win.\n\n2. **Collapsed the chunk loop to one chunk** (`_CHUNK_MEM_CONST` 16→32). At the public shapes this makes `num_chunks == 1` everywhere, removing redundant chunk boundaries/accumulation and improving both GEMM shapes and the numerics of the input gradient (main's input-grad rel. error dropped from 2.8e-3 to 1.7e-5).\n\n3. **Skipped the wasted weight-gradient memset.** With one chunk the buffer is fully overwritten, so it is now allocated with `empty_like` and filled via `torch.mm(..., out=grad_weight)` instead of `zeros_like` + accumulate — eliminating a full `V×H` zero-fill that the next matmul immediately destroyed.\n\n4. **Removed a hidden per-call host sync/allocation in backward.** `torch.equal(grad_output, torch.tensor(1.0, device=...))` allocated a tensor and ran a GPU reduction + sync every call; replaced with `grad_output.numel() != 1 or grad_output.item() != 1.0`.\n\n### Notes\nThe dominant cost is the three GEMMs (logits, input-grad, weight-grad), which are already near cuBLAS peak (~120 TFLOP/s of the A6000's ~155 dense bf16), so the wins above came from removing the surrounding bandwidth waste (fp32 upcast, memset) and fixed per-call overhead rather than from the matmuls themselves. Remaining headroom is mostly the CE kernel's unavoidable 2-read/1-write pass over the logits, which I did not get to restructure within budget.\n\nThe last saved source is the validated, correct version.",
+      "namespace": "20260928-093511-r1-fuzzy",
+      "budget_notices": 16,
+      "api_seconds": 410.51785787101835,
+      "tool_seconds": 79.1165889473632,
+      "benchmark_seconds": 78.6794571839273,
+      "benchmark_active_seconds": 67.53836777247488
+    },
+    "misleading_other": {
+      "condition": "misleading_other",
+      "stop_reason": "agent_finished",
+      "agent_seconds": 467.7123290123418,
+      "real_wall_seconds": 467.986827718094,
+      "gpu_queue_wait_seconds": 0.18401832226663828,
+      "api_calls": 19,
+      "tool_actions": 23,
+      "generated_tokens": 22126,
+      "prompt_tokens": 440515,
+      "total_tokens": 462641,
+      "reported_cost_usd": 0.014141954399999997,
+      "failed_requests_usage_unknown": 0,
+      "final_source_sha256": "95fe20ffdc6878dad042892469d638b222178c82946f34c8a9c9d4ec1db60c06",
+      "final_answer": "Final validated version confirmed correct. Summary of the submission:\n\n## Result\n\n| Family | Baseline (µs) | Final (µs) | Speedup |\n|---|---:|---:|---:|\n| small (512×1024×16384) | 1643 | 1191 | **1.38×** |\n| main (2048×1024×32768) | 6585 | 4522 | **1.46×** |\n| wide_hidden (1024×2048×32768) | 6170 | 4457 | **1.38×** |\n\nGeometric-mean speedup ≈ **1.40×**, all correctness checks pass (loss 0 / ~1e-7, input-grad ~2e-5, weight-grad ~1e-6 relative error — actually *tighter* than baseline on the main case).\n\n## Changes made (3, all low-risk and measured)\n\n1. **`fused_linear_cross_entropy.py` — widened the chunk-memory budget** (`_CHUNK_MEM_CONST` 16 → 64). This makes `inc_factor == 1` for every public shape, so `num_chunks == 1` and the token dimension is never split. The single larger GEMMs (M=BT instead of BT/2) run far closer to cuBLAS peak. *main: 6585 → 5530 µs.*\n\n2. **`fused_linear_cross_entropy.py` — removed the fp32 temp in weight-grad accumulation.** With one chunk the fp32 accumulator starts at zero, so `grad_weight += mm(...).float()` was a zero-fill + read-modify-write that is numerically identical to `round(0 + x.float()) == x`. Now a single `torch.mm` produces the gradient directly, eliminating a 67 MB fp32 temp and the extra read/add traffic per call. *small: 1649 → 1168, main: 5530 → 4538, wide: 6063 → 4472 µs.* Guarded on `num_chunks == 1 and accum_dtype is None and matching dtypes`, so the existing multi-chunk and AMP/addmm paths are untouched.\n\n3. **`fused_linear_cross_entropy.py` — CE-kernel launch geometry** (`num_warps` 32 → 16 for the fused path), which reduced register pressure / improved occupancy for the wide-vocabulary blocks. *~5% across the board.*\n\nI also tested `num_warps` 8 (mixed/noisy), and two CE-kernel micro-edits (folded reciprocal scaling), but reverted the latter because it did not measurably help — the last saved source is the exact configuration that produced the numbers above, and it has been re-validated as correct after the revert.",
+      "namespace": "20260928-093511-r1-misleading_other",
+      "budget_notices": 19,
+      "api_seconds": 346.86423223651946,
+      "tool_seconds": 119.65449240524322,
+      "benchmark_seconds": 119.13033205736428,
+      "benchmark_active_seconds": 118.94631373509765
+    }
+  },
+  "score_method": "Three equal-weight BF16 full-call families; three balanced rotated block medians; correctness-gated."
+}

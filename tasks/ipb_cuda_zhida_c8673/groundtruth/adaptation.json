@@ -1,0 +1,18 @@
+{
+  "changes": [
+    "Relative dependency paths",
+    "IPB_PYTHON/IPB_GPU environment selection",
+    "Shared per-host/GPU queue",
+    "Independent evaluation wrapper and reference patch",
+    "No changes to historical prompts/budgets or raw results"
+  ],
+  "preserved": [
+    "Original oracle/workload/tolerances",
+    "Original grader scripts separately archived",
+    "Initial visible sources and all observed score endpoints"
+  ],
+  "limitations": [
+    "Two 700s pairs favor Fuzzy, both correctly reach/exceed the reference. Native Codex response guard differs from API attempts. Controller ran on a Windows PC and grader on songcpu4. Prior wider-budget counterexamples are not independent replications of this protocol.",
+    "Original sandbox/policy is preserved; packaging is not a new proof of adversarial evaluator security."
+  ]
+}

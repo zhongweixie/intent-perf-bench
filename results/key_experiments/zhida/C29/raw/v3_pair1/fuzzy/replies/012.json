@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RnRMdKRmWIGZrS3SFgXTeHyW",
+  "object": "chat.completion",
+  "created": 1791043463,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"combine_kernels.py\",\"old\":\"        for k in range(K):\\n            idx = tl.load(idx_ptr + t * K + k)\\n            s = tl.load(s_ptr + t * K + k).to(tl.float32)\\n            x = tl.load(x_ptr + idx * H + offs, mask=m, other=0.0)\\n            acc += s * x.to(tl.float32)\\n        tl.store(out_ptr + t * H + offs, acc, mask=m)\",\"new\":\"        for k in range(K):\\n            idx = tl.load(idx_ptr + t * K + k).to(tl.int64)\\n            s = tl.load(s_ptr + t * K + k).to(tl.float32)\\n            x = tl.load(x_ptr + idx * H + offs, mask=m, other=0.0)\\n            acc += s * x.to(tl.float32)\\n        tl.store(out_ptr + t * H + offs, acc, mask=m)\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29773,
+    "total_tokens": 30045,
+    "completion_tokens": 272,
+    "estimated_cost": 0.01781193,
+    "prompt_tokens_details": {
+      "cached_tokens": 27648,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

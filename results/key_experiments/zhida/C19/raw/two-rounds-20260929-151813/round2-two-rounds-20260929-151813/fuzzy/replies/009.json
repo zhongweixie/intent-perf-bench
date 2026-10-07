@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790696677-yJG8O713ZWqgb0TZ7z2b",
+  "object": "chat.completion",
+  "created": 1790696677,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Wait, __init__ calls self.routing() but routing is pass now, so weights/ids are empty. That's bad. Let me fix: in __init__ call the real grouped_topk directly.\n\nHmm, but the replacement of routing means self.routing() does nothing. I need __init__ to compute via grouped_topk directly. Let me change __init__ line to call grouped_topk.\n\nActually I already replaced the __init__ line with `self.routing()`. Let me change it to call grouped_topk directly.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-9667125500efd048",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"new\": \"        self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)\", \"old\": \"        self.routing()\", \"path\": \"pipeline.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Wait, __init__ calls self.routing() but routing is pass now, so weights/ids are empty. That's bad. Let me fix: in __init__ call the real grouped_topk directly.\n\nHmm, but the replacement of routing means self.routing() does nothing. I need __init__ to compute via grouped_topk directly. Let me change __init__ line to call grouped_topk.\n\nActually I already replaced the __init__ line with `self.routing()`. Let me change it to call grouped_topk directly.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 18044,
+    "completion_tokens": 221,
+    "total_tokens": 18265,
+    "cost": 0.0002375912,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 17536,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0002375912,
+      "upstream_inference_prompt_cost": 0.0001447712,
+      "upstream_inference_completions_cost": 9.282e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 112,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

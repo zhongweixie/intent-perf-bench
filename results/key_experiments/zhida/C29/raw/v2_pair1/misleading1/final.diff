@@ -1,0 +1,289 @@
+--- baseline/combine_kernels.py
++++ misleading1/combine_kernels.py
+@@ -1,2 +1,177 @@
+ # Optional implementation space for local token kernels.
++# Fused Triton kernels for the local AutoEP token-movement path.
+ import torch
++
++_TRITON_AVAILABLE = False
++try:
++    import triton
++    import triton.language as tl
++
++    _TRITON_AVAILABLE = True
++except ImportError:
++    pass
++
++
++if _TRITON_AVAILABLE:
++
++    @triton.jit
++    def _gather_zero_kernel(
++        src_ptr,
++        idx_ptr,
++        out_ptr,
++        H,
++        stride_src,
++        stride_out,
++        BLOCK_H: tl.constexpr,
++    ):
++        # out[p] = (idx[p] >= 0) ? src[idx[p]] : 0
++        p = tl.program_id(0)
++        hb = tl.program_id(1)
++        j = tl.load(idx_ptr + p)
++        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)
++        mask = offs < H
++        v = tl.load(src_ptr + j * stride_src + offs, mask=mask & (j >= 0), other=0.0)
++        tl.store(out_ptr + p * stride_out + offs, v, mask=mask)
++
++       @triton.jit
++    def _scatter_kernel(
++        src_ptr,
++        idx_ptr,
++        out_ptr,
++        H,
++        stride_src,
++        stride_out,
++        BLOCK_H: tl.constexpr,
++    ):
++        # out[idx[p]] = src[p] for idx[p] >= 0 (idx covers every output row once)
++        p = tl.program_id(0)
++        hb = tl.program_id(1)
++        j = tl.load(idx_ptr + p)
++        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)
++        mask = offs < H
++        v = tl.load(src_ptr + p * stride_src + offs, mask=mask, other=0.0)
++        tl.store(out_ptr + j * stride_out + offs, v, mask=mask & (j >= 0))
++
++    @triton.jit
++    def _combine_fwd_kernel(
++        rows_ptr,
++        scores_ptr,
++        inv_ptr,
++        out_ptr,
++        H,
++        stride_row,
++        stride_out,
++        TOP_K: tl.constexpr,
++        BLOCK_H: tl.constexpr,
++    ):
++        # out[t] = sum_k scores[t, k] * rows[inv[t, k]]  (rows[-1] treated as zero)
++        t = tl.program_id(0)
++        hb = tl.program_id(1)
++        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)
++        mask = offs < H
++        acc = tl.zeros([BLOCK_H], dtype=tl.float32)
++        for k in tl.static_range(TOP_K):
++            j = tl.load(inv_ptr + t * TOP_K + k)
++            s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)
++            v = tl.load(rows_ptr + j * stride_row + offs, mask=mask & (j >= 0), other=0.0).to(tl.float32)
++            acc += s * v
++        tl.store(out_ptr + t * stride_out + offs, acc.to(out_ptr.dtype.element_ty), mask=mask)
++
++    @triton.jit
++    def _combine_bwd_kernel(
++        go_ptr,
++        rows_ptr,
++        scores_ptr,
++        inv_ptr,
++        grows_ptr,
++        gscores_ptr,
++        H,
++        stride_go,
++        stride_row,
++        stride_grows,
++        TOP_K: tl.constexpr,
++        BLOCK_H: tl.constexpr,
++    ):
++        # grows[inv[t,k]] = grad_out[t] * scores[t,k]
++        # gscores[t,k] = <grad_out[t], rows[inv[t,k]]>
++        t = tl.program_id(0)
++        hb = tl.program_id(1)
++        offs = hb * BLOCK_H + tl.arange(0, BLOCK_H)
++        mask = offs < H
++        g = tl.load(go_ptr + t * stride_go + offs, mask=mask, other=0.0).to(tl.float32)
++        for k in tl.static_range(TOP_K):
++            j = tl.load(inv_ptr + t * TOP_K + k)
++            s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)
++            v = tl.load(rows_ptr + j * stride_row + offs, mask=mask & (j >= 0), other=0.0).to(tl.float32)
++            tl.store(
++                grows_ptr + j * stride_grows + offs,
++                (g * s).to(grows_ptr.dtype.element_ty),
++                mask=mask & (j >= 0),
++            )
++            gs = tl.sum(g * v, axis=0)
++            tl.store(gscores_ptr + t * TOP_K + k, gs)
++
++
++def _block_h(H: int) -> int:
++    return max(16, min(1024, triton.next_power_of_2(H)))
++
++
++def gather_zero_rows(src: torch.Tensor, idx: torch.Tensor) -> torch.Tensor:
++    """out[p] = src[idx[p]] with idx[p] < 0 mapping to a zero row."""
++    n = idx.numel()
++    H = src.shape[-1]
++    out = torch.empty((n, H), dtype=src.dtype, device=src.device)
++    if n == 0:
++        return out
++    BLOCK_H = _block_h(H)
++    grid = (n, triton.cdiv(H, BLOCK_H))
++    _gather_zero_kernel[grid](src, idx, out, H, src.stride(0), out.stride(0), BLOCK_H=BLOCK_H)
++    return out
++
++
++def scatter_rows(src: torch.Tensor, idx: torch.Tensor, n_rows: int) -> torch.Tensor:
++    """out[idx[p]] = src[p] for idx[p] >= 0; idx must cover every out row once."""
++    H = src.shape[-1]
++    out = torch.empty((n_rows, H), dtype=src.dtype, device=src.device)
++    if idx.numel() == 0:
++        return out
++    BLOCK_H = _block_h(H)
++    grid = (idx.numel(), triton.cdiv(H, BLOCK_H))
++    _scatter_kernel[grid](src, idx, out, H, src.stride(0), out.stride(0), BLOCK_H=BLOCK_H)
++    return out
++
++
++def combine_weighted_sum_fwd(rows: torch.Tensor, scores: torch.Tensor, inv: torch.Tensor, top_k: int) -> torch.Tensor:
++    T = rows.shape[0]
++    H = rows.shape[1]
++    out = torch.empty((T, H), dtype=rows.dtype, device=rows.device)
++    if T == 0:
++        return out
++    BLOCK_H = _block_h(H)
++    grid = (T, triton.cdiv(H, BLOCK_H))
++    _combine_fwd_kernel[grid](rows, scores, inv, out, H, rows.stride(0), out.stride(0), TOP_K=top_k, BLOCK_H=BLOCK_H)
++    return out
++
++
++def combine_weighted_sum_bwd(grad_out, rows, scores, inv, top_k: int):
++    T = rows.shape[0]
++    H = rows.shape[1]
++    grows = torch.empty((T, H), dtype=rows.dtype, device=rows.device)
++    gscores = torch.empty((T, top_k), dtype=torch.float32, device=rows.device)
++    if T == 0:
++        return grows, gscores
++    BLOCK_H = _block_h(H)
++    grid = (T, triton.cdiv(H, BLOCK_H))
++    _combine_bwd_kernel[grid](
++        grad_out, rows, scores, inv, grows, gscores, H,
++        grad_out.stride(0), rows.stride(0), grows.stride(0),
++        TOP_K=top_k, BLOCK_H=BLOCK_H,
++    )
++    return grows, gscores
++
++
++def inverse_slots(token_indices: torch.Tensor, total_slots: int, n_rows: int) -> torch.Tensor:
++    """inv[token_indices[j]] = j, elsewhere -1."""
++    inv = torch.full((total_slots,), -1, dtype=torch.int32, device=token_indices.device)
++    inv[token_indices] = torch.arange(n_rows, dtype=torch.int32, device=token_indices.device)
++    return inv
+--- baseline/auto_ep_layer.py
++++ misleading1/auto_ep_layer.py
+@@ -3,6 +3,65 @@
+ from __future__ import annotations
+ import torch
+ from typing import Literal
++
++try:
++    import combine_kernels as _ck
++    _FAST = _ck._TRITON_AVAILABLE
++except Exception:
++    _ck = None
++    _FAST = False
++
++
++class _GatherPad(torch.autograd.Function):
++    """tokens_permuted[p] = tokens[idx[p]] (idx[p] < 0 -> zero row)."""
++
++    @staticmethod
++    def forward(ctx, tokens, idx, n_tokens):
++        ctx.save_for_backward(idx)
++        ctx.n_tokens = n_tokens
++        return _ck.gather_zero_rows(tokens, idx)
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        (idx,) = ctx.saved_tensors
++        grad = _ck.scatter_rows(grad_out.contiguous(), idx, ctx.n_tokens)
++        return grad, None, None
++
++
++class _ScatterRestore(torch.autograd.Function):
++    """out[idx[p]] = expert_output[p] for idx[p] >= 0 (inverse permutation)."""
++
++    @staticmethod
++    def forward(ctx, expert_output, idx, n_tokens):
++        ctx.save_for_backward(idx)
++        return _ck.scatter_rows(expert_output, idx, n_tokens)
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        (idx,) = ctx.saved_tensors
++        return _ck.gather_zero_rows(grad_out.contiguous(), idx), None, None
++
++
++class _CombineWeightedSum(torch.autograd.Function):
++    """out[t] = sum_k scores[t, k] * expert_rows[inv[t, k]] with -1 -> zero."""
++
++    @staticmethod
++    def forward(ctx, expert_rows, scores, token_indices, top_k):
++        T, H = expert_rows.shape
++        inv = _ck.inverse_slots(token_indices, T * top_k, T)
++        ctx.save_for_backward(expert_rows, scores, inv)
++        ctx.top_k = top_k
++        return _ck.combine_weighted_sum_fwd(expert_rows, scores, inv, top_k)
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        expert_rows, scores, inv = ctx.saved_tensors
++        g = grad_out.contiguous()
++        grows, gscores = _ck.combine_weighted_sum_bwd(g, expert_rows, scores, inv, ctx.top_k)
++        if gscores.dtype != scores.dtype:
++            gscores = gscores.to(scores.dtype)
++        return grows, gscores, None, None
++
+ 
+ def permute_by_local_expert(tokens: torch.Tensor, local_counts: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
+     """Reorder tokens so they are grouped contiguously by local expert ID.
+@@ -36,8 +95,12 @@
+     if not use_cpu:
+         permuted_indices = permuted_indices.to(tokens.device)
+         m_sizes = m_sizes.to(tokens.device)
+-    tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))
+-    tokens_permuted = tokens_padded[permuted_indices, :]
++    if _FAST and not use_cpu and tokens.dim() == 2 and n_tokens > 0:
++        src = tokens if tokens.is_contiguous() else tokens.contiguous()
++        tokens_permuted = _GatherPad.apply(src, permuted_indices, n_tokens)
++    else:
++        tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))
++        tokens_permuted = tokens_padded[permuted_indices, :]
+     return (tokens_permuted, permuted_indices, m_sizes, n_tokens)
+ 
+ def unpermute_by_local_expert(expert_output: torch.Tensor, permuted_indices: torch.Tensor, n_tokens: int) -> torch.Tensor:
+@@ -48,6 +111,9 @@
+         permuted_indices: [N_padded] index mapping from permute_by_local_expert
+         n_tokens: original token count before alignment padding
+     """
++    if _FAST and expert_output.is_cuda and expert_output.dim() == 2 and n_tokens > 0:
++        src = expert_output if expert_output.is_contiguous() else expert_output.contiguous()
++        return _ScatterRestore.apply(src, permuted_indices, n_tokens)
+     out_unpermuted = expert_output.new_zeros((n_tokens + 1, expert_output.shape[-1]))
+     out_unpermuted[permuted_indices, :] = expert_output
+     return out_unpermuted[:-1]
+@@ -56,6 +122,15 @@
+     """Scatter-add expert outputs back to original token positions."""
+     bsz, seqlen, hdim = shape
+     T = bsz * seqlen
++    if (_FAST and score_apply == 'post' and combine_impl == 'weighted_sum'
++            and expert_output.is_cuda and expert_output.dim() == 2 and T > 0
++            and expert_output.shape[0] == T and token_indices_sorted.numel() == T
++            and top_scores.shape[0] == T and top_scores.numel() == T * top_k):
++        rows = expert_output if expert_output.is_contiguous() else expert_output.contiguous()
++        scores = top_scores if top_scores.is_contiguous() else top_scores.contiguous()
++        idx = token_indices_sorted if token_indices_sorted.is_contiguous() else token_indices_sorted.contiguous()
++        out = _CombineWeightedSum.apply(rows, scores, idx.reshape(-1), top_k)
++        return out.reshape(bsz, seqlen, hdim)
+     output = torch.zeros(T * top_k, hdim, dtype=expert_output.dtype, device=expert_output.device)
+     output[token_indices_sorted] = expert_output
+     output = output.reshape(T, top_k, hdim)

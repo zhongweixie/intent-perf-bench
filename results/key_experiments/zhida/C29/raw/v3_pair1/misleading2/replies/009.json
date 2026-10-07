@@ -1,0 +1,51 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-Rl6mwxTBJeVg9iMclGDy9cxY",
+  "object": "chat.completion",
+  "created": 1791043402,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"ep_kernels.py\",\"old\":\"        r_offs = tl.arange(0, BLOCK_FLAT // BLOCK_E)[:, None]\",\"new\":\"        r_offs = tl.arange(0, BLOCK_R)[:, None]\"}"
+            }
+          },
+          {
+            "id": "replace_text:1",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"ep_kernels.py\",\"old\":\"        BLOCK_FLAT = _next_pow2(n_flat)\\n        BLOCK_E = _next_pow2(experts_per_rank)\\n        _permute_meta_kernel[(1,)](\\n            counts,\\n            start_index_values,\\n            write_offsets,\\n            m_sizes,\\n            m_offsets,\\n            num_ranks,\\n            experts_per_rank,\\n            alignment,\\n            BLOCK_FLAT=BLOCK_FLAT,\\n            BLOCK_E=BLOCK_E,\\n        )\",\"new\":\"        BLOCK_FLAT = _next_pow2(n_flat)\\n        BLOCK_R = _next_pow2(num_ranks)\\n        BLOCK_E = _next_pow2(experts_per_rank)\\n        _permute_meta_kernel[(1,)](\\n            counts,\\n            start_index_values,\\n            write_offsets,\\n            m_sizes,\\n            m_offsets,\\n            num_ranks,\\n            experts_per_rank,\\n            alignment,\\n            BLOCK_FLAT=BLOCK_FLAT,\\n            BLOCK_R=BLOCK_R,\\n            BLOCK_E=BLOCK_E,\\n        )\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 27964,
+    "total_tokens": 28334,
+    "completion_tokens": 370,
+    "estimated_cost": 0.02193246,
+    "prompt_tokens_details": {
+      "cached_tokens": 24576,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

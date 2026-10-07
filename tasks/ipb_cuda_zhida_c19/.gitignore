@@ -1,0 +1,9 @@
+evaluation/runtime/workspaces/
+evaluation/runtime/runs/
+evaluation/runtime/extra_site/
+evaluation/runtime/public
+evaluation/runtime/source_base/native/*.so
+__pycache__/
+*.pyc
+*.lock
+evaluation/runtime/runtime_env.json

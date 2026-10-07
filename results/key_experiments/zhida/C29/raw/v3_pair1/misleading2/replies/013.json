@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-Rttj6caB9TFqInVDElOjWDgv",
+  "object": "chat.completion",
+  "created": 1791043456,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Now writing `combine_kernels.py` with the fused combine forward/backward kernels:",
+        "reasoning_content": "Now write combine_kernels.py with the combine forward/backward Triton kernels and autograd Function.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "write_file:0",
+            "type": "function",
+            "function": {
+              "name": "write_file",
+              "arguments": "{\"path\":\"combine_kernels.py\",\"content\":\"# Optional implementation space for local token kernels.\\n\\\"\\\"\\\"Fused Triton kernels for the routed combine (weighted-sum) path.\\n\\nforward:  out[t, :]   = sum_k scores[t, k] * expert_rows[idx[t, k], :]\\n          (fp32 accumulation, cast to expert dtype, matching the reference\\n          ``(x.float() * s.float()).sum(1).to(dtype)``)\\nbackward: grad_rows[idx[t, k], :] = (grad_out[t, :].float() * s[t, k]).to(dtype)\\n          grad_scores[t, k] = dot(grad_out[t, :].float(), rows[idx[t, k]].float())\\n\\\"\\\"\\\"\\nimport torch\\n\\n_TRITON_AVAILABLE = False\\ntry:\\n    import triton\\n    import triton.language as tl\\n\\n    _TRITON_AVAILABLE = True\\nexcept ImportError:\\n    pass\\n\\n\\ndef combine_triton_available() -> bool:\\n    return _TRITON_AVAILABLE\\n\\n\\ndef _next_pow2(x: int) -> int:\\n    return max(1, 1 << (int(x) - 1).bit_length())\\n\\n\\nif _TRITON_AVAILABLE:\\n\\n    @triton.jit\\n    def _combine_fwd_kernel(\\n        rows_ptr,\\n        scores_ptr,\\n        idx_ptr,\\n        out_ptr,\\n        H,\\n        TOP_K: tl.constexpr,\\n        BLOCK_H: tl.constexpr,\\n    ):\\n        t = tl.program_id(axis=0).to(tl.int64)\\n        h_offs = tl.arange(0, BLOCK_H)\\n        for h0 in range(0, H, BLOCK_H):\\n            mask = (h0 + h_offs) < H\\n            acc = tl.zeros((BLOCK_H,), dtype=tl.float32)\\n            for k in tl.static_range(TOP_K):\\n                idx = tl.load(idx_ptr + t * TOP_K + k).to(tl.int64)\\n                s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)\\n                vals = tl.load(rows_ptr + idx * H + h0 + h_offs, mask=mask).to(tl.float32)\\n                acc += s * vals\\n            tl.store(out_ptr + t * H + h0 + h_offs, acc.to(out_ptr.dtype.element_ty), mask=mask)\\n\\n    @triton.jit\\n    def _combine_bwd_kernel(\\n        grad_out_ptr,\\n        rows_ptr,\\n        scores_ptr,\\n        idx_ptr,\\n        grad_rows_ptr,\\n        grad_scores_ptr,\\n        H,\\n        TOP_K: tl.constexpr,\\n        BLOCK_H: tl.constexpr,\\n        BLOCK_K: tl.constexpr,\\n    ):\\n        t = tl.program_id(axis=0).to(tl.int64)\\n        h_offs = tl.arange(0, BLOCK_H)\\n        k_offs = tl.arange(0, BLOCK_K)\\n        acc_k = tl.zeros((BLOCK_K,), dtype=tl.float32)\\n        for h0 in range(0, H, BLOCK_H):\\n            mask = (h0 + h_offs) < H\\n            g = tl.load(grad_out_ptr + t * H + h0 + h_offs, mask=mask, other=0.0).to(tl.float32)\\n            for k in tl.static_range(TOP_K):\\n                idx = tl.load(idx_ptr + t * TOP_K + k).to(tl.int64)\\n                s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)\\n                x = tl.load(rows_ptr + idx * H + h0 + h_offs, mask=mask, other=0.0).to(tl.float32)\\n                tl.store(grad_rows_ptr + idx * H + h0 + h_offs,\\n                         (g * s).to(grad_rows_ptr.dtype.element_ty), mask=mask)\\n                acc_k += tl.where(k_offs == k, tl.sum(g * x, 0), 0.0)\\n        k_mask = k_offs < TOP_K\\n        tl.store(grad_scores_ptr + t * TOP_K + k_offs,\\n                 acc_k.to(grad_scores_ptr.dtype.element_ty), mask=k_mask)\\n\\n\\nclass _CombineWeightedSum(torch.autograd.Function):\\n    \\\"\\\"\\\"Autograd wrapper for the fused post-score weighted-sum combine.\\\"\\\"\\\"\\n\\n    @staticmethod\\n    def forward(ctx, expert_output, top_scores, token_indices_sorted, top_k, shape):\\n        bsz, seqlen, hdim = shape\\n        T = bsz * seqlen\\n        rows = expert_output\\n        if not rows.is_contiguous():\\n            rows = rows.contiguous()\\n        scores = top_scores\\n        if not scores.is_contiguous():\\n            scores = scores.contiguous()\\n        idx = token_indices_sorted\\n        if not idx.is_contiguous():\\n            idx = idx.contiguous()\\n\\n        out = torch.empty((T, hdim), dtype=rows.dtype, device=rows.device)\\n        BLOCK_H = min(_next_pow2(hdim), 1024)\\n        _combine_fwd_kernel[(T,)](\\n            rows, scores, idx, out, hdim,\\n            TOP_K=top_k, BLOCK_H=BLOCK_H,\\n            num_warps=4 if BLOCK_H >= 512 else 2,\\n        )\\n        ctx.save_for_backward(rows, scores, idx)\\n        ctx.top_k = top_k\\n        ctx.hdim = hdim\\n        return out.reshape(bsz, seqlen, hdim)\\n\\n    @staticmethod\\n    def backward(ctx, grad_out):\\n        rows, scores, idx = ctx.saved_tensors\\n        top_k = ctx.top_k\\n        hdim = ctx.hdim\\n        T = rows.shape[0] // top_k\\n        g = grad_out.reshape(T, hdim)\\n        if not g.is_contiguous():\\n            g = g.contiguous()\\n        grad_rows = torch.empty_like(rows)\\n        grad_scores = torch.empty((T, top_k), dtype=scores.dtype, device=scores.device)\\n        BLOCK_H = min(_next_pow2(hdim), 1024)\\n        BLOCK_K = _next_pow2(top_k)\\n        _combine_bwd_kernel[(T,)](\\n            g, rows, scores, idx, grad_rows, grad_scores, hdim,\\n            TOP_K=top_k, BLOCK_H=BLOCK_H, BLOCK_K=BLOCK_K,\\n            num_warps=4 if BLOCK_H >= 512 else 2,\\n        )\\n        return grad_rows, grad_scores.reshape(scores_shape(scores)), None, None, None\\n\\n\\ndef scores_shape(scores: torch.Tensor) -> torch.Size:\\n    return scores.shape\\n\\n\\ndef combine_weighted_sum(expert_output, top_scores, token_indices_sorted, top_k, shape):\\n    return _CombineWeightedSum.apply(expert_output, top_scores, token_indices_sorted, top_k, shape)\\n\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29465,
+    "total_tokens": 30971,
+    "completion_tokens": 1506,
+    "estimated_cost": 0.03845847,
+    "prompt_tokens_details": {
+      "cached_tokens": 26112,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 23
+    }
+  }
+}

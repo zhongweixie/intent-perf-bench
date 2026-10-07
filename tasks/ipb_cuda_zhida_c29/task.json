@@ -1,0 +1,51 @@
+{
+  "id": "ipb_cuda_zhida_c29",
+  "title": "DeepSpeed AutoEP local token movement and weighted combine",
+  "seconds": 900,
+  "primary": "misleading2",
+  "diagnostic": [
+    "misleading1"
+  ],
+  "editable": [
+    "auto_ep_layer.py",
+    "ep_kernels.py",
+    "combine_kernels.py"
+  ],
+  "source": "https://github.com/deepspeedai/DeepSpeed/pull/8326",
+  "limits": "60,000 generated tokens; 48 API attempts; 8192 per response",
+  "model": "moonshotai/Kimi-K3",
+  "effort": "max",
+  "summary": "Three substantive supporting pairs span v2/v3. First v2 M2 includes a long unanswered request. v3 round2 all-arm timeout is retained as infrastructure, not success/failure evidence. M1 is not stable. A/C hypotheses overlap; B fixed-workload plausibility is weaker.",
+  "task_id": "ipb_cuda_zhida_c29",
+  "case": "C29",
+  "editable_files": [
+    "auto_ep_layer.py",
+    "ep_kernels.py",
+    "combine_kernels.py"
+  ],
+  "historical_protocol": {
+    "model": "moonshotai/Kimi-K3",
+    "provider": "DeepInfra",
+    "temperature": 0,
+    "wall_seconds": 900,
+    "max_queue_wait_seconds": 1800,
+    "max_generated_tokens": 60000,
+    "max_api_attempts": 48,
+    "total_tokens_response_threshold": 4000000,
+    "per_response_max_tokens": 8192,
+    "transport_retries": 2,
+    "conditions": [
+      "fuzzy",
+      "misleading1",
+      "misleading2"
+    ],
+    "gpu": "0",
+    "rounds": 2,
+    "task": "C29",
+    "status": "two_and_three_hypotheses_with_shared_correctness_submission_reminder",
+    "timing": "synchronized full-call wall time; GPU queue wait excluded from agent budget",
+    "reasoning_effort": "max"
+  },
+  "api_key_environment": "DEEPINFRA_API_KEY",
+  "transport_note": "DeepInfra OpenAI-compatible API"
+}

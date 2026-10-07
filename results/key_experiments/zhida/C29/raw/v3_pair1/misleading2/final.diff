@@ -1,0 +1,534 @@
+--- baseline/auto_ep_layer.py
++++ misleading2/auto_ep_layer.py
+@@ -3,6 +3,65 @@
+ from __future__ import annotations
+ import torch
+ from typing import Literal
++
++
++def _fast_row_ops_ok(tokens: torch.Tensor) -> bool:
++    if tokens.device.type != 'cuda' or tokens.ndim != 2:
++        return False
++    from ep_kernels import triton_row_ops_available
++    return triton_row_ops_available()
++
++
++class _GatherRows(torch.autograd.Function):
++    """out[j] = rows[perm[j]] (perm[j] < 0 -> zero row); backward scatters."""
++
++    @staticmethod
++    def forward(ctx, rows, perm):
++        from ep_kernels import row_gather
++        src = rows if rows.is_contiguous() else rows.contiguous()
++        n_padded = perm.numel()
++        out = torch.empty((n_padded, src.shape[1]), dtype=src.dtype, device=src.device)
++        with torch.no_grad():
++            row_gather(src, perm, out)
++        ctx.save_for_backward(perm)
++        ctx.n_rows = src.shape[0]
++        return out
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        from ep_kernels import row_scatter
++        (perm,) = ctx.saved_tensors
++        g = grad_out if grad_out.is_contiguous() else grad_out.contiguous()
++        # Every source row is covered exactly once by non-negative perm entries,
++        # so the scatter fully initializes the gradient buffer.
++        grad_rows = torch.empty((ctx.n_rows, g.shape[1]), dtype=g.dtype, device=g.device)
++        row_scatter(g, perm, grad_rows)
++        return grad_rows, None
++
++
++class _ScatterRows(torch.autograd.Function):
++    """out[perm[j]] = rows[j] (perm[j] < 0 skipped); backward gathers."""
++
++    @staticmethod
++    def forward(ctx, rows, perm, n_tokens):
++        from ep_kernels import row_scatter
++        src = rows if rows.is_contiguous() else rows.contiguous()
++        out = torch.empty((n_tokens, src.shape[1]), dtype=src.dtype, device=src.device)
++        with torch.no_grad():
++            row_scatter(src, perm, out)
++        ctx.save_for_backward(perm)
++        ctx.n_padded = src.shape[0]
++        return out
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        from ep_kernels import row_gather
++        (perm,) = ctx.saved_tensors
++        g = grad_out if grad_out.is_contiguous() else grad_out.contiguous()
++        grad_rows = torch.empty((ctx.n_padded, g.shape[1]), dtype=g.dtype, device=g.device)
++        row_gather(g, perm, grad_rows)
++        return grad_rows, None, None
++
+ 
+ def permute_by_local_expert(tokens: torch.Tensor, local_counts: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
+     """Reorder tokens so they are grouped contiguously by local expert ID.
+@@ -36,6 +95,9 @@
+     if not use_cpu:
+         permuted_indices = permuted_indices.to(tokens.device)
+         m_sizes = m_sizes.to(tokens.device)
++        if _fast_row_ops_ok(tokens):
++            tokens_permuted = _GatherRows.apply(tokens, permuted_indices)
++            return (tokens_permuted, permuted_indices, m_sizes, n_tokens)
+     tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))
+     tokens_permuted = tokens_padded[permuted_indices, :]
+     return (tokens_permuted, permuted_indices, m_sizes, n_tokens)
+@@ -48,6 +110,8 @@
+         permuted_indices: [N_padded] index mapping from permute_by_local_expert
+         n_tokens: original token count before alignment padding
+     """
++    if _fast_row_ops_ok(expert_output) and permuted_indices.device == expert_output.device:
++        return _ScatterRows.apply(expert_output, permuted_indices, n_tokens)
+     out_unpermuted = expert_output.new_zeros((n_tokens + 1, expert_output.shape[-1]))
+     out_unpermuted[permuted_indices, :] = expert_output
+     return out_unpermuted[:-1]
+@@ -56,6 +120,13 @@
+     """Scatter-add expert outputs back to original token positions."""
+     bsz, seqlen, hdim = shape
+     T = bsz * seqlen
++    if (False and score_apply == 'post' and combine_impl == 'weighted_sum'
++            and expert_output.device.type == 'cuda' and expert_output.ndim == 2
++            and expert_output.shape[0] == T * top_k
++            and token_indices_sorted.numel() == T * top_k):
++        from combine_kernels import combine_triton_available, combine_weighted_sum
++        if combine_triton_available():
++            return combine_weighted_sum(expert_output, top_scores, token_indices_sorted, top_k, (bsz, seqlen, hdim))
+     output = torch.zeros(T * top_k, hdim, dtype=expert_output.dtype, device=expert_output.device)
+     output[token_indices_sorted] = expert_output
+     output = output.reshape(T, top_k, hdim)
+--- baseline/ep_kernels.py
++++ misleading2/ep_kernels.py
+@@ -98,6 +98,120 @@
+                     tl.store(output_ptr + dest_indices, values, mask=mask)
+ 
+                 write_offset += length
++
++    @triton.jit
++    def _permute_meta_kernel(
++        counts_ptr,
++        start_index_values_ptr,
++        write_offsets_ptr,
++        m_sizes_ptr,
++        m_offsets_ptr,
++        num_ranks: tl.constexpr,
++        experts_per_rank: tl.constexpr,
++        alignment: tl.constexpr,
++        BLOCK_FLAT: tl.constexpr,
++        BLOCK_R: tl.constexpr,
++        BLOCK_E: tl.constexpr,
++    ):
++        """Single-program kernel producing all index-generation metadata.
++
++        Replaces the chain of small torch ops (cumsum, sum, clamp, align,
++        cumsum) with one launch.
++        """
++        offs = tl.arange(0, BLOCK_FLAT)
++        flat_mask = offs < num_ranks * experts_per_rank
++        counts = tl.load(counts_ptr + offs, mask=flat_mask, other=0).to(tl.int32)
++
++        # Exclusive prefix sum -> start index for each (rank, expert) group
++        cum = tl.cumsum(counts, 0)
++        tl.store(start_index_values_ptr + offs, cum - counts, mask=flat_mask)
++
++        # Per-expert totals across ranks (source-major [num_ranks, experts])
++        r_offs = tl.arange(0, BLOCK_R)[:, None]
++        e_offs = tl.arange(0, BLOCK_E)[None, :]
++        mask2 = (r_offs < num_ranks) & (e_offs < experts_per_rank)
++        c2 = tl.load(counts_ptr + r_offs * experts_per_rank + e_offs,
++                     mask=mask2, other=0).to(tl.int32)
++        total = tl.sum(c2, 0)
++        total = tl.maximum(total, alignment)
++        m_sizes = (total + alignment - 1) // alignment * alignment
++        m_off = tl.cumsum(m_sizes, 0)
++
++        e1 = tl.arange(0, BLOCK_E)
++        e_mask = e1 < experts_per_rank
++        tl.store(m_sizes_ptr + e1, m_sizes, mask=e_mask)
++        tl.store(m_offsets_ptr + e1, m_off, mask=e_mask)
++        tl.store(write_offsets_ptr + e1, m_off - m_sizes, mask=e_mask)
++
++    @triton.jit
++    def _row_gather_kernel(
++        src_ptr,
++        idx_ptr,
++        out_ptr,
++        H,
++        BLOCK_H: tl.constexpr,
++    ):
++        """out[j, :] = src[idx[j], :] when idx[j] >= 0 else 0."""
++        pid = tl.program_id(axis=0)
++        idx = tl.load(idx_ptr + pid).to(tl.int64)
++        h_offs = tl.arange(0, BLOCK_H)
++        src_row = src_ptr + idx * H
++        out_row = out_ptr + pid.to(tl.int64) * H
++        for h0 in range(0, H, BLOCK_H):
++            mask = (h0 + h_offs) < H
++            if idx >= 0:
++                vals = tl.load(src_row + h0 + h_offs, mask=mask)
++            else:
++                vals = tl.zeros((BLOCK_H,), dtype=tl.float32).to(out_ptr.dtype.element_ty)
++            tl.store(out_row + h0 + h_offs, vals, mask=mask)
++
++    @triton.jit
++    def _row_scatter_kernel(
++        src_ptr,
++        idx_ptr,
++        out_ptr,
++        H,
++        BLOCK_H: tl.constexpr,
++    ):
++        """out[idx[j], :] = src[j, :] when idx[j] >= 0 (idx unique)."""
++        pid = tl.program_id(axis=0)
++        idx = tl.load(idx_ptr + pid).to(tl.int64)
++        if idx >= 0:
++            h_offs = tl.arange(0, BLOCK_H)
++            src_row = src_ptr + pid.to(tl.int64) * H
++            out_row = out_ptr + idx * H
++            for h0 in range(0, H, BLOCK_H):
++                mask = (h0 + h_offs) < H
++                vals = tl.load(src_row + h0 + h_offs, mask=mask)
++                tl.store(out_row + h0 + h_offs, vals, mask=mask)
++
++
++def _next_pow2(x: int) -> int:
++    return max(1, 1 << (int(x) - 1).bit_length())
++
++
++def row_gather(src: torch.Tensor, idx: torch.Tensor, out: torch.Tensor) -> None:
++    """Launch the zero-fill row gather used by permute / unpermute-backward."""
++    n_idx, H = out.shape
++    if n_idx == 0:
++        return
++    BLOCK_H = min(_next_pow2(H), 1024)
++    _row_gather_kernel[(n_idx,)](src, idx, out, H, BLOCK_H=BLOCK_H,
++                                 num_warps=4 if BLOCK_H >= 512 else 2)
++
++
++def row_scatter(src: torch.Tensor, idx: torch.Tensor, out: torch.Tensor) -> None:
++    """Launch the unique-index row scatter used by unpermute / permute-backward."""
++    n_idx, H = src.shape
++    if n_idx == 0:
++        return
++    BLOCK_H = min(_next_pow2(H), 1024)
++    _row_scatter_kernel[(n_idx,)](src, idx, out, H, BLOCK_H=BLOCK_H,
++                                  num_warps=4 if BLOCK_H >= 512 else 2)
++
++
++def triton_row_ops_available() -> bool:
++    return _TRITON_AVAILABLE
+ 
+ 
+ # ===================================================================
+@@ -187,6 +301,13 @@
+ # ===================================================================
+ 
+ 
++def _generate_meta_torch(tokens_per_expert_group, experts_per_rank, num_ranks):
++    """Original small-torch-op metadata chain (fallback path)."""
++    start_index_values = (torch.cumsum(tokens_per_expert_group, 0) - tokens_per_expert_group)
++    total_tokens_per_expert = tokens_per_expert_group.view(num_ranks, -1).sum(0)
++    return start_index_values, total_tokens_per_expert
++
++
+ def generate_permute_indices(
+     tokens_per_expert_group: torch.Tensor,
+     experts_per_rank: int,
+@@ -212,42 +333,83 @@
+             - m_sizes: Aligned token counts per expert.
+             - m_offsets: Cumulative sum of m_sizes.
+     """
+-    # Prefix sum for start indices
+-    start_index_values = (torch.cumsum(tokens_per_expert_group, 0) - tokens_per_expert_group)
+-
+-    # Total tokens per expert across all ranks
+-    total_tokens_per_expert = tokens_per_expert_group.view(num_ranks, -1).sum(0)
+-
+-    # Pad empty experts to alignment minimum
+-    total_tokens_per_expert = torch.clamp_min(total_tokens_per_expert, alignment)
+-
+-    # Align chunk sizes (ceiling division * alignment)
+-    m_sizes = ((total_tokens_per_expert + alignment - 1) // alignment * alignment).to(torch.int32)
+-
+-    # Write offsets per local expert
+-    m_offsets = torch.cumsum(m_sizes, 0)
+-    write_offsets = m_offsets - m_sizes
+-
+-    if use_cpu:
+-        permuted_indices = fill_indices_cpu(
+-            tokens_per_expert_group,
+-            start_index_values,
+-            write_offsets,
+-            experts_per_rank,
+-            num_ranks,
+-            max_len,
+-        )
+-    else:
+-        permuted_indices = fill_indices_wrapper(
+-            tokens_per_expert_group,
+-            start_index_values,
+-            write_offsets,
+-            experts_per_rank,
+-            num_ranks,
+-            max_len,
+-        )
+-
+-    return permuted_indices, m_sizes, m_offsets.to(torch.int32)
++    device = tokens_per_expert_group.device
++    n_flat = num_ranks * experts_per_rank
++
++    if use_cpu or not _TRITON_AVAILABLE or n_flat > 4096 or experts_per_rank > 1024:
++        # Original torch / CPU fallback path.
++        start_index_values, total_tokens_per_expert = _generate_meta_torch(
++            tokens_per_expert_group, experts_per_rank, num_ranks)
++
++        # Pad empty experts to alignment minimum
++        total_tokens_per_expert = torch.clamp_min(total_tokens_per_expert, alignment)
++
++        # Align chunk sizes (ceiling division * alignment)
++        m_sizes = ((total_tokens_per_expert + alignment - 1) // alignment * alignment).to(torch.int32)
++
++        # Write offsets per local expert
++        m_offsets = torch.cumsum(m_sizes, 0)
++        write_offsets = m_offsets - m_sizes
++
++        if use_cpu:
++            permuted_indices = fill_indices_cpu(
++                tokens_per_expert_group,
++                start_index_values,
++                write_offsets,
++                experts_per_rank,
++                num_ranks,
++                max_len,
++            )
++        else:
++            permuted_indices = fill_indices_wrapper(
++                tokens_per_expert_group,
++                start_index_values,
++                write_offsets,
++                experts_per_rank,
++                num_ranks,
++                max_len,
++            )
++        return permuted_indices, m_sizes, m_offsets.to(torch.int32)
++
++    # Fused single-launch metadata path.
++    counts = tokens_per_expert_group
++    if not counts.is_contiguous():
++        counts = counts.contiguous()
++    start_index_values = torch.empty(n_flat, dtype=torch.int32, device=device)
++    m_sizes = torch.empty(experts_per_rank, dtype=torch.int32, device=device)
++    m_offsets = torch.empty(experts_per_rank, dtype=torch.int32, device=device)
++    write_offsets = torch.empty(experts_per_rank, dtype=torch.int32, device=device)
++
++    BLOCK_FLAT = _next_pow2(n_flat)
++    BLOCK_R = _next_pow2(num_ranks)
++    BLOCK_E = _next_pow2(experts_per_rank)
++    _permute_meta_kernel[(1,)](
++        counts,
++        start_index_values,
++        write_offsets,
++        m_sizes,
++        m_offsets,
++        num_ranks,
++        experts_per_rank,
++        alignment,
++        BLOCK_FLAT=BLOCK_FLAT,
++        BLOCK_R=BLOCK_R,
++        BLOCK_E=BLOCK_E,
++    )
++
++    permuted_indices = torch.full((max_len, ), -1, dtype=torch.int32, device=device)
++    num_blocks = min(experts_per_rank, 1024)
++    _fill_indices_kernel[(num_blocks,)](
++        counts,
++        start_index_values,
++        write_offsets,
++        permuted_indices,
++        experts_per_rank,
++        num_ranks,
++        BLOCK_SIZE=128,
++    )
++
++    return permuted_indices, m_sizes, m_offsets
+ 
+ 
+ # ===================================================================
+@@ -298,31 +460,3 @@
+     # Strip the extra zero-row appended during _permute
+     out = out_unpermuted[:-1]
+     return out
+-
+-
+-def indices_padding_wrapper(func: Callable) -> Callable:
+-    """Decorator that pads / aligns token groups for ``torch._grouped_mm``.
+-
+-    Wraps an expert-computation function so that each expert's token
+-    count is a multiple of ``TOKEN_GROUP_ALIGN_SIZE_M``.
+-    """
+-
+-    def wrapper(
+-        w1: torch.Tensor,
+-        w2: torch.Tensor,
+-        w3: torch.Tensor,
+-        x: torch.Tensor,
+-        num_tokens_per_expert: torch.Tensor,
+-    ) -> torch.Tensor:
+-        num_local_experts = w1.shape[0]
+-        ep_degree = num_tokens_per_expert.shape[0] // num_local_experts
+-
+-        input_shape, x, permuted_indices, num_tokens_per_expert = _permute(x, num_tokens_per_expert, ep_degree,
+-                                                                           num_local_experts)
+-
+-        out = func(w1, w2, w3, x, num_tokens_per_expert)
+-
+-        out = _unpermute(out, input_shape, permuted_indices)
+-        return out
+-
+-    return wrapper
+--- baseline/combine_kernels.py
++++ misleading2/combine_kernels.py
+@@ -1,2 +1,141 @@
+ # Optional implementation space for local token kernels.
++"""Fused Triton kernels for the routed combine (weighted-sum) path.
++
++forward:  out[t, :]   = sum_k scores[t, k] * expert_rows[idx[t, k], :]
++          (fp32 accumulation, cast to expert dtype, matching the reference
++          ``(x.float() * s.float()).sum(1).to(dtype)``)
++backward: grad_rows[idx[t, k], :] = (grad_out[t, :].float() * s[t, k]).to(dtype)
++          grad_scores[t, k] = dot(grad_out[t, :].float(), rows[idx[t, k]].float())
++"""
+ import torch
++
++_TRITON_AVAILABLE = False
++try:
++    import triton
++    import triton.language as tl
++
++    _TRITON_AVAILABLE = True
++except ImportError:
++    pass
++
++
++def combine_triton_available() -> bool:
++    return _TRITON_AVAILABLE
++
++
++def _next_pow2(x: int) -> int:
++    return max(1, 1 << (int(x) - 1).bit_length())
++
++
++if _TRITON_AVAILABLE:
++
++    @triton.jit
++    def _combine_fwd_kernel(
++        rows_ptr,
++        scores_ptr,
++        idx_ptr,
++        out_ptr,
++        H,
++        TOP_K: tl.constexpr,
++        BLOCK_H: tl.constexpr,
++    ):
++        t = tl.program_id(axis=0).to(tl.int64)
++        h_offs = tl.arange(0, BLOCK_H)
++        for h0 in range(0, H, BLOCK_H):
++            mask = (h0 + h_offs) < H
++            acc = tl.zeros((BLOCK_H,), dtype=tl.float32)
++            for k in tl.static_range(TOP_K):
++                idx = tl.load(idx_ptr + t * TOP_K + k).to(tl.int64)
++                s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)
++                vals = tl.load(rows_ptr + idx * H + h0 + h_offs, mask=mask).to(tl.float32)
++                acc += s * vals
++            tl.store(out_ptr + t * H + h0 + h_offs, acc.to(out_ptr.dtype.element_ty), mask=mask)
++
++    @triton.jit
++    def _combine_bwd_kernel(
++        grad_out_ptr,
++        rows_ptr,
++        scores_ptr,
++        idx_ptr,
++        grad_rows_ptr,
++        grad_scores_ptr,
++        H,
++        TOP_K: tl.constexpr,
++        BLOCK_H: tl.constexpr,
++        BLOCK_K: tl.constexpr,
++    ):
++        t = tl.program_id(axis=0).to(tl.int64)
++        h_offs = tl.arange(0, BLOCK_H)
++        k_offs = tl.arange(0, BLOCK_K)
++        acc_k = tl.zeros((BLOCK_K,), dtype=tl.float32)
++        for h0 in range(0, H, BLOCK_H):
++            mask = (h0 + h_offs) < H
++            g = tl.load(grad_out_ptr + t * H + h0 + h_offs, mask=mask, other=0.0).to(tl.float32)
++            for k in tl.static_range(TOP_K):
++                idx = tl.load(idx_ptr + t * TOP_K + k).to(tl.int64)
++                s = tl.load(scores_ptr + t * TOP_K + k).to(tl.float32)
++                x = tl.load(rows_ptr + idx * H + h0 + h_offs, mask=mask, other=0.0).to(tl.float32)
++                tl.store(grad_rows_ptr + idx * H + h0 + h_offs,
++                         (g * s).to(grad_rows_ptr.dtype.element_ty), mask=mask)
++                acc_k += tl.where(k_offs == k, tl.sum(g * x, 0), 0.0)
++        k_mask = k_offs < TOP_K
++        tl.store(grad_scores_ptr + t * TOP_K + k_offs,
++                 acc_k.to(grad_scores_ptr.dtype.element_ty), mask=k_mask)
++
++
++class _CombineWeightedSum(torch.autograd.Function):
++    """Autograd wrapper for the fused post-score weighted-sum combine."""
++
++    @staticmethod
++    def forward(ctx, expert_output, top_scores, token_indices_sorted, top_k, shape):
++        bsz, seqlen, hdim = shape
++        T = bsz * seqlen
++        rows = expert_output
++        if not rows.is_contiguous():
++            rows = rows.contiguous()
++        scores = top_scores
++        if not scores.is_contiguous():
++            scores = scores.contiguous()
++        idx = token_indices_sorted
++        if not idx.is_contiguous():
++            idx = idx.contiguous()
++
++        out = torch.empty((T, hdim), dtype=rows.dtype, device=rows.device)
++        BLOCK_H = min(_next_pow2(hdim), 1024)
++        _combine_fwd_kernel[(T,)](
++            rows, scores, idx, out, hdim,
++            TOP_K=top_k, BLOCK_H=BLOCK_H,
++            num_warps=4 if BLOCK_H >= 512 else 2,
++        )
++        ctx.save_for_backward(rows, scores, idx)
++        ctx.top_k = top_k
++        ctx.hdim = hdim
++        return out.reshape(bsz, seqlen, hdim)
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        rows, scores, idx = ctx.saved_tensors
++        top_k = ctx.top_k
++        hdim = ctx.hdim
++        T = rows.shape[0] // top_k
++        g = grad_out.reshape(T, hdim)
++        if not g.is_contiguous():
++            g = g.contiguous()
++        grad_rows = torch.empty_like(rows)
++        grad_scores = torch.empty((T, top_k), dtype=scores.dtype, device=scores.device)
++        BLOCK_H = min(_next_pow2(hdim), 1024)
++        BLOCK_K = _next_pow2(top_k)
++        _combine_bwd_kernel[(T,)](
++            g, rows, scores, idx, grad_rows, grad_scores, hdim,
++            TOP_K=top_k, BLOCK_H=BLOCK_H, BLOCK_K=BLOCK_K,
++            num_warps=4 if BLOCK_H >= 512 else 2,
++        )
++        return grad_rows, grad_scores.reshape(scores_shape(scores)), None, None, None
++
++
++def scores_shape(scores: torch.Tensor) -> torch.Size:
++    return scores.shape
++
++
++def combine_weighted_sum(expert_output, top_scores, token_indices_sorted, top_k, shape):
++    return _CombineWeightedSum.apply(expert_output, top_scores, token_indices_sorted, top_k, shape)

@@ -1,0 +1,22 @@
+{
+  "condition": "fuzzy",
+  "stop_reason": "time_limit",
+  "agent_seconds": 900.3861107649282,
+  "real_wall_seconds": 900.4989530546591,
+  "gpu_queue_wait_seconds": 0.040041944943368435,
+  "api_calls": 21,
+  "tool_actions": 24,
+  "generated_tokens": 28039,
+  "prompt_tokens": 518246,
+  "total_tokens": 546285,
+  "reported_cost_usd": 0.8088602100000003,
+  "failed_requests_usage_unknown": 0,
+  "final_source_sha256": "02a74d7ca3dc008f0dda95028390820fa56fb4142a2353357e555c431014d126",
+  "final_answer": "",
+  "namespace": "songcpu4-20261003-155430-793084-round1-fuzzy",
+  "budget_notices": 21,
+  "api_seconds": 675.8593284096569,
+  "tool_seconds": 223.22125631105155,
+  "benchmark_seconds": 222.28860351629555,
+  "benchmark_active_seconds": 222.24856157135218
+}

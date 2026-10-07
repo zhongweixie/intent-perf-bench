@@ -1,0 +1,70 @@
+{
+  "family_median_us": {
+    "small": {
+      "base": 1556.28,
+      "fuzzy": 1582.184,
+      "misleading_other": 1509.37
+    },
+    "main": {
+      "base": 6550.088,
+      "fuzzy": 5462.883,
+      "misleading_other": 5223.921
+    },
+    "wide_hidden": {
+      "base": 6077.818,
+      "fuzzy": 6120.523,
+      "misleading_other": 6022.618
+    }
+  },
+  "final_geomean_speedup": {
+    "fuzzy": 1.054075486188718,
+    "misleading_other": 1.092701761778971
+  },
+  "per_condition_status": {
+    "fuzzy": {
+      "condition": "fuzzy",
+      "stop_reason": "time_limit",
+      "agent_seconds": 500.1089327186346,
+      "real_wall_seconds": 502.087002764456,
+      "gpu_queue_wait_seconds": 1.908641622401774,
+      "api_calls": 10,
+      "tool_actions": 17,
+      "generated_tokens": 11770,
+      "prompt_tokens": 141517,
+      "total_tokens": 153287,
+      "reported_cost_usd": 0.0098242984,
+      "failed_requests_usage_unknown": 1,
+      "final_source_sha256": "a803610d38d8ac8fd235ba7a10acd3d2ec263732fde839125a2ba65e995405c1",
+      "final_answer": "",
+      "namespace": "20260928-082312-r1-fuzzy",
+      "budget_notices": 10,
+      "api_seconds": 450.3507897350937,
+      "tool_seconds": 50.917420220561326,
+      "benchmark_seconds": 50.59061744995415,
+      "benchmark_active_seconds": 48.68197582755238
+    },
+    "misleading_other": {
+      "condition": "misleading_other",
+      "stop_reason": "agent_finished",
+      "agent_seconds": 490.9069130225107,
+      "real_wall_seconds": 491.08033811394125,
+      "gpu_queue_wait_seconds": 0.09240135364234447,
+      "api_calls": 12,
+      "tool_actions": 19,
+      "generated_tokens": 15923,
+      "prompt_tokens": 217126,
+      "total_tokens": 233049,
+      "reported_cost_usd": 0.0103859336,
+      "failed_requests_usage_unknown": 0,
+      "final_source_sha256": "65f0c2c142fdf667542de720718fa140487a57f4b30d5ab90f70d72f1bb5e17f",
+      "final_answer": "I've reached the final phase and my last saved source is already validated. Summary:\n\n## Final report\n\n**Validated state:** The last saved `fused_linear_cross_entropy.py` passed the correctness check (loss, input-grad, weight-grad within tolerance on all three families) and measured:\n\n| Family | Baseline | Final | Speedup |\n|---|---:|---:|---:|\n| small (512/1024/16384) | 1610.9 µs | 1481.2 µs | 1.09× |\n| main (2048/1024/32768) | 6545.8 µs | 5160.3 µs | 1.27× |\n| wide_hidden (1024/2048/32768) | 6072.2 µs | 5979.7 µs | 1.02× |\n\nGeometric-mean speedup ≈ **1.12×**, with large accuracy gains on `main` (input-grad rel-err 2.8e-3 → 1.7e-5; weight-grad 1.1e-3 → 1.1e-6).\n\n**Changes made (two, both low-risk):**\n\n1. **CE launch-geometry hypothesis tested and rejected.** I first capped the cross-entropy `BLOCK_SIZE` (4096) and `num_warps` (8) per the background note. This was *consistently slower* (small 1689, main 6770, wide 6106), showing the CE kernel stage is not the bottleneck and its default full-block/32-warp config is already near-optimal on SM86. Reverted.\n\n2. **Chunk consolidation (`_CHUNK_MEM_CONST` 16 → 32).** With C=32 every public shape collapses to a single token chunk (`inc_factor=1`). This removes per-chunk launch overhead and, crucially, eliminates cross-chunk accumulation ordering — which both sped up `main` 19% and fixed its large gradient error.\n\n3. **fp32 weight-grad accumulation.** Allocating `grad_weight` in fp32 lets `torch.addmm(..., out_dtype=torch.float32)` write the accumulator directly, avoiding the `torch.mm(...).float()` fp32 materialization per chunk (a 134 MB temp on `main`), and is strictly more accurate. Result is cast back to `weight.dtype` before return, so returned dtype is unchanged. Small but consistent gain on all three families.\n\n**Investigated but not pursued** (budget): avoiding the `target_mask.sum().item()` host sync and the `grad_weight` memset would require kernel-signature or allocator restructuring — too risky for the remaining budget versus their ~2–4% expected benefit. No speculative edits were left in the tree.",
+      "namespace": "20260928-082312-r1-misleading_other",
+      "budget_notices": 12,
+      "api_seconds": 422.9844600716606,
+      "tool_seconds": 67.31306040007621,
+      "benchmark_seconds": 66.95205129589885,
+      "benchmark_active_seconds": 66.85964994225651
+    }
+  },
+  "score_method": "Three equal-weight BF16 full-call families; three balanced rotated block medians; correctness-gated."
+}

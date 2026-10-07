@@ -1,0 +1,30 @@
+{
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "rounds": 2,
+  "conditions": [
+    "fuzzy",
+    "flatten_hint"
+  ],
+  "budget_seconds": 700,
+  "model_response_guard": 48,
+  "generated_token_guard": 40000,
+  "total_token_guard": 1250000,
+  "max_queue_wait_seconds": 1800,
+  "response_counting": "distinct cumulative token-usage updates; deduplicate identical notifications; not provider HTTP attempts",
+  "controller": "700s-fixed-v2",
+  "controller_host": "local Windows",
+  "notes": [
+    "Local PC must remain awake and connected; full shutdown cannot be survived.",
+    "GPU queue excluded; native model retries and SSH reconnect overhead charged.",
+    "Frozen source at cutoff; interrupt grace 8s; no additional solver turn.",
+    "SSH reattachment reuses the same detached evaluator job/result.",
+    "Infrastructure-affected episodes flagged, never converted to wrong-answer scores."
+  ],
+  "public_sha256": "e2c69c69347271c31278a3879ad74b696ec3707049fddb92fc574398220692d6",
+  "controller_sha256": "d6cc34cec01442754dfeb83473c12d2143d875d1b75527538343c05eae275242",
+  "prompt_sha256": {
+    "fuzzy": "665e8f33d1bcb5fcbf5afb17c579d38375d5fe7a34ec6e9fe99fb0bfe6e6968c",
+    "flatten_hint": "346b31bcdd3cdaefe8a44a8a7e534b0659dc8fda17938be9b0536baba9d6dd29"
+  }
+}

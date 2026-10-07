@@ -1,0 +1,1 @@
+The multi-tensor update processes the workload in chunks. Chunk size and launch grouping may affect throughput at this scale; their contribution has not been established.

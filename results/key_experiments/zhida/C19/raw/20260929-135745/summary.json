@@ -1,0 +1,33 @@
+{
+  "baseline_us": 62.2649621963501,
+  "arms": {
+    "fuzzy": {
+      "correct": true,
+      "latency_us": 59.74016189575195,
+      "speedup_vs_base": 1.042263030773234,
+      "status": {
+        "condition": "fuzzy",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 418.210360779427,
+        "real_wall_seconds": 418.3280912730843,
+        "gpu_queue_wait_seconds": 0.06162901781499386,
+        "api_calls": 12,
+        "tool_actions": 15,
+        "generated_tokens": 17886,
+        "prompt_tokens": 185558,
+        "total_tokens": 203444,
+        "reported_cost_usd": 0.010597619199999998,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "bc5eda9ae931fe5bbe58fd9575b5f88fb154d616654f3965829309a01e67c549",
+        "final_answer": "The saved source is exactly the version validated in my last run (correct on all three cases, 59.4 µs). Only 40 s remain, so I'm stopping on this tested state.\n\n## Final report\n\n**Diagnosis.** The whole-pipeline measurement (62.5 µs) is dominated by a sequence of small kernels over only ~0.77 GFLOP and ~17 MB of traffic — the two fused-MoE Triton GEMMs, the SiLU activation, routing, alignment, and the top-8 reduction. The GEMM tiling/padding (1472 padded slots, block_m=64) is already near-optimal for this skewed workload: only ~23 distinct experts are touched per GEMM, so weight traffic (~11.8 MB) and compute are modest and not obviously improvable without changing routing.\n\n**Change made.** The pipeline reduced the `(M, topk, K)` expert-partial tensor with a generic `torch.sum(..., dim=1)`. I replaced it with the provided native `reduce8` helper (a fused top-8 reduction), which the block was not using:\n\n```python\ndef reduce(self):\n    check(lib.reduce8(self.parts.data_ptr(), self.out.data_ptr(),\n                      self.M, self.K, torch.cuda.current_stream().cuda_stream))\n```\n\nThis removes torch's generic strided-reduction kernel in favor of the purpose-built native one.\n\n**Result (validated).** Correct on all three cases (relative RMS ≤ 0.00048, max abs ≤ 0.0015, route sets equal, finite), latency **62.5 µs → 59.4 µs** (~5% faster, consistent across samples).\n\n**Safety.** All behavior is preserved: routing, alignment (native `align`), both expert GEMMs, and the activation are untouched; only the reduction implementation changed. Uniform-logit and multi-group configurations (cases 1/2, block_m=32) pass identically. The last saved source is this tested correct version; no untested edits were left in place.",
+        "namespace": "20260929-135745-fuzzy",
+        "budget_notices": 12,
+        "api_seconds": 337.32776218280196,
+        "tool_seconds": 80.32144595962018,
+        "benchmark_seconds": 80.10508821345866,
+        "benchmark_active_seconds": 80.04345919564366
+      }
+    }
+  },
+  "warning": "Exploratory one-run pilot; inspect agent paths and repeat promising arms before claims."
+}

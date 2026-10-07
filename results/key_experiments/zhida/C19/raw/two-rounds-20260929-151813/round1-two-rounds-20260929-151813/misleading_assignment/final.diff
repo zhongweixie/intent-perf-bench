@@ -1,0 +1,35 @@
+--- baseline/pipeline.py
++++ misleading_assignment/pipeline.py
+@@ -20,6 +20,7 @@
+         self.M,self.K=self.x.shape;self.E=self.w1.shape[0];self.N=self.w2.shape[-1];self.k=8
+         M,E,N,K,k=self.M,self.E,self.N,self.K,self.k
+         config=get_default_config(M,E,N,K,k,None)
++        config['BLOCK_SIZE_M']=32
+         self.config=config; block=config['BLOCK_SIZE_M']
+         capacity=M*k+E*(block-1)
+         if M*k<E:capacity=min(M*k*block,capacity)
+--- baseline/routing.py
++++ misleading_assignment/routing.py
+@@ -48,6 +48,22 @@
+         raise ValueError(f"Unsupported scoring function: {scoring_func}")
+ 
+     num_token = scores.size(0)
++    use_sorted = envs.VLLM_BATCH_INVARIANT
++    if num_expert_group <= 1 and topk_group >= 1:
++        # A single expert group makes the group-selection machinery a no-op:
++        # every score survives the mask, so select directly over all experts.
++        if e_score_correction_bias is not None:
++            topk_ids = torch.topk(scores, k=topk, dim=-1, sorted=use_sorted)[1]
++            topk_weights = original_scores.gather(1, topk_ids)
++        else:
++            topk_weights, topk_ids = torch.topk(
++                scores, k=topk, dim=-1, sorted=use_sorted
++            )
++        if renormalize:
++            topk_weights = topk_weights / topk_weights.sum(dim=-1, keepdim=True)
++        if routed_scaling_factor != 1.0:
++            topk_weights = topk_weights * routed_scaling_factor
++        return topk_weights.to(torch.float32), topk_ids.to(torch.int32)
+     if e_score_correction_bias is not None:
+         # Store original scores before applying correction bias. We use biased
+         # scores for expert selection but original scores for routing weights

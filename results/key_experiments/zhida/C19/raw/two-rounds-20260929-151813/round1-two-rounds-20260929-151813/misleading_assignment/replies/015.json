@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790695983-ICvgjCUDl41VdklBcWqz",
+  "object": "chat.completion",
+  "created": 1790695983,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Worse (59.1 vs 54.9). Revert to the best-known config: BLOCK_SIZE_M=32 only, no other changes. That version was validated at 54.9µs. I must revert now, and ideally re-validate — but time is 63s and a benchmark costs ~35s. Reverting to the exact previously-validated source is safe (it was tested correct). I'll revert and not re-run, or re-run if budget permits. Reverting is safest: the exact same bytes were validated.\n\nLet me revert now.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-be818b467af75367",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"new\": \"        config['BLOCK_SIZE_M']=32\", \"old\": \"        config['BLOCK_SIZE_M']=32\\n        config['BLOCK_SIZE_N']=256\\n        config['num_stages']=2\", \"path\": \"pipeline.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Worse (59.1 vs 54.9). Revert to the best-known config: BLOCK_SIZE_M=32 only, no other changes. That version was validated at 54.9µs. I must revert now, and ideally re-validate — but time is 63s and a benchmark costs ~35s. Reverting to the exact previously-validated source is safe (it was tested correct). I'll revert and not re-run, or re-run if budget permits. Reverting is safest: the exact same bytes were validated.\n\nLet me revert now.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29834,
+    "completion_tokens": 231,
+    "total_tokens": 30065,
+    "cost": 0.000275828,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 29440,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000275828,
+      "upstream_inference_prompt_cost": 0.000178808,
+      "upstream_inference_completions_cost": 9.702e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 119,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

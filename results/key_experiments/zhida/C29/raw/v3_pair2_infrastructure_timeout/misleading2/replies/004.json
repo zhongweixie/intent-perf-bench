@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RTLJ2Ipk1lADabyjdisOevgN",
+  "object": "chat.completion",
+  "created": 1791044619,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Now let me read combine_kernels.py.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "read_file:0",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"combine_kernels.py\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 6504,
+    "total_tokens": 6565,
+    "completion_tokens": 61,
+    "estimated_cost": 0.01546581,
+    "prompt_tokens_details": {
+      "cached_tokens": 1536,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 13
+    }
+  }
+}

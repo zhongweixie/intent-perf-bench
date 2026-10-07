@@ -1,0 +1,21 @@
+fuzzy call 1 generated 79 elapsed 5 benchmarks 0
+fuzzy call 2 generated 163 elapsed 14 benchmarks 0
+fuzzy call 3 generated 248 elapsed 18 benchmarks 0
+fuzzy call 4 generated 7122 elapsed 181 benchmarks 1
+fuzzy call 6 generated 17836 elapsed 406 benchmarks 1
+fuzzy call 7 generated 21277 elapsed 510 benchmarks 1
+fuzzy call 8 generated 21790 elapsed 528 benchmarks 1
+fuzzy call 9 generated 22084 elapsed 536 benchmarks 1
+fuzzy call 10 generated 22368 elapsed 545 benchmarks 1
+fuzzy call 11 generated 22696 elapsed 556 benchmarks 1
+fuzzy call 12 generated 22968 elapsed 563 benchmarks 1
+fuzzy call 13 generated 23300 elapsed 574 benchmarks 1
+fuzzy call 14 generated 23689 elapsed 583 benchmarks 1
+fuzzy call 15 generated 23884 elapsed 604 benchmarks 2
+fuzzy call 16 generated 26164 elapsed 659 benchmarks 2
+fuzzy call 17 generated 26740 elapsed 674 benchmarks 2
+fuzzy call 18 generated 27512 elapsed 697 benchmarks 2
+fuzzy call 19 generated 27750 elapsed 725 benchmarks 3
+fuzzy call 20 generated 28005 elapsed 732 benchmarks 3
+fuzzy call 21 generated 28039 elapsed 900 benchmarks 4
+TRIAL_END {"condition": "fuzzy", "stop_reason": "time_limit", "agent_seconds": 900.3861107649282, "real_wall_seconds": 900.4989530546591, "gpu_queue_wait_seconds": 0.040041944943368435, "api_calls": 21, "tool_actions": 24, "generated_tokens": 28039, "prompt_tokens": 518246, "total_tokens": 546285, "reported_cost_usd": 0.8088602100000003, "failed_requests_usage_unknown": 0, "final_source_sha256": "02a74d7ca3dc008f0dda95028390820fa56fb4142a2353357e555c431014d126", "final_answer": "", "namespace": "songcpu4-20261003-155430-793084-round1-fuzzy", "budget_notices": 21, "api_seconds": 675.8593284096569, "tool_seconds": 223.22125631105155, "benchmark_seconds": 222.28860351629555, "benchmark_active_seconds": 222.24856157135218}

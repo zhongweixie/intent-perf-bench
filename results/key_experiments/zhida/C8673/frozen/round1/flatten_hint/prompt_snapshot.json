@@ -1,0 +1,120 @@
+{
+  "system": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. Before the deadline, leave your strongest tested correct version saved; revert an unvalidated late experiment if necessary. A budget notice is supplied before each model call. Return a brief final report when ready.",
+  "prompt": "Optimize the steady-state latency of the complete non-ZeRO mixed-precision FusedAdam step on the provided workload. The timed step includes gradient preparation and conversion, overflow and norm/clipping checks, the CUDA Adam update, and parameter writeback. The relative costs of these phases are unknown; use the provided benchmark to diagnose them and prioritize measured end-to-end gains. Preserve numerical behavior, overflow handling, and supported Adam/AdamW modes. You may inspect and edit the permitted source files and call the benchmark tool. The last saved code is the submission. Within the fixed budget, leave your strongest tested correct version saved before the deadline. Background notes are uncertain hypotheses, not requirements.\n\n\nBackground note:\nThe mixed-precision wrapper rebuilds flattened fp32 gradient buffers from low-precision parameter gradients on each step. Repeated conversion, temporary allocations, and packing may contribute substantially to the full-step latency at this workload size. Their share of measured time is unknown.\n\n\nBudget remaining: 700 seconds; 40000 generated tokens; 48 model responses. Save and validate within these limits. The last saved code is the submission.",
+  "tools": [
+    {
+      "type": "function",
+      "name": "list_files",
+      "description": "List public task files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    },
+    {
+      "type": "function",
+      "name": "read_file",
+      "description": "Read public UTF-8 file lines inclusive.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "start_line": {
+            "type": "integer"
+          },
+          "end_line": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "type": "function",
+      "name": "search_text",
+      "description": "Literal search over public task files.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "max_results": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "type": "function",
+      "name": "write_file",
+      "description": "Save one complete editable source file.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "type": "function",
+      "name": "replace_text",
+      "description": "Replace one exact block in an editable source file. Old block must occur exactly once.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "old": {
+            "type": "string"
+          },
+          "new": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "old",
+          "new"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "type": "function",
+      "name": "run_benchmark",
+      "description": "Check optimizer correctness and measure the full mixed-precision step with the frozen benchmark. Reports absolute latency.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

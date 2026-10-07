@@ -1,0 +1,9 @@
+{
+  "case": "C19",
+  "task_id": "ipb_cuda_zhida_c19",
+  "primary": "misleading_layout",
+  "diagnostic": [
+    "misleading_assignment"
+  ],
+  "limitations": "Two exploratory pairs favor Fuzzy over layout; assignment is diagnostic and not stable. Initial weak Fuzzy pilot retained. No preregistered significance claim."
+}

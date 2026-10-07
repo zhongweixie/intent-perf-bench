@@ -1,0 +1,18 @@
+misleading_layout call 1 generated 32 elapsed 1 benchmarks 0
+misleading_layout call 2 generated 139 elapsed 3 benchmarks 0
+misleading_layout call 3 generated 234 elapsed 6 benchmarks 0
+misleading_layout call 4 generated 362 elapsed 7 benchmarks 0
+misleading_layout call 5 generated 589 elapsed 42 benchmarks 1
+misleading_layout call 6 generated 4132 elapsed 79 benchmarks 1
+misleading_layout call 7 generated 4220 elapsed 81 benchmarks 1
+misleading_layout call 8 generated 6507 elapsed 109 benchmarks 1
+misleading_layout call 9 generated 6572 elapsed 138 benchmarks 2
+misleading_layout call 10 generated 10648 elapsed 189 benchmarks 2
+misleading_layout call 11 generated 10735 elapsed 218 benchmarks 3
+misleading_layout call 12 generated 11995 elapsed 234 benchmarks 3
+misleading_layout call 13 generated 12020 elapsed 264 benchmarks 4
+misleading_layout call 14 generated 16322 elapsed 305 benchmarks 4
+misleading_layout call 15 generated 16406 elapsed 347 benchmarks 5
+misleading_layout call 16 generated 20489 elapsed 389 benchmarks 5
+misleading_layout call 17 generated 20566 elapsed 419 benchmarks 6
+TRIAL_END {"condition": "misleading_layout", "stop_reason": "agent_finished", "agent_seconds": 425.43265680689365, "real_wall_seconds": 573.1498965071514, "gpu_queue_wait_seconds": 147.67895514983684, "api_calls": 18, "tool_actions": 21, "generated_tokens": 21033, "prompt_tokens": 317802, "total_tokens": 338835, "reported_cost_usd": 0.016371157600000002, "failed_requests_usage_unknown": 0, "final_source_sha256": "96fdd3a27fa5ce3448445ec6cd475f1f35fe850425398ccb1e3c70e4843c070c", "final_answer": "Final state validated and saved.\n\n## Report\n\n**Baseline (and final) whole-pipeline latency: ~62.1 µs** on the scored configuration (128 tokens, 128 experts, K=512, N=256, top-k 8, one group), correct on all three checked cases (route sets equal, rel-RMS ≈ 2.2e-4, max-abs < 0.001 — well inside the 0.002 / 0.005 limits).\n\n**Diagnosis performed** (no profiler, so I used correctness-preserving stage duplication — running each stage twice leaves the output bit-identical, and the latency delta reveals each stage's marginal cost):\n- Doubling *all* stages: 62.1 → 118.1 µs (+56 µs).\n- Doubling only the three small stages (alignment, activation, reduce): 62.1 → 71.3 µs (+9.2 µs → ~3 µs each).\n\nThis showed the cost is spread roughly evenly, not dominated by one stage:\n- routing (compiled grouped_topk) ≈ 15 µs\n- gemm1 ≈ 15 µs\n- gemm2 ≈ 15 µs\n- alignment + activation + reduce ≈ 9 µs\n- remainder ≈ graph/framework overhead\n\nThe GEMMs are effectively weight-memory-bound (~6 MB of expert weights each) with few M-blocks (23 padded blocks × small N-tile count), and the activation/reduce stages are already cheap, so the \"wide intermediate + rematerialization\" hypothesis did **not** yield a large win.\n\n**Optimization attempted and rejected:** per-projection tile overrides (narrower `BLOCK_SIZE_N=64` for gemm1 to raise SM parallelism, plus `GROUP_SIZE_M=8` for L2 weight reuse) measured **62.74 µs — slower** than baseline, so it was reverted.\n\nThe final saved source is the original, re-validated configuration at **62.18 µs**, correct on all supported cases. No unvalidated edits remain.", "namespace": "round1-two-rounds-20260929-151813-misleading_layout", "budget_notices": 18, "api_seconds": 245.0728525556624, "tool_seconds": 327.17060166597366, "benchmark_seconds": 326.898408267647, "benchmark_active_seconds": 179.2194531178102}

@@ -1,0 +1,232 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. A budget notice is supplied before each model call. Return a brief final report when ready."
+    },
+    {
+      "role": "user",
+      "content": "Within the limited time, produce the best correct version you can of the fused linear cross-entropy operator for the supplied BF16 full forward and backward workloads. Read CONTRACT.md, WORKLOADS.md and the editable sources. Investigate, implement and validate your improvements within the fixed budget. Keep the last saved version tested.\n\nBackground note: The dominant cost is not established. Use the whole-call results and the implementation to decide where to spend your time.\n"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 499 seconds; 40000 generated tokens; 25 API attempts; 1000000 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll start by reading the contract and workload files to understand the task.\n\n",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-9626ba3252db2344",
+          "function": {
+            "name": "list_files",
+            "arguments": "{}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-aca00425aaa52ef0",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"CONTRACT.md\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-9626ba3252db2344",
+      "content": "CONTRACT.md\nLICENSE\nWORKLOADS.md\ncross_entropy.py\nfused_linear_cross_entropy.py\nutils.py"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-aca00425aaa52ef0",
+      "content": "1: # C21 fused linear cross-entropy optimization\n2: \n3: Improve the full forward plus backward latency of Liger's fused linear cross-entropy on an RTX A6000 while preserving its behavior. The supplied operator starts from one frozen baseline. Only `fused_linear_cross_entropy.py`, `cross_entropy.py`, and `utils.py` may be edited; they occupy their usual `liger_kernel/ops/` locations when evaluated. The other Liger package files are fixed dependencies. Do not assume any particular optimization is required.\n4: \n5: ## Supported task domain\n6: \n7: - BF16 CUDA input `[BT,H]`, weight `[V,H]`, and integer target `[BT]`; gradients of both input and weight are required.\n8: - Mean reduction, no bias or class weight, `ignore_index=-100`; some inputs contain ignored targets.\n9: - The public shapes are listed in `WORKLOADS.md`. Final checking also uses fresh values and a smaller ignored-target edge case.\n10: - Preserve loss, input gradient, and weight gradient against the mathematical PyTorch reference within the grader's numerical tolerances. Shape, finite values, and all three relative norm errors are checked.\n11: \n12: The `run_benchmark` tool checks correctness before reporting each public case's full forward-plus-backward latency. It includes tensor allocation and device/host synchronization inside the operator; it excludes input creation, warmup, compilation, and the grader's own numerical diagnostics. Both prompts use exactly the same workloads and evaluator. Lower latency with correct outputs is better. The final saved source, rather than the agent's best intermediate checkpoint, is scored.\n13: \n14: The agent can list/read/search the public files and edit only the three Python sources. External shell, Internet, previous trials, and the private evaluator are unavailable. Do not introduce filesystem/network/process access, read environment state, introspect the evaluator, cache answers across calls, or change global framework precision settings.\n15: \n16: ## Budget\n17: \n18: You have 500 seconds of active time, at most 40,000 cumulative generated tokens and 25 model API attempts. GPU-queue waiting is excluded from active time, with a separate bounded wall-clock safeguard. Each model call includes a notice of remaining active time, generated tokens and API attempts. Within this limited time, deliver the best correct version you can. Reserve enough time to save and validate the final implementation."
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 491 seconds; 39933 generated tokens; 24 API attempts; 999075 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll read the workloads and source files now.\n\n",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-a75f803034c1e00d",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"WORKLOADS.md\"}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-bbca54f42c2fa129",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"fused_linear_cross_entropy.py\"}"
+          }
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-a75f803034c1e00d",
+      "content": "1: # Public workloads\n2: \n3: All three cases are BF16 CUDA full forward plus backward with mean cross-entropy. Each family has equal weight in the final geometric-mean speedup relative to the frozen baseline. Numerical checks use fresh random values; the third family includes ignored targets.\n4: \n5: | Family | BT | H | V | Notes |\n6: |---|---:|---:|---:|---|\n7: | small | 512 | 1024 | 16384 | no ignored targets |\n8: | main | 2048 | 1024 | 32768 | no ignored targets |\n9: | wide_hidden | 1024 | 2048 | 32768 | some ignored targets |\n10: \n11: The runner warms up each implementation and reports median microseconds from repeated full calls. On this shared server, small differences may be noisy. Final grading rotates baseline and all conditions through repeated blocks on the same GPU."
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-bbca54f42c2fa129",
+      "content": "1: import torch\n2: import triton\n3: \n4: from packaging.version import Version\n5: \n6: # Trigger declaration of the ``cross_entropy_loss_and_grad`` op location so the\n7: # dispatcher knows where to discover the Triton + CuTe DSL impls. Without this\n8: # import the first dispatch call would return \"no impl registered\".\n9: import liger_kernel.functional  # noqa: F401\n10: \n11: from liger_kernel.backends import dispatch\n12: from liger_kernel.ops.cross_entropy import liger_cross_entropy_kernel\n13: from liger_kernel.ops.utils import amp_custom_bwd\n14: from liger_kernel.ops.utils import amp_custom_fwd\n15: from liger_kernel.ops.utils import element_mul_kernel\n16: from liger_kernel.ops.utils import is_hip\n17: from liger_kernel.utils import infer_device\n18: \n19: # The hard limit of TRITON_MAX_TENSOR_NUMEL is 1048576 https://github.com/triton-lang/triton/blob/ba42a5c68fd0505f8c42f4202d53be0f8d9a5fe0/python/triton/language/core.py#L19\n20: # However, setting limit as 65536 as in LayerNorm tutorial is faster because of less register spilling\n21: # The optimal maximum block size depends on your hardware, your kernel, and your dtype\n22: MAX_FUSED_SIZE = 2048 if infer_device() == \"npu\" else 65536 // 2\n23: \n24: # Memory-budget constant for the token-chunk geometry below. The historical\n25: # formula (inc_factor = cdiv(V, H), i.e. budget C=1) sizes chunks to a memory\n26: # FLOOR of ~BT x H transient logits, which at LLM vocab shapes forces many tiny\n27: # chunks and a launch-bound wall. At llama_3 shapes (V=128256, H=4096) C=1 gives\n28: # inc_factor=32 -> chunk_size=BT/32 (256 rows @ BT=8192) = 32 loop iterations.\n29: # Widening the transient budget to C x BT x H collapses the loop. Measured\n30: # Blackwell B200 (full fwd+bwd, bf16): V=128256/H=4096 BT=8192 123.4ms (C=1) ->\n31: # 24.7ms (C=16) = 5.0x; BT=4096 119.3 -> 15.1 = 7.9x; BT=1024 116.9 -> 9.07 =\n32: # 12.9x; small V=32000 BT=8192 11.0 -> 5.4 = 2.0x (flat for C>=8). C=16 is the\n33: # knee (gains flatten beyond it at BT>=4096). Numerics are partition-invariant\n34: # per row: loss is bit-identical across C; input-grad differs only at the ~1e-5\n35: # GEMM reduction-order level; weight-grad differs only in addmm chunk-accumulation\n36: # order (same class as the fused_linear_jsd chunk-memory idiom). Same constant on\n37: # all devices.\n38: _CHUNK_MEM_CONST = 16\n39: _TORCH_VERSION = Version(torch.__version__.split(\"+\")[0])\n40: _ADDMM_SUPPORTS_OUT_DTYPE = _TORCH_VERSION >= Version(\"2.8.0\")\n41: \n42: \n43: def fused_linear_cross_entropy_forward(\n44:     _input,\n45:     weight,\n46:     target,\n47:     ce_weight=None,\n48:     bias=None,\n49:     ignore_index=-100,\n50:     lse_square_scale=0.0,\n51:     label_smoothing=0.0,\n52:     reduction=\"mean\",\n53:     softcap=None,\n54:     return_z_loss=False,\n55:     accum_dtype=None,\n56:     use_token_scaling=False,\n57:     return_token_accuracy=False,\n58:     return_predicted_tokens=False,\n59:     ce_impl=None,\n60:     ce_mode=None,\n61:     token_grad_output=None,\n62:     compute_gradients=None,\n63:     weight_requires_grad=None,\n64: ):\n65:     assert isinstance(return_z_loss, bool), f\"return_z_loss must be True or False. Got: {return_z_loss}\"\n66:     assert isinstance(return_token_accuracy, bool), (\n67:         f\"return_token_accuracy must be True or False. Got: {return_token_accuracy}\"\n68:     )\n69:     assert isinstance(return_predicted_tokens, bool), (\n70:         f\"return_predicted_tokens must be True or False. Got: {return_predicted_tokens}\"\n71:     )\n72:     device = _input.device\n73:     # ``compute_gradients`` / ``weight_requires_grad`` let backward re-enter this\n74:     # function with *detached* saved tensors (whose ``.requires_grad`` is False) and\n75:     # still get gradients out. ``token_grad_output`` is the per-token upstream\n76:     # gradient for reduction=\"none\"; it must be folded into the logits gradient\n77:     # before that gradient is summed into grad_weight/grad_bias.\n78:     input_requires_grad = _input.requires_grad if compute_gradients is None else compute_gradients\n79:     weight_needs_grad = weight.requires_grad if weight_requires_grad is None else weight_requires_grad\n80: \n81:     # inputs have shape: BT x H\n82:     # materialized activations will have shape: BT x V\n83:     # the increase in memory = BT x V\n84:     # reduction can be achieved by partitioning the number of tokens BT into smaller chunks.\n85:     # for ex: if we were to achieve the same memory consumption as BT x H, then the chunk size should be:\n86:     # inc_factor = (V+H-1)//H, chunk_size = (BT + inc_factor - 1)//inc_factor\n87:     # for ex: BT = 4096*4, V = 32000, H = 4096 ==> inc_factor = 8, chunk_size = 2048\n88:     BT, H = _input.shape\n89:     V = weight.shape[0]\n90: \n91:     # widen the transient logits budget to C x BT x H (C=1 is a memory floor, not a perf target)\n92:     inc_factor = triton.cdiv(V, _CHUNK_MEM_CONST * H)\n93:     chunk_size = triton.next_power_of_2(triton.cdiv(BT, inc_factor))  # (BT + inc_factor - 1) // inc_factor\n94:     chunk_size = min(chunk_size, BT)  # a single chunk covers BT when the budget allows; never exceed BT\n95:     num_chunks = triton.cdiv(BT, chunk_size)  # (BT + chunk_size - 1) // chunk_size\n96: \n97:     grad_input = torch.zeros_like(_input, device=device)\n98: \n99:     # we use fp32 for loss and gradients accumulator\n100:     if input_requires_grad:\n101:         if accum_dtype is None:\n102:             grad_weight = torch.zeros_like(weight, device=device) if weight_needs_grad else None\n103:             grad_bias = torch.zeros_like(bias, device=device) if bias is not None else None\n104:         else:\n105:             grad_weight = torch.zeros_like(weight, dtype=accum_dtype, device=device) if weight_needs_grad else None\n106:             grad_bias = torch.zeros_like(bias, dtype=accum_dtype, device=device) if bias is not None else None\n107:     else:\n108:         grad_weight = None\n109:         grad_bias = None\n110: \n111:     loss_1d = torch.zeros(BT, dtype=torch.float32, device=device)\n112:     z_loss_1d = torch.zeros(BT, dtype=_input.dtype, device=_input.device) if return_z_loss else None\n113:     token_accuracy_1d = torch.zeros(BT, dtype=torch.float32, device=device) if return_token_accuracy else None\n114:     predicted_tokens_1d = torch.full((BT,), -1, dtype=torch.int64, device=device) if return_predicted_tokens else None\n115: \n116:     # TODO: evaluate how CUDA synchronization caused by .item() affects the speed\n117:     target_mask = target != ignore_index\n118:     total_n_non_ignore = target_mask.sum().item()\n119:     total_sum_non_ignore_ce_weight = total_n_non_ignore\n120:     ce_weight_sum = 0.0\n121:     if ce_weight is not None:\n122:         assert ce_weight.shape[0] == V, f\"If given, weight has to be a Tensor of size V. Got: {ce_weight.shape}\"\n123:         assert torch.is_floating_point(ce_weight), (\n124:             f\"If given, weight has to be a Tensor of floating point dtype. Got: {ce_weight.dtype}\"\n125:         )\n126:         total_sum_non_ignore_ce_weight = (\n127:             torch.gather(ce_weight, dim=0, index=target.masked_select(target_mask)).sum().item()\n128:         )\n129:         ce_weight_sum = ce_weight.sum().item()\n130:         if ce_weight.stride(-1) != 1:\n131:             ce_weight = ce_weight.contiguous()\n132: \n133:     for chunk_id in range(num_chunks):\n134:         start_idx = chunk_id * chunk_size\n135:         end_idx = min((chunk_id + 1) * chunk_size, BT)\n136:         _input_chunk = _input[start_idx:end_idx]  # chunk_size x H\n137: \n138:         # when doing matmul, use the original precision\n139:         logits_chunk = _input_chunk @ weight.t()  # chunk_size x V\n140:         if bias is not None:\n141:             logits_chunk = logits_chunk + bias\n142: \n143:         target_chunk = target[start_idx:end_idx]  # chunk_size,\n144: \n145:         # Compute predicted probabilities for token scaling if needed\n146:         if use_token_scaling:\n147:             # Compute softmax probabilities for scaling\n148:             # We need to compute this before the cross entropy kernel modifies logits_chunk\n149:             logits_for_softmax = logits_chunk.detach().clone()  # Detach to avoid gradient flow\n150:             if softcap is not None:\n151:                 logits_for_softmax = softcap * torch.tanh(logits_for_softmax / softcap)\n152: \n153:             # Compute softmax to get predicted probabilities\n154:             probs = torch.softmax(logits_for_softmax, dim=-1)\n155: \n156:             # Get predicted probabilities for token scaling, handling ignored targets\n157:             valid_target_mask = target_chunk != ignore_index\n158:             valid_targets = target_chunk[valid_target_mask]\n159: \n160:             if len(valid_targets) > 0:\n161:                 # Gather probabilities only for valid targets\n162:                 valid_probs = probs[valid_target_mask]\n163:                 pred_probs_valid = torch.gather(valid_probs, -1, valid_targets.unsqueeze(-1)).squeeze(-1)\n164: \n165:                 # Create full tensor with zeros for ignored targets\n166:                 pred_probs = torch.zeros_like(target_chunk, dtype=probs.dtype, device=probs.device)\n167:                 pred_probs[valid_target_mask] = pred_probs_valid\n168:             else:\n169:                 # All targets are ignored\n170:                 pred_probs = torch.zeros_like(target_chunk, dtype=probs.dtype, device=probs.device)\n171: \n172:             # Store the scaling factors\n173:             scaling_factors = pred_probs.detach()  # Detach to ensure no gradient flow\n174: \n175:         # ensure _input and target are contiguous\n176:         logits_chunk = logits_chunk.contiguous()\n177:         target_chunk = target_chunk.contiguous()\n178: \n179:         if ce_impl is None:\n180:             loss_1d_slice = loss_1d[start_idx:end_idx]\n181:             z_loss_1d_slice = z_loss_1d[start_idx:end_idx] if return_z_loss else None\n182:             token_accuracy_1d_slice = token_accuracy_1d[start_idx:end_idx] if return_token_accuracy else None\n183:             predicted_tokens_1d_slice = predicted_tokens_1d[start_idx:end_idx] if return_predicted_tokens else None\n184:             block_size = min(MAX_FUSED_SIZE, triton.next_power_of_2(V))\n185: \n186:             liger_cross_entropy_kernel[(end_idx - start_idx,)](\n187:                 X_ptr=logits_chunk,\n188:                 X_stride=logits_chunk.stride(-2),\n189:                 Y_ptr=target_chunk,\n190:                 Y_stride=target_chunk.stride(-1),\n191:                 weight_ptr=ce_weight,\n192:                 loss_ptr=loss_1d_slice,\n193:                 z_loss_ptr=z_loss_1d_slice,\n194:                 loss_stride=loss_1d_slice.stride(-1),\n195:                 token_accuracy_ptr=token_accuracy_1d_slice,\n196:                 token_accuracy_stride=token_accuracy_1d_slice.stride(-1) if return_token_accuracy else 0,\n197:                 predicted_tokens_ptr=predicted_tokens_1d_slice,\n198:                 predicted_tokens_stride=predicted_tokens_1d_slice.stride(-1) if return_predicted_tokens else 0,\n199:                 n_cols=V,\n200:                 n_non_ignore=total_n_non_ignore,\n201:                 sum_non_ignore_weight=total_sum_non_ignore_ce_weight,\n202:                 weight_sum=ce_weight_sum,\n203:                 ignore_index=ignore_index,\n204:                 lse_square_scale=lse_square_scale,\n205:                 label_smoothing=label_smoothing,\n206:                 reduction=reduction,\n207:                 softcap=softcap,\n208:                 RETURN_Z_LOSS=return_z_loss,\n209:                 RETURN_TOKEN_ACCURACY=return_token_accuracy,\n210:                 RETURN_PREDICTED_TOKENS=return_predicted_tokens,\n211:                 HAS_WEIGHT=ce_weight is not None,\n212:                 HAS_SOFTCAPPING=softcap is not None,\n213:                 HAS_GRADIENTS=input_requires_grad,\n214:                 BLOCK_SIZE=block_size,\n215:                 num_warps=32 if not is_hip() else 16,\n216:             )\n217:             grad_logits_chunk = logits_chunk\n218:         else:\n219:             ce_args = (\n220:                 logits_chunk,\n221:                 target_chunk,\n222:                 ce_weight,\n223:                 ignore_index,\n224:                 lse_square_scale,\n225:                 label_smoothing,\n226:                 reduction,\n227:                 softcap,\n228:                 total_n_non_ignore,\n229:                 total_sum_non_ignore_ce_weight,\n230:                 ce_weight_sum,\n231:                 return_z_loss,\n232:                 return_token_accuracy,\n233:                 return_predicted_tokens,\n234:                 input_requires_grad,\n235:             )\n236:             (\n237:                 loss_1d_slice,\n238:                 z_loss_1d_slice,\n239:                 token_accuracy_1d_slice,\n240:                 predicted_tokens_1d_slice,\n241:                 grad_logits_chunk,\n242:             ) = dispatch(\n243:                 \"cross_entropy_loss_and_grad\",\n244:                 *ce_args,\n245:                 impl=ce_impl,\n246:                 mode=ce_mode,\n247:             )\n248: \n249:         # Apply token scaling if requested\n250:         if use_token_scaling:\n251:             loss_1d_slice = loss_1d_slice * scaling_factors\n252:             if return_z_loss:\n253:                 z_loss_1d_slice = z_loss_1d_slice * scaling_factors\n254: \n255:         loss_1d[start_idx:end_idx] = loss_1d_slice\n256:         if return_z_loss:\n257:             z_loss_1d[start_idx:end_idx] = z_loss_1d_slice\n258:         if return_token_accuracy:\n259:             token_accuracy_1d[start_idx:end_idx] = token_accuracy_1d_slice\n260:         if return_predicted_tokens:\n261:             predicted_tokens_1d[start_idx:end_idx] = predicted_tokens_1d_slice\n262: \n263:         # Apply token scaling to gradients if requested\n264:         if use_token_scaling:\n265:             # Expand scaling factors to match gradient dimensions\n266:             scaling_factors_expanded = scaling_factors.unsqueeze(-1)  # chunk_size x 1\n267:             grad_logits_chunk = grad_logits_chunk * scaling_factors_expanded\n268: \n269:         # reduction=\"none\": fold the per-token upstream gradient in HERE, before the\n270:         # projections below sum over the token dimension. grad_weight is\n271:         # sum_i go_i * (g_i outer x_i); once the sum has happened the per-token\n272:         # weights can no longer be recovered, so scaling grad_weight afterwards\n273:         # (as element_mul_kernel does) is mathematically incapable of being correct.\n274:         if token_grad_output is not None:\n275:             grad_logits_chunk = grad_logits_chunk * token_grad_output[start_idx:end_idx].unsqueeze(-1).to(\n276:                 grad_logits_chunk.dtype\n277:             )\n278: \n279:         if input_requires_grad:\n280:             grad_input[start_idx:end_idx] = grad_logits_chunk @ weight\n281: \n282:         if grad_weight is not None and input_requires_grad:\n283:             grad_logits_t = grad_logits_chunk.t()\n284:             if (\n285:                 _ADDMM_SUPPORTS_OUT_DTYPE\n286:                 and grad_weight.device.type == \"cuda\"\n287:                 and torch.cuda.get_device_capability(grad_weight.device)[0] >= 8\n288:                 and grad_weight.dtype == torch.float32\n289:                 and grad_logits_t.dtype in (torch.float16, torch.bfloat16)\n290:             ):\n291:                 # Unlike torch.mm, torch.addmm's out_dtype path does not participate in\n292:                 # autocast operand casting, so under AMP (fp32 params, no bias) _input_chunk\n293:                 # can stay fp32 while grad_logits is the autocast dtype. addmm requires mat1\n294:                 # and mat2 to share a dtype, so align _input_chunk before accumulating.\n295:                 input_chunk = _input_chunk\n296:                 if input_chunk.dtype != grad_logits_t.dtype:\n297:                     input_chunk = input_chunk.to(grad_logits_t.dtype)\n298:                 torch.addmm(\n299:                     grad_weight,\n300:                     grad_logits_t,"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 490 seconds; 39845 generated tokens; 23 API attempts; 997447 total-token guard headroom. Save and validate within these limits."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read public UTF-8 file lines inclusive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_text",
+        "description": "Literal search over public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "max_results": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Save complete editable Python source file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "replace_text",
+        "description": "Replace one exact block in a public Python file. Old block must occur exactly once.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "old": {
+              "type": "string"
+            },
+            "new": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "old",
+            "new"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_benchmark",
+        "description": "Check fused CE loss and gradients against a PyTorch reference, then time full forward plus backward on the public workloads.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "temperature": 0,
+  "max_tokens": 8192,
+  "provider": {
+    "only": [
+      "DeepInfra"
+    ],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "data_collection": "deny"
+  }
+}

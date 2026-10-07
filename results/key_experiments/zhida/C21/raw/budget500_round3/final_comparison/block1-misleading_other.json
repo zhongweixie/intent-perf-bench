@@ -1,0 +1,72 @@
+{
+  "correct": true,
+  "cases": [
+    {
+      "name": "small",
+      "bt": 512,
+      "h": 1024,
+      "v": 16384,
+      "median_us": 1208.62,
+      "samples_us": [
+        1199.877,
+        1208.62,
+        1225.812,
+        1107.426,
+        1264.044,
+        1159.706,
+        1216.365
+      ],
+      "relative_errors": {
+        "loss": 9.830015440988254e-08,
+        "input_grad": 2.7833784905308533e-05,
+        "weight_grad": 2.050465020859999e-06
+      },
+      "ignored_targets": false
+    },
+    {
+      "name": "main",
+      "bt": 2048,
+      "h": 1024,
+      "v": 32768,
+      "median_us": 4605.355,
+      "samples_us": [
+        4413.057,
+        4519.205,
+        4530.012,
+        4605.355,
+        4752.782,
+        4778.748,
+        4846.23
+      ],
+      "relative_errors": {
+        "loss": 0.0,
+        "input_grad": 2.2881857548653145e-05,
+        "weight_grad": 1.7209417595477246e-06
+      },
+      "ignored_targets": false
+    },
+    {
+      "name": "wide_hidden",
+      "bt": 1024,
+      "h": 2048,
+      "v": 32768,
+      "median_us": 4474.105,
+      "samples_us": [
+        4248.334,
+        4434.22,
+        4453.237,
+        4541.402,
+        4474.105,
+        4488.211,
+        4635.082
+      ],
+      "relative_errors": {
+        "loss": 0.0,
+        "input_grad": 1.48417762510946e-05,
+        "weight_grad": 7.575553129971953e-06
+      },
+      "ignored_targets": true
+    }
+  ],
+  "device": "NVIDIA RTX A6000"
+}

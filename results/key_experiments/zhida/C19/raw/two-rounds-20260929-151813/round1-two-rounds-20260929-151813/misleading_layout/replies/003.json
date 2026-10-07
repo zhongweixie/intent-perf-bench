@@ -1,0 +1,74 @@
+{
+  "id": "gen-1790695494-gMvwSsGfzGJndYLH9GMV",
+  "object": "chat.completion",
+  "created": 1790695494,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Let me look at the helper files to understand the interfaces, especially the expert kernels and native ops.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8a9f30cb0eb9ea08",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"expert_kernels.py\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-8308d3efca5890a2",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\": \"native_ops.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Let me look at the helper files to understand the interfaces, especially the expert kernels and native ops.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 4022,
+    "completion_tokens": 95,
+    "total_tokens": 4117,
+    "cost": 0.0004986856,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 768,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0004986856,
+      "upstream_inference_prompt_cost": 0.0004587856,
+      "upstream_inference_completions_cost": 3.99e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 20,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

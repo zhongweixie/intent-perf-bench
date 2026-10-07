@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RuTO2wuOI7NrmMyMKwrPs4rh",
+  "object": "chat.completion",
+  "created": 1791035513,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Now let me run the benchmark to check correctness and performance.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 27315,
+    "total_tokens": 27361,
+    "completion_tokens": 46,
+    "estimated_cost": 0.01940565,
+    "prompt_tokens_details": {
+      "cached_tokens": 23040,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 16
+    }
+  }
+}

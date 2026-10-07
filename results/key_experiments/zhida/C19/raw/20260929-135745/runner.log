@@ -1,0 +1,6 @@
+STATUS base_measurement {}
+STATUS prewarm_isolated_workspaces {}
+STATUS agents_running {"conditions": ["fuzzy"], "baseline_us": 62.2649621963501}
+AGENT_END fuzzy agent_finished
+STATUS final_scoring {}
+STATUS complete {"scores": {"fuzzy": 1.042263030773234}}

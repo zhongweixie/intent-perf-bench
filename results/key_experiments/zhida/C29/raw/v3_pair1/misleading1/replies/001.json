@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RlB766GntkHshBqBW9JORTDD",
+  "object": "chat.completion",
+  "created": 1791042904,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "I'll start by reading the CONTRACT.md and exploring the available files.",
+        "reasoning_content": "Let me start by reading the CONTRACT.md file to understand the task.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "list_files:0",
+            "type": "function",
+            "function": {
+              "name": "list_files",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1078,
+    "total_tokens": 1139,
+    "completion_tokens": 61,
+    "estimated_cost": 0.00394155,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 18
+    }
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790588518-GpWVg4Ocoo3SJchkDSxh",
+  "object": "chat.completion",
+  "created": 1790588518,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Now update the loop branch and the backward torch.equal.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-88a720980c701fc5",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"fused_linear_cross_entropy.py\", \"old\": \"                # waste with identical rounding.\\n                torch.addmm(grad_weight, grad_logits_t, input_chunk, out=grad_weight)\", \"new\": \"                # waste with identical rounding.\\n                if _wg_overwrite:\\n                    torch.mm(grad_logits_t, input_chunk, out=grad_weight)\\n                else:\\n                    torch.addmm(grad_weight, grad_logits_t, input_chunk, out=grad_weight)\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Now update the loop branch and the backward torch.equal.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 36350,
+    "completion_tokens": 174,
+    "total_tokens": 36524,
+    "cost": 0.000295008,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 35840,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000295008,
+      "upstream_inference_prompt_cost": 0.000221928,
+      "upstream_inference_completions_cost": 7.308e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 11,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

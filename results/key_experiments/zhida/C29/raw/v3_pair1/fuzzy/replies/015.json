@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-Ronxd1u6B4XQVCx4flN2c6kx",
+  "object": "chat.completion",
+  "created": 1791043489,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "One more concern: in `GatherPad.backward`, g may be bf16; kernel loads fine. gx fp32 zeros then `.to(ctx.x_dtype)`. But wait — the atomic_add kernel writes into fp32 gx; rounding: `.to(bf16)` at the end. Reference for unique indices gives exactly g value (bf16) — my path: g bf16 → fp32 exact → round bf16 = identical. ✓\n\nAlso `gs` dtype = s.dtype; kernel stores fp32 acc → implicit cast to bf16 if scores bf16. Reference: grad w.r.t. scores computed in fp32 then cast to scores dtype. ✓\n\nAlso in `CombineFused.forward` I save x,s,idx — that keeps x alive (fine).\n\nRun benchmark now.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 31114,
+    "total_tokens": 31309,
+    "completion_tokens": 195,
+    "estimated_cost": 0.020536529999999997,
+    "prompt_tokens_details": {
+      "cached_tokens": 27648,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 165
+    }
+  }
+}

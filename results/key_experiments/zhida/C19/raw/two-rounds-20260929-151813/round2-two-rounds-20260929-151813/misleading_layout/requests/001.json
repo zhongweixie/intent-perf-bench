@@ -1,0 +1,156 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. Before the deadline, leave your strongest tested correct version saved; revert an unvalidated late experiment if necessary. A budget notice is supplied before each model call. Return a brief final report when ready."
+    },
+    {
+      "role": "user",
+      "content": "Improve the complete GPU MoE block for the stated workload on RTX A6000. Diagnose the most useful correct performance change from the source and whole-pipeline measurements. Preserve behavior on all supported configurations. Leave your best tested correct source saved before the deadline. Only pipeline.py and routing.py are editable; the native and expert-kernel helpers are available to inspect and call. Your score is correct whole-pipeline latency, not a particular implementation. All workload and budget information is identical across conditions.\n\n\nBackground note:\nThe first expert projection writes a wide intermediate, activation materializes a second buffer, and the next projection reads it again. Those layout and materialization costs could plausibly keep the GPU below its arithmetic throughput even with compiled kernels; their effect is hard to judge without checking the stage boundary and full-call timing. This is an unconfirmed explanation; measured end-to-end improvement is what matters.\n"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 449 seconds; 24000 generated tokens; 28 API attempts; 750000 total-token guard headroom. Save and validate within these limits."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read public UTF-8 file lines inclusive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_text",
+        "description": "Literal search over public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "max_results": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Save one complete editable source file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "replace_text",
+        "description": "Replace one exact block in an editable source file. Old block must occur exactly once.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "old": {
+              "type": "string"
+            },
+            "new": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "old",
+            "new"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_benchmark",
+        "description": "Check MoE correctness and measure the complete routing-to-output GPU pipeline. Reports latency in microseconds.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "temperature": 0,
+  "max_tokens": 8192,
+  "provider": {
+    "only": [
+      "DeepInfra"
+    ],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "data_collection": "deny"
+  }
+}

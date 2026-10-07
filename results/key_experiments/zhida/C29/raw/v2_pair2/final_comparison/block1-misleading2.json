@@ -1,0 +1,9 @@
+{
+  "correct": false,
+  "errors": [
+    "AcceleratorError: CUDA error: an illegal memory access was encountered\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+    ""
+  ],
+  "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_pilot_grade.py\", line 70, in main\n    ob = oracle.permute_by_local_expert(b, counts)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_oracle_layer.py\", line 35, in permute_by_local_expert\n    permuted_indices, m_sizes, _offsets = generate_permute_indices(counts_for_permute, num_local_experts, ep_degree, padded_max_len, alignment, use_cpu=use_cpu)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-multi-decoy-v2/workspaces/songcpu4/20261003-134221-313000-round1-final-misleading2/_oracle_ep_kernels.py\", line 216, in generate_permute_indices\n    start_index_values = (torch.cumsum(tokens_per_expert_group, 0) - tokens_per_expert_group)\ntorch.AcceleratorError: CUDA error: an illegal memory access was encountered\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n\n",
+  "worker_seconds": 217.9351072795689
+}

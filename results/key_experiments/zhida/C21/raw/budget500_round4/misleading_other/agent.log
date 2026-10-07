@@ -1,0 +1,16 @@
+misleading_other call 1 generated 69 elapsed 2 benchmarks 0
+misleading_other call 2 generated 148 elapsed 4 benchmarks 0
+misleading_other call 3 generated 262 elapsed 6 benchmarks 0
+misleading_other call 4 generated 442 elapsed 9 benchmarks 0
+misleading_other call 5 generated 1517 elapsed 44 benchmarks 1
+misleading_other call 6 generated 4454 elapsed 86 benchmarks 1
+misleading_other call 7 generated 4797 elapsed 92 benchmarks 1
+misleading_other call 8 generated 4822 elapsed 109 benchmarks 2
+misleading_other call 9 generated 9050 elapsed 175 benchmarks 2
+misleading_other call 10 generated 9075 elapsed 194 benchmarks 3
+misleading_other call 11 generated 16287 elapsed 304 benchmarks 3
+misleading_other call 12 generated 16312 elapsed 321 benchmarks 4
+misleading_other call 13 generated 24008 elapsed 457 benchmarks 4
+misleading_other call 14 generated 24096 elapsed 478 benchmarks 5
+misleading_other call 15 generated 24968 elapsed 492 benchmarks 5
+TRIAL_END {"condition": "misleading_other", "stop_reason": "time_limit", "agent_seconds": 500.01648599933833, "real_wall_seconds": 500.29023505281657, "gpu_queue_wait_seconds": 0.21961190924048424, "api_calls": 16, "tool_actions": 25, "generated_tokens": 24968, "prompt_tokens": 337715, "total_tokens": 362683, "reported_cost_usd": 0.014971191200000001, "failed_requests_usage_unknown": 1, "final_source_sha256": "3cf0436117842ee839f78bbd4525de61540a2163234dff0d4cb8cb83381a4c2e", "final_answer": "", "namespace": "20260928-093511-r2-misleading_other", "budget_notices": 16, "api_seconds": 413.03796206694096, "tool_seconds": 86.08405210915953, "benchmark_seconds": 85.31255201436579, "benchmark_active_seconds": 85.09294010512531}

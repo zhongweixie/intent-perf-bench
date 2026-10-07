@@ -1,0 +1,20 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "temperature": 0,
+  "wall_seconds": 450,
+  "max_queue_wait_seconds": 1200,
+  "max_generated_tokens": 24000,
+  "max_api_attempts": 28,
+  "total_tokens_response_threshold": 750000,
+  "per_response_max_tokens": 8192,
+  "transport_retries": 2,
+  "conditions": [
+    "fuzzy",
+    "misleading_assignment",
+    "misleading_layout"
+  ],
+  "gpu": "0",
+  "status": "paired_prompt_screen",
+  "task": "C19"
+}

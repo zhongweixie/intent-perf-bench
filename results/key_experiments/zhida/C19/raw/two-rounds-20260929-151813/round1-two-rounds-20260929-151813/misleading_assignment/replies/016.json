@@ -1,0 +1,54 @@
+{
+  "id": "gen-1790695986-xOUZK2hU3vAAbkDQLweS",
+  "object": "chat.completion",
+  "created": 1790695986,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "The reverted file is byte-identical (hash `26d6ade1…`) to the version that already passed all three correctness cases, so it is validated. Reporting final state.\n\n**Final report**\n\nSaved source: `pipeline.py` + `routing.py` (last saved = best tested).\n\nMeasured whole-pipeline latency (RTX A6000, 128 tokens / 128 experts / H=512 / I=256 / top-8 / 1 group / skewed logits):\n- Baseline: **62.3 µs** (correct)\n- Final: **54.9 µs** (correct) — ~12% faster\n\nChanges that survived testing:\n1. **`pipeline.py`**: force `BLOCK_SIZE_M = 32` in the expert config (default was 64 for M=128). Smaller per-expert padding blocks cut padded slots 1472 → 1248 and won 62.3 → 58.8 µs. Smaller (16) was much worse (112 µs — tiny M-tiles lose tensor-core efficiency), so 32 is the sweet spot.\n2. **`routing.py`**: added a single-expert-group fast path in `grouped_topk` (when `num_expert_group <= 1 and topk_group >= 1`). With one group the group-scoring/masking machinery (view+max, group topk, zeros/scatter/expand, masked_fill) is provably a no-op — every score survives the mask — so it selects directly over all experts and renormalizes. Identical expert sets/weights, but several fewer graph nodes: 58.8 → 54.9 µs. The general multi-group path (and the bias/`original_scores` weighting) is untouched, so uniform logits and multi-group configs keep the original behavior.\n\nRejected experiments (reverted): `BLOCK_SIZE_M=16` (112 µs), `BLOCK_SIZE_N=256, num_stages=2` (59.1 µs). Padding/block-size was the dominant structural waste, and routing graph overhead was the second-largest cost; both were attacked and validated. All three reported correctness cases pass with relative RMS ≈ 2.2e-4 and max abs ≈ 8e-4, well inside tolerance.",
+        "refusal": null,
+        "reasoning": "The saved file hash 26d6ade... matches the previously validated 54.9µs version exactly (same hash as when routing fast path + block_m=32 was saved). That version passed correctness on all 3 cases. \n\nTime remaining: 59s. A benchmark would take ~35s. It's the identical file that was already validated, so I'm confident. But it says \"save and validate your best correct version now\" — the file is byte-identical to a validated version, so validation holds. I could run one more benchmark to confirm, costing ~35s, leaving ~24s. That's tight but the report needs only a few seconds. Let me run it to be safe, since an identical hash means it's guaranteed the same as validated... Running it risks running out of time mid-call? The benchmark would just complete. Actually risk: if budget expires mid-call, the run may be aborted — but the file is already saved correctly, so no harm.\n\nI'll skip the redundant re-run and just report — the saved source is byte-identical (hash 26d6ade1…) to the version that passed all correctness checks at 54.9µs. That's the safest use of the remaining time.\n\nLet me write the final report.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "The saved file hash 26d6ade... matches the previously validated 54.9µs version exactly (same hash as when routing fast path + block_m=32 was saved). That version passed correctness on all 3 cases. \n\nTime remaining: 59s. A benchmark would take ~35s. It's the identical file that was already validated, so I'm confident. But it says \"save and validate your best correct version now\" — the file is byte-identical to a validated version, so validation holds. I could run one more benchmark to confirm, costing ~35s, leaving ~24s. That's tight but the report needs only a few seconds. Let me run it to be safe, since an identical hash means it's guaranteed the same as validated... Running it risks running out of time mid-call? The benchmark would just complete. Actually risk: if budget expires mid-call, the run may be aborted — but the file is already saved correctly, so no harm.\n\nI'll skip the redundant re-run and just report — the saved source is byte-identical (hash 26d6ade1…) to the version that passed all correctness checks at 54.9µs. That's the safest use of the remaining time.\n\nLet me write the final report.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 30175,
+    "completion_tokens": 755,
+    "total_tokens": 30930,
+    "cost": 0.0004741184,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 29952,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0004741184,
+      "upstream_inference_prompt_cost": 0.0001570184,
+      "upstream_inference_completions_cost": 0.0003171
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 266,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

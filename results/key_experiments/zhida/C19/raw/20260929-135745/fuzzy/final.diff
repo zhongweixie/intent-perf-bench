@@ -1,0 +1,11 @@
+--- baseline/pipeline.py
++++ fuzzy/pipeline.py
+@@ -56,7 +56,7 @@
+     def activation(self):activate[(triton.cdiv(self.M*self.k*self.N,256),)](self.h,self.act,self.N,self.M*self.k*self.N,256)
+     def gemm2(self):self.invoke(self.act,self.w2,self.parts,1,True)
+     def reduce(self):
+-        torch.sum(self.parts,dim=1,out=self.out)
++        check(lib.reduce8(self.parts.data_ptr(),self.out.data_ptr(),self.M,self.K,torch.cuda.current_stream().cuda_stream))
+     def __call__(self):
+         for f in self.stage_fns:f()
+         return self.out

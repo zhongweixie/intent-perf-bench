@@ -1,0 +1,180 @@
+{
+  "task_id": "ipb_cuda_zhida_c21",
+  "positive_controls": {
+    "baseline": {
+      "correct": true,
+      "latency_ms": 4.085267774143596,
+      "raw_worker_result": {
+        "correct": true,
+        "cases": [
+          {
+            "name": "small",
+            "bt": 512,
+            "h": 1024,
+            "v": 16384,
+            "median_us": 1621.06,
+            "samples_us": [
+              1635.845,
+              1610.931,
+              1600.222,
+              1655.805,
+              1621.06,
+              1585.983,
+              1633.004
+            ],
+            "relative_errors": {
+              "loss": 0.0,
+              "input_grad": 1.6154805762095607e-05,
+              "weight_grad": 2.251945587566053e-06
+            },
+            "ignored_targets": false
+          },
+          {
+            "name": "main",
+            "bt": 2048,
+            "h": 1024,
+            "v": 32768,
+            "median_us": 6823.697,
+            "samples_us": [
+              6746.485,
+              6782.257,
+              6823.697,
+              6848.767,
+              6841.294,
+              6844.154,
+              6809.638
+            ],
+            "relative_errors": {
+              "loss": 1.8337163966886015e-07,
+              "input_grad": 0.0027912503512800917,
+              "weight_grad": 0.0011030522516821252
+            },
+            "ignored_targets": false
+          },
+          {
+            "name": "wide_hidden",
+            "bt": 1024,
+            "h": 2048,
+            "v": 32768,
+            "median_us": 6163.718,
+            "samples_us": [
+              6128.235,
+              6152.125,
+              6163.718,
+              6204.032,
+              6186.595,
+              6161.278,
+              6181.821
+            ],
+            "relative_errors": {
+              "loss": 1.8334482752614567e-07,
+              "input_grad": 1.7377111566025867e-05,
+              "weight_grad": 3.4749783038543796e-06
+            },
+            "ignored_targets": true
+          }
+        ],
+        "device": "NVIDIA RTX A6000"
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c21"
+    },
+    "reference": {
+      "correct": true,
+      "latency_ms": 3.068643973373998,
+      "raw_worker_result": {
+        "correct": true,
+        "cases": [
+          {
+            "name": "small",
+            "bt": 512,
+            "h": 1024,
+            "v": 16384,
+            "median_us": 1269.558,
+            "samples_us": [
+              1269.558,
+              1314.624,
+              1448.312,
+              1336.672,
+              1260.099,
+              1254.451,
+              1103.734
+            ],
+            "relative_errors": {
+              "loss": 0.0,
+              "input_grad": 1.6154805762095607e-05,
+              "weight_grad": 2.251945587566053e-06
+            },
+            "ignored_targets": false
+          },
+          {
+            "name": "main",
+            "bt": 2048,
+            "h": 1024,
+            "v": 32768,
+            "median_us": 5004.084,
+            "samples_us": [
+              4816.413,
+              4875.279,
+              4966.205,
+              5013.708,
+              5004.084,
+              5061.957,
+              5119.207
+            ],
+            "relative_errors": {
+              "loss": 1.8337163966886015e-07,
+              "input_grad": 0.0027912503512800917,
+              "weight_grad": 0.0007831703523606739
+            },
+            "ignored_targets": false
+          },
+          {
+            "name": "wide_hidden",
+            "bt": 1024,
+            "h": 2048,
+            "v": 32768,
+            "median_us": 4548.439,
+            "samples_us": [
+              4371.59,
+              4453.611,
+              4431.479,
+              4637.254,
+              4590.019,
+              4548.439,
+              4597.885
+            ],
+            "relative_errors": {
+              "loss": 1.8334482752614567e-07,
+              "input_grad": 1.7377111566025867e-05,
+              "weight_grad": 3.4749783038543796e-06
+            },
+            "ignored_targets": true
+          }
+        ],
+        "device": "NVIDIA RTX A6000"
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c21"
+    },
+    "wrong_answer": {
+      "correct": false,
+      "latency_ms": null,
+      "raw_worker_result": {
+        "correct": false,
+        "cases": [],
+        "error": "AssertionError: input_grad: relative error 1.00000"
+      },
+      "seed": 271828,
+      "final": false,
+      "task_id": "ipb_cuda_zhida_c21"
+    }
+  },
+  "passed": true,
+  "note": "Packaging check only; negative control changes numeric output/gradient/state. This does not add independent agent trials or replace archived performance.",
+  "negative_control_rejected_numerically": true,
+  "verification_host": "songcpu4",
+  "verification_date": "2026-10-07"
+}

@@ -1,0 +1,22 @@
+{
+  "scripts/grade_task.py": "16da4eb31da156198787be19465dfee33196c777a3046473959f1183e4bced1b",
+  "private/reference.json": "977e87ce8277fa882646d594749d19936c637260d680509619e384cefbaabe2f",
+  "public/CONTRACT.md": "7e426903f447c66f044e53dbaa4aac1b8b6df4c1f69d0d7745e2a01e8e0c25cf",
+  "public/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+  "public/SOURCE_NOTICE.md": "e5afcfd6c0969d57d7849f9d8a2cb21518fa1548c9f33fad96a74fb0afc83eb3",
+  "public/THIRD_PARTY_NOTICES.md": "21733f38e11d2b71377d8dc111cf4e9c045959ce0b8b689b5574454bba4dfa4e",
+  "public/auto_ep_layer.py": "bb6bbc4f2e28d53ebba0457fd1a71583e97a961a3aced09db3f3f8663a809865",
+  "public/combine_kernels.py": "837f5a829ddb24d70f34b983afcb8652c10121d6997ee0d4300fd0865edcdf83",
+  "public/ep_kernels.py": "1ac17b323e641af2855579f839bfce1687d6572670cdb96e6831ad4581068365",
+  "public/local_pipeline.py": "761906fa40e244f273cc143484fb7a0a6adc5a72e258494003310a12b69f4402",
+  "source_base/CONTRACT.md": "7e426903f447c66f044e53dbaa4aac1b8b6df4c1f69d0d7745e2a01e8e0c25cf",
+  "source_base/LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+  "source_base/SOURCE_NOTICE.md": "e5afcfd6c0969d57d7849f9d8a2cb21518fa1548c9f33fad96a74fb0afc83eb3",
+  "source_base/THIRD_PARTY_NOTICES.md": "21733f38e11d2b71377d8dc111cf4e9c045959ce0b8b689b5574454bba4dfa4e",
+  "source_base/_oracle_ep_kernels.py": "1ac17b323e641af2855579f839bfce1687d6572670cdb96e6831ad4581068365",
+  "source_base/_oracle_layer.py": "de865e187e1933757a20a42d5ea96dab454d866fabbc78fbc5166618d2082017",
+  "source_base/auto_ep_layer.py": "bb6bbc4f2e28d53ebba0457fd1a71583e97a961a3aced09db3f3f8663a809865",
+  "source_base/combine_kernels.py": "837f5a829ddb24d70f34b983afcb8652c10121d6997ee0d4300fd0865edcdf83",
+  "source_base/ep_kernels.py": "1ac17b323e641af2855579f839bfce1687d6572670cdb96e6831ad4581068365",
+  "source_base/local_pipeline.py": "761906fa40e244f273cc143484fb7a0a6adc5a72e258494003310a12b69f4402"
+}

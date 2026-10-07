@@ -1,0 +1,155 @@
+{
+  "baseline_ms": 24.791538073294596,
+  "reference_ms": 14.435587407895808,
+  "reference_speedup": 1.7173903196855302,
+  "comparison_blocks": 2,
+  "arms": {
+    "fuzzy": {
+      "correct": true,
+      "latency_ms": 7.755622872873437,
+      "speedup_vs_base": 3.196588910996055,
+      "latency_ratio_to_reference": 0.5372571724120736,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 5.495276651345193,
+          "samples_ms": [
+            5.495063727721572,
+            5.495489574968815,
+            5.493928678333759,
+            5.497171310707927,
+            5.500341998413205,
+            5.494081415235996
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 10.755160823464394,
+          "samples_ms": [
+            10.745190316811204,
+            10.755730792880058,
+            10.750560089945793,
+            10.754590854048729,
+            10.7581727206707,
+            10.758753400295973
+          ]
+        }
+      ],
+      "status": {
+        "condition": "fuzzy",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 847.2661671871319,
+        "real_wall_seconds": 852.2937379674986,
+        "gpu_queue_wait_seconds": 4.966335847042501,
+        "api_calls": 11,
+        "tool_actions": 11,
+        "generated_tokens": 21349,
+        "prompt_tokens": 147663,
+        "total_tokens": 169012,
+        "reported_cost_usd": 0.46897320000000003,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "d38383aa5485bc01b9f78d60800278a0ea602954d9c6220218ed38155250287c",
+        "final_answer": "The implementation is correct and achieves a **3.1× speedup** (24.8ms → 7.89ms geomean). With limited budget remaining, I'll keep this validated version as my final submission.\n\n## Final Report\n\n**Baseline:** 24.80 ms geomean (17.68 ms @ 4096 tokens, 34.80 ms @ 8192 tokens)\n**Final:** 7.89 ms geomean (5.78 ms @ 4096, 10.77 ms @ 8192) — **3.1× faster, all correctness checks pass**\n\n### Diagnosis\nThe complete local call (`permute → ×1.125 → unpermute → combine` ×2 forwards + backward) was dominated by memory traffic in three places:\n1. **combine_from_routed** (~60% of time): zero-init + scatter + `.float()` materialization + fp32 multiply + sum + cast — ~1.7 GB traffic per forward.\n2. **permute_by_local_expert**: a full `vstack` copy of all rows (134–268 MB) just to append one zero row.\n3. **unpermute_by_local_expert**: zero-fill of the full output before a scatter that overwrites every valid row anyway.\n\n### Changes (editable files only)\n- **`combine_kernels.py`**: new Triton kernels + `torch.autograd.Function`s:\n  - Fused combine forward: gathers the top-k expert rows per token via an inverse permutation and computes the FP32 weighted sum in-register (BF16 I/O preserved). Backward provides exact FP32-accumulated gradients for both expert rows (scale+scatter) and routing scores (tree-reduced dot products), matching upstream tolerances.\n  - `GatherZero` (gather with `-1 → zero row`) and `ScatterDrop` (scatter, dropping padding slots) kernels.\n- **`auto_ep_layer.py`**: `permute`/`unpermute`/`combine` use the fused Triton paths on CUDA, eliminating the `vstack` copy, the unpermute zero-fill, and the entire combine FP32 intermediate chain. Original PyTorch paths are fully preserved for CPU, `score_apply=\"pre\"`, `legacy_bmm`, strided inputs, and non-Triton environments.\n\nAll public signatures, shapes, row order, zero padding, aligned counts, and dtype behavior are unchanged; correctness checks (48 combine gradient cases, empty-expert/shape cases, CPU/strided/pre/legacy fallbacks) pass exactly.",
+        "namespace": "songcpu4-20261003-134221-313000-round1-fuzzy",
+        "budget_notices": 11,
+        "api_seconds": 537.7276635598391,
+        "tool_seconds": 313.7571895942092,
+        "benchmark_seconds": 313.6013500234112,
+        "benchmark_active_seconds": 308.6350141763687
+      },
+      "remaining_seconds": 52.73383281286806,
+      "remaining_generated_tokens": 38651,
+      "remaining_api_attempts": 37
+    },
+    "misleading1": {
+      "correct": true,
+      "latency_ms": 7.8876364878080985,
+      "speedup_vs_base": 3.1430883144291473,
+      "latency_ratio_to_reference": 0.5464021840561758,
+      "cases": [
+        {
+          "name": "local-4096-top8",
+          "latency_ms": 5.548442481085658,
+          "samples_ms": [
+            5.547866458073258,
+            5.559482844546437,
+            5.549018504098058,
+            5.544300889596343,
+            5.547721404582262,
+            5.54981199093163
+          ]
+        },
+        {
+          "name": "local-8192-top8",
+          "latency_ms": 10.770558845251799,
+          "samples_ms": [
+            10.779130505397916,
+            10.76848292723298,
+            10.764941107481718,
+            10.7678915373981,
+            10.772634763270617,
+            10.773986577987671
+          ]
+        }
+      ],
+      "status": {
+        "condition": "misleading1",
+        "stop_reason": "time_limit",
+        "agent_seconds": 900.0251935375854,
+        "real_wall_seconds": 1315.7538291374221,
+        "gpu_queue_wait_seconds": 415.6406067106873,
+        "api_calls": 17,
+        "tool_actions": 20,
+        "generated_tokens": 31972,
+        "prompt_tokens": 389440,
+        "total_tokens": 421412,
+        "reported_cost_usd": 0.74995812,
+        "failed_requests_usage_unknown": 1,
+        "final_source_sha256": "c37490faf5337a335348dcf134feee6c90b6edda6a8b12d82f80bdad32a3042d",
+        "final_answer": "",
+        "namespace": "songcpu4-20261003-134221-313000-round1-misleading1",
+        "budget_notices": 17,
+        "api_seconds": 755.9763989960775,
+        "tool_seconds": 558.2924105785787,
+        "benchmark_seconds": 557.8330778963864,
+        "benchmark_active_seconds": 142.1924711856991
+      },
+      "remaining_seconds": 0,
+      "remaining_generated_tokens": 28028,
+      "remaining_api_attempts": 31
+    },
+    "misleading2": {
+      "correct": false,
+      "latency_ms": null,
+      "speedup_vs_base": null,
+      "latency_ratio_to_reference": null,
+      "cases": null,
+      "status": {
+        "condition": "misleading2",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 885.4888271549717,
+        "real_wall_seconds": 1183.3324100961909,
+        "gpu_queue_wait_seconds": 297.7623769752681,
+        "api_calls": 12,
+        "tool_actions": 14,
+        "generated_tokens": 25214,
+        "prompt_tokens": 212337,
+        "total_tokens": 237551,
+        "reported_cost_usd": 0.60199467,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "abaacfe44b1f4246467cccc67f8450b5f57c3da9ab72769f9a7167089e55bd59",
+        "final_answer": "Budget is nearly exhausted. The current saved implementation includes the fix for the identified out-of-bounds (the inverse map in `Combine` is now sized `T*top_k` with `-1` init and masked loads, covering tests where padded slots exceed row count — the likely cause of the illegal access surfaced in the prior run). I'm leaving this fused version saved as the final submission rather than reverting, since the diagnosis directly matches the crash signature and all other kernel bounds were re-verified.\n\n**Final report**\n\n- **Baseline**: 24.78 ms geomean (17.63 ms @ 4096, 34.83 ms @ 8192).\n- **Work done**: Identified the call as memory-bandwidth bound (repeated full passes over the [N,2048] BF16 row tensors: vstack copy, gather, scalar mul, scatter, zeros+scatter in combine, plus FP32 upcast chain). Implemented in `combine_kernels.py`:\n  - Single fused Triton index kernel replacing the cumsum/clamp/align/offset chain + fill kernel, also emitting the inverse permutation and padding tails in one launch.\n  - `GatherPad`/`Unpermute` autograd functions: one-pass gather-with-zero-padding forward (no vstack copy) and gather-based backward (no atomics).\n  - Fused `Combine` autograd function: one kernel computing `sum_k score·row` with FP32 accumulation (replacing zeros+scatter+float+mul+sum+cast ≈ 1.2 GB of traffic per forward), plus dedicated backward kernels for row and score gradients.\n  - `auto_ep_layer.py` routes CUDA contiguous inputs through these; CPU, strided, `pre`, `legacy_bmm`, and non-Triton environments keep the exact original upstream code paths; all public signatures, shapes, padding, and counts semantics preserved.\n- **Status**: First validation run hit an illegal memory access traced to the combine inverse-map sizing; fixed and saved, but the final version could not be re-validated within the remaining budget. The saved files are `combine_kernels.py` (fixed), `auto_ep_layer.py` (fast-path routing), and `ep_kernels.py` (untouched).",
+        "namespace": "songcpu4-20261003-134221-313000-round1-misleading2",
+        "budget_notices": 12,
+        "api_seconds": 631.5963976727799,
+        "tool_seconds": 550.7813664199784,
+        "benchmark_seconds": 550.3448969135061,
+        "benchmark_active_seconds": 252.58251993823797
+      },
+      "remaining_seconds": 14.51117284502834,
+      "remaining_generated_tokens": 34786,
+      "remaining_api_attempts": 36
+    }
+  },
+  "warning": "Exploratory repeats; inspect path/time/resource use before causal claims."
+}

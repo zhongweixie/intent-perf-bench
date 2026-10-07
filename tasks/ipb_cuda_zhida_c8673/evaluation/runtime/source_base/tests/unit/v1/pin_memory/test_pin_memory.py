@@ -1,0 +1,448 @@
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
+import pytest
+import torch
+
+from deepspeed.accelerator import npu_accelerator
+from deepspeed.accelerator.cpu_accelerator import CPU_Accelerator
+from deepspeed.accelerator.cuda_accelerator import CUDA_Accelerator
+from deepspeed.accelerator.npu_accelerator import NPU_Accelerator
+from deepspeed.utils.pin_memory import NativePinnedMemory
+
+
+@pytest.fixture
+def native_pins():
+    try:
+        return NativePinnedMemory()
+    except Exception:
+        pytest.skip("pin_memory op could not be built; native pinning unavailable")
+
+
+def test_pin_copies_and_matches_shape(native_pins):
+    tensor = torch.arange(32, dtype=torch.float32).reshape(4, 8)
+    pinned = native_pins.pin(tensor)
+    assert tuple(pinned.shape) == (4, 8)
+    assert torch.equal(pinned, tensor)
+    assert getattr(pinned, "ds_pinned", False) is True
+    assert native_pins.is_pinned(pinned)
+
+
+def test_is_pinned_propagates_to_views(native_pins):
+    tensor = torch.arange(32, dtype=torch.float32).reshape(4, 8)
+    pinned = native_pins.pin(tensor)
+    # Views/slices lose the .ds_pinned attribute but must still be recognized
+    # via the tracked pointer range.
+    view = pinned.reshape(-1).narrow(0, 8, 8)
+    assert getattr(view, "ds_pinned", False) is False
+    assert native_pins.is_pinned(view)
+    assert native_pins.is_pinned(pinned[1])
+
+
+def test_pin_flags(native_pins):
+    tensor = torch.arange(32, dtype=torch.float32).reshape(4, 8)
+    alloc = native_pins.pin(tensor, make_copy=False)
+    assert tuple(alloc.shape) == (4, 8)
+    assert native_pins.is_pinned(alloc)
+    flat = native_pins.pin(tensor, match_shape=False)
+    assert tuple(flat.shape) == (tensor.numel(), )
+
+
+def test_pin_empty_uses_example_dtype_only(native_pins):
+    example = torch.empty(0, dtype=torch.float16)
+    pinned = native_pins.pin_empty(example, (4, 8))
+    assert tuple(pinned.shape) == (4, 8)
+    assert pinned.dtype == torch.float16
+    assert native_pins.is_pinned(pinned)
+    assert native_pins.unpin(pinned) is True
+
+
+def test_unpin_frees_range(native_pins):
+    tensor = torch.arange(32, dtype=torch.float32).reshape(4, 8)
+    pinned = native_pins.pin(tensor)
+    view = pinned.reshape(-1).narrow(0, 8, 8)
+    assert native_pins.unpin(pinned) is True
+    assert not native_pins.is_pinned(pinned)
+    assert not native_pins.is_pinned(view)
+
+
+def test_pin_freed_on_gc(native_pins):
+    import gc
+
+    tensor = torch.arange(32, dtype=torch.float32)
+    pinned = native_pins.pin(tensor)
+    begin = pinned.data_ptr()
+    assert begin in native_pins._ranges
+    # Dropping the returned tensor must release the mlocked allocation, matching
+    # torch.pin_memory lifetime semantics (no explicit unpin() required).
+    del pinned
+    gc.collect()
+    assert begin not in native_pins._ranges
+
+
+def test_allocation_survives_until_all_views_dropped(native_pins):
+    import gc
+
+    tensor = torch.arange(32, dtype=torch.float32)
+    pinned = native_pins.pin(tensor)
+    begin = pinned.data_ptr()
+    view = pinned.narrow(0, 8, 8)
+    # Dropping the returned tensor while a derived view is still live must NOT free
+    # the shared allocation, or the view would alias freed (use-after-free) memory.
+    del pinned
+    gc.collect()
+    assert begin in native_pins._ranges
+    assert native_pins.is_pinned(view)
+    assert float(view[0]) == 8.0
+    # The allocation is released only once the last alias is gone.
+    del view
+    gc.collect()
+    assert begin not in native_pins._ranges
+
+
+def test_unpin_frees_original_after_data_redirect(native_pins):
+    tensor = torch.arange(32, dtype=torch.float32)
+    pinned = native_pins.pin(tensor)
+    begin = pinned.data_ptr()
+    # Keep the original allocation alive so the GC finalizer cannot race the
+    # explicit unpin below; this mirrors live narrows into an offload buffer.
+    keep_alive = pinned.narrow(0, 0, 1)
+    # Simulate ZeRO offload/reload rebinding .data to a different buffer.
+    pinned.data = torch.zeros(32, dtype=torch.float32)
+    assert pinned.data_ptr() != begin
+    # unpin() must free the original region recorded at pin time, not the buffer
+    # the tensor currently points at.
+    assert native_pins.unpin(pinned) is True
+    assert begin not in native_pins._ranges
+    del keep_alive
+
+
+def test_is_pinned_handles_storageless_tensors(native_pins):
+    from torch._subclasses.fake_tensor import FakeTensorMode
+
+    with FakeTensorMode() as fake_mode:
+        fake_tensor = fake_mode.from_tensor(torch.zeros(2, 8))
+        assert native_pins.is_pinned(fake_tensor) is False
+
+    meta_tensor = torch.zeros(2, 8, device="meta")
+    assert native_pins.is_pinned(meta_tensor) is False
+
+
+class _RegisteringAccelerator:
+
+    def __init__(self):
+        self.registered = []
+        self.unregistered = []
+
+    def register_host_memory(self, address, num_bytes):
+        self.registered.append((address, num_bytes))
+        return True
+
+    def unregister_host_memory(self, address):
+        self.unregistered.append(address)
+
+    def pin_memory_alignment(self):
+        return 1
+
+
+def test_native_device_registration_and_unpin(monkeypatch, native_pins):
+    accelerator = _RegisteringAccelerator()
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: accelerator)
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    begin = pinned.data_ptr()
+    assert accelerator.registered == [(begin, pinned.nbytes)]
+    assert begin in native_pins._device_registered
+
+    assert native_pins.unpin(pinned) is True
+    assert accelerator.unregistered == [begin]
+    assert begin not in native_pins._device_registered
+    # A second call must not unregister or free the allocation twice.
+    assert native_pins.unpin(pinned) is False
+    assert accelerator.unregistered == [begin]
+
+
+def test_native_device_registration_disabled(monkeypatch, native_pins):
+    accelerator = _RegisteringAccelerator()
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: accelerator)
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "0")
+
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    assert native_pins.is_pinned(pinned)
+    assert accelerator.registered == []
+    assert native_pins.unpin(pinned) is True
+    assert accelerator.unregistered == []
+
+
+def test_cpu_device_registration_is_noop():
+    accelerator = CPU_Accelerator()
+    assert accelerator.register_host_memory(1234, 4096) is False
+    assert accelerator.unregister_host_memory(1234) is None
+
+
+def test_cuda_device_registration_calls_cudart(monkeypatch):
+
+    class _Cudart:
+
+        def __init__(self):
+            self.registered = []
+            self.unregistered = []
+
+        def cudaHostRegister(self, address, num_bytes, flags):
+            self.registered.append((address, num_bytes, flags))
+            return 0
+
+        def cudaHostUnregister(self, address):
+            self.unregistered.append(address)
+            return 0
+
+    cudart = _Cudart()
+    errors = []
+    monkeypatch.setattr(torch.cuda, "cudart", lambda: cudart)  #ignore-cuda
+    monkeypatch.setattr(torch.cuda, "check_error", errors.append)  #ignore-cuda
+    accelerator = CUDA_Accelerator.__new__(CUDA_Accelerator)
+
+    assert accelerator.register_host_memory(1234, 4096) is True
+    accelerator.unregister_host_memory(1234)
+    assert cudart.registered == [(1234, 4096, 0)]
+    assert cudart.unregistered == [1234]
+    assert errors == [0, 0]
+
+
+def test_cpu_native_pin_with_register_env_on(monkeypatch, native_pins):
+    """CPU accelerator has no register hook; native pin still works with default-on."""
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: CPU_Accelerator())
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    assert native_pins.is_pinned(pinned)
+    assert native_pins.unpin(pinned) is True
+
+
+def test_device_registration_failure_keeps_mlock(monkeypatch, native_pins):
+
+    class _FailingAccelerator:
+
+        def register_host_memory(self, address, num_bytes):
+            raise RuntimeError("simulated cudaHostRegister failure")
+
+        def unregister_host_memory(self, address):
+            raise AssertionError("unregister must not run when register failed")
+
+        def pin_memory_alignment(self):
+            return 1
+
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: _FailingAccelerator())
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    assert native_pins.is_pinned(pinned)
+    assert pinned.data_ptr() not in native_pins._device_registered
+    assert native_pins.unpin(pinned) is True
+
+
+def test_device_registration_gc_unregisters(monkeypatch, native_pins):
+    import gc
+
+    accelerator = _RegisteringAccelerator()
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: accelerator)
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    begin = pinned.data_ptr()
+    del pinned
+    gc.collect()
+    assert begin not in native_pins._ranges
+    assert accelerator.unregistered == [begin]
+
+
+def test_invalid_register_device_env(monkeypatch, native_pins):
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "maybe")
+    with pytest.raises(ValueError, match="DS_PIN_MEMORY_REGISTER_DEVICE"):
+        native_pins.pin(torch.empty(8), make_copy=False)
+
+
+def test_unpin_keeps_allocation_when_unregister_fails(monkeypatch, native_pins):
+
+    class _UnregisterFailAccelerator(_RegisteringAccelerator):
+
+        def __init__(self):
+            super().__init__()
+            self.fail_unregister = True
+
+        def unregister_host_memory(self, address):
+            if self.fail_unregister:
+                raise RuntimeError("simulated cudaHostUnregister failure")
+            super().unregister_host_memory(address)
+
+    accelerator = _UnregisterFailAccelerator()
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: accelerator)
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    begin = pinned.data_ptr()
+
+    with pytest.raises(RuntimeError, match="cudaHostUnregister"):
+        native_pins.unpin(pinned)
+
+    assert native_pins.is_pinned(pinned)
+    assert begin in native_pins._device_registered
+    assert begin in native_pins._ranges
+    assert accelerator.unregistered == []
+
+    accelerator.fail_unregister = False
+    assert native_pins.unpin(pinned) is True
+    assert accelerator.unregistered == [begin]
+    assert begin not in native_pins._device_registered
+
+
+class _AlignedAccelerator(_RegisteringAccelerator):
+
+    def __init__(self, alignment):
+        super().__init__()
+        self._alignment = alignment
+
+    def pin_memory_alignment(self):
+        return self._alignment
+
+
+class _OffsetHandle:
+    """pin_memory-op stand-in whose buffer base sits at a fixed byte offset."""
+
+    def __init__(self, offset):
+        self._offset = offset
+
+    def new_cpu_locked_tensor(self, numel, example):
+        storage = torch.empty(numel * example.element_size() + self._offset, dtype=torch.uint8)
+        return storage[self._offset:].view(example.dtype)
+
+    def free_cpu_locked_tensor_by_ptr(self, address):
+        return True
+
+
+@pytest.mark.parametrize("alignment, offset", [(1, 64), (2048, 1232), (4096, 64), (4096, 0)])
+def test_device_registration_aligns_to_declared_alignment(native_pins, monkeypatch, alignment, offset):
+    # Accelerators declare the alignment their device runtime requires for
+    # host-memory registration. NativePinnedMemory must round the registered
+    # range down to it, pad the size so the full request is covered, and
+    # unregister the same aligned address. Alignment 1 means no requirement,
+    # so the request passes through unchanged.
+    accelerator = _AlignedAccelerator(alignment)
+    monkeypatch.setattr("deepspeed.accelerator.get_accelerator", lambda: accelerator)
+    monkeypatch.setenv("DS_PIN_MEMORY_REGISTER_DEVICE", "1")
+    monkeypatch.setattr(native_pins, "_handle", _OffsetHandle(offset))
+
+    pinned = native_pins.pin(torch.empty(32), make_copy=False)
+    begin = pinned.data_ptr()
+    registered_address, registered_bytes = accelerator.registered[0]
+    if alignment == 1:
+        assert registered_address == begin
+    else:
+        assert registered_address % alignment == 0
+        assert registered_address <= begin < registered_address + alignment
+    assert registered_bytes == pinned.nbytes + (begin - registered_address)
+
+    assert native_pins.unpin(pinned) is True
+    assert accelerator.unregistered == [registered_address]
+
+
+def test_npu_declares_page_alignment():
+    # MAPPED registration rejects non-4K-aligned addresses; the declared
+    # alignment is what makes NativePinnedMemory round ranges down for NPU.
+    accelerator = NPU_Accelerator.__new__(NPU_Accelerator)
+    assert accelerator.pin_memory_alignment() == 4096
+
+
+def test_npu_register_uses_mapped_flag(monkeypatch):
+    # MAPPED is deliberate: PINNED-only registrations fall back to mlock-speed
+    # copies on this platform (measured ~9 GB/s vs ~23 GB/s for 64 MiB buffers).
+    registered = []
+    unregistered = []
+
+    def register(addr, num_bytes, flag):
+        registered.append((addr, num_bytes, flag))
+        return 0
+
+    def unregister(addr):
+        unregistered.append(addr)
+        return 0
+
+    monkeypatch.setattr(npu_accelerator, "_npu_host_copy_funcs", lambda: ((register, unregister), None))
+    accelerator = NPU_Accelerator.__new__(NPU_Accelerator)
+
+    assert accelerator.register_host_memory(4096, 4096) is True
+    assert registered == [(4096, 4096, npu_accelerator.ACL_HOST_REG_MAPPED)]
+    accelerator.unregister_host_memory(4096)
+    assert unregistered == [4096]
+
+
+def test_npu_device_registration_failure_returns_false(monkeypatch):
+    # A non-zero npuHostRegister return code must degrade to mlock-only, not
+    # raise: the NativePinnedMemory caller only tracks the address on True.
+    def register(address, num_bytes, flag):
+        return 107000
+
+    def unregister(address):
+        raise AssertionError("unregister must not run when register failed")
+
+    monkeypatch.setattr(npu_accelerator, "_npu_host_copy_funcs", lambda: ((register, unregister), None))
+    accelerator = NPU_Accelerator.__new__(NPU_Accelerator)
+
+    assert accelerator.register_host_memory(4096, 4096) is False
+
+
+def test_npu_unregister_failure_raises(monkeypatch):
+    # Raising keeps the allocation alive in NativePinnedMemory so the driver
+    # never holds a registration for pages later reused by malloc.
+    def register(address, num_bytes, flag):
+        return 0
+
+    def unregister(address):
+        return 107000
+
+    monkeypatch.setattr(npu_accelerator, "_npu_host_copy_funcs", lambda: ((register, unregister), None))
+    accelerator = NPU_Accelerator.__new__(NPU_Accelerator)
+
+    with pytest.raises(RuntimeError, match="npuHostUnregister"):
+        accelerator.unregister_host_memory(4096)
+
+
+def test_npu_missing_npurt_is_noop(monkeypatch):
+    monkeypatch.setattr(npu_accelerator, "_npu_host_copy_funcs", lambda: (None, "test"))
+    accelerator = NPU_Accelerator.__new__(NPU_Accelerator)
+
+    assert accelerator.register_host_memory(4096, 4096) is False
+    assert accelerator.unregister_host_memory(4096) is None
+
+
+@pytest.mark.skipif(not hasattr(torch, "npu") or not hasattr(torch.npu, "npurt"), reason="torch_npu is not installed")
+def test_npu_host_copy_lookup_gates(monkeypatch):
+    # Exercise each npurt resolution path (missing, init failure, success)
+    # by stubbing torch.npu; where torch_npu is absent the whole test is
+    # skipped because stubbing torch.npu is not reliable across torch versions.
+    class _StubNpu:
+        pass
+
+    monkeypatch.setattr(torch, "npu", _StubNpu(), raising=False)
+    # A build lacking npurt must not resolve, with a reason saying so.
+    monkeypatch.delattr(torch.npu, "npurt", raising=False)
+    funcs, reason = npu_accelerator._npu_host_copy_funcs()
+    assert funcs is None
+    assert "npurt is unavailable" in reason
+
+    # npurt() failing to initialize the runtime resolves to None with a reason.
+    def fail_npurt():
+        raise RuntimeError("init failed")
+
+    monkeypatch.setattr(torch.npu, "npurt", fail_npurt, raising=False)
+    funcs, reason = npu_accelerator._npu_host_copy_funcs()
+    assert funcs is None
+    assert "initialize" in reason
+
+    # A working npurt module resolves to its host copy functions.
+    class _Npurt:
+        npuHostRegister = "register"
+        npuHostUnregister = "unregister"
+
+    monkeypatch.setattr(torch.npu, "npurt", lambda: _Npurt(), raising=False)
+    funcs, reason = npu_accelerator._npu_host_copy_funcs()
+    assert funcs == ("register", "unregister")
+    assert reason is None

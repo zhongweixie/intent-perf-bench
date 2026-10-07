@@ -1,0 +1,11 @@
+misleading1 call 1 generated 83 elapsed 3 benchmarks 0
+misleading1 call 2 generated 179 elapsed 7 benchmarks 0
+misleading1 call 3 generated 264 elapsed 10 benchmarks 0
+misleading1 call 5 generated 8554 elapsed 256 benchmarks 1
+misleading1 call 6 generated 16520 elapsed 569 benchmarks 1
+misleading1 call 7 generated 18421 elapsed 698 benchmarks 1
+misleading1 call 8 generated 18604 elapsed 716 benchmarks 1
+misleading1 call 9 generated 18648 elapsed 739 benchmarks 2
+misleading1 call 10 generated 19409 elapsed 764 benchmarks 2
+misleading1 call 11 generated 19443 elapsed 783 benchmarks 3
+TRIAL_END {"condition": "misleading1", "stop_reason": "time_limit", "agent_seconds": 900.1090765446424, "real_wall_seconds": 1033.125325887464, "gpu_queue_wait_seconds": 132.94013349618763, "api_calls": 12, "tool_actions": 13, "generated_tokens": 19443, "prompt_tokens": 168794, "total_tokens": 188237, "reported_cost_usd": 0.48627669, "failed_requests_usage_unknown": 1, "final_source_sha256": "5b475cf76a499d826c454d65a8b85d0e987c934d6dcbcb98b5b2c2bac1337ca4", "final_answer": "", "namespace": "songcpu4-20261003-130616-276929-round1-misleading1", "budget_notices": 12, "api_seconds": 841.6402039574459, "tool_seconds": 190.65105812624097, "benchmark_seconds": 190.39796095434576, "benchmark_active_seconds": 57.457827458158135}

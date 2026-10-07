@@ -1,0 +1,12 @@
+hjson==3.1.0
+msgpack==1.2.2
+ninja==1.13.2
+py-cpuinfo==9.0.0
+pydantic==2.13.5
+psutil==7.2.2
+einops==0.8.2
+tqdm==4.70.1
+annotated-types==0.8.0
+pydantic-core==2.46.5
+typing-extensions==4.16.0
+typing-inspection==0.4.4

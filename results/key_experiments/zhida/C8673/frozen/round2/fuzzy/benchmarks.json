@@ -1,0 +1,50 @@
+[
+  {
+    "elapsed_seconds": 172.34499999997206,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+    "latency_ms": 6.568591952323914,
+    "samples_ms": [
+      6.594367980957031,
+      6.542815923690796
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 231.17199999978766,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+    "latency_ms": 6.608903884887695,
+    "samples_ms": [
+      6.64633584022522,
+      6.571471929550171
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 401.6099999998696,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+    "latency_ms": 5.23635196685791,
+    "samples_ms": [
+      5.230448007583618,
+      5.242255926132202
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 555.5009999999311,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+    "latency_ms": 4.242999911308289,
+    "samples_ms": [
+      4.264127969741821,
+      4.221871852874756
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  }
+]

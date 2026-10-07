@@ -1,0 +1,30 @@
+--- baseline/auto_ep_layer.py
++++ misleading2/auto_ep_layer.py
+@@ -56,14 +56,19 @@
+     """Scatter-add expert outputs back to original token positions."""
+     bsz, seqlen, hdim = shape
+     T = bsz * seqlen
+-    output = torch.zeros(T * top_k, hdim, dtype=expert_output.dtype, device=expert_output.device)
+-    output[token_indices_sorted] = expert_output
+-    output = output.reshape(T, top_k, hdim)
++    idx = token_indices_sorted
++    if idx.dtype != torch.int64:
++        idx = idx.long()
++    idx = idx.reshape(-1)
++    t_idx = torch.div(idx, top_k, rounding_mode='floor')
++    # Accumulate directly into the [T, H] result in fp32, skipping the
++    # materialization of the full [T*top_k, H] scatter buffer.
++    acc = torch.zeros((T, hdim), dtype=torch.float32, device=expert_output.device)
+     if score_apply == 'post':
+-        if combine_impl == 'legacy_bmm':
+-            output = torch.bmm(top_scores.reshape(-1, 1, top_k).float(), output.float()).to(expert_output.dtype).squeeze(1)
+-        else:
+-            output = (output.float() * top_scores.reshape(T, top_k, 1).float()).sum(dim=1).to(expert_output.dtype)
++        w = top_scores.reshape(-1).index_select(0, idx).float().unsqueeze(1)
++        terms = expert_output.float() * w
+     else:
+-        output = output.sum(dim=1)
++        terms = expert_output.float()
++    acc = acc.index_add(0, t_idx, terms)
++    output = acc.to(expert_output.dtype)
+     return output.reshape(bsz, seqlen, hdim)

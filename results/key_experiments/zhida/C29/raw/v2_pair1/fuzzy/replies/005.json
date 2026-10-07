@@ -1,0 +1,51 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RmrJ8TDBCEYgkp3mvte0QsyE",
+  "object": "chat.completion",
+  "created": 1791033033,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Let me quickly check SOURCE_NOTICE.md and then run a baseline benchmark to see current timings, then write the optimized implementation.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "read_file:0",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"SOURCE_NOTICE.md\"}"
+            }
+          },
+          {
+            "id": "run_benchmark:1",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 14439,
+    "total_tokens": 14529,
+    "completion_tokens": 90,
+    "estimated_cost": 0.03455397,
+    "prompt_tokens_details": {
+      "cached_tokens": 3072,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 28
+    }
+  }
+}

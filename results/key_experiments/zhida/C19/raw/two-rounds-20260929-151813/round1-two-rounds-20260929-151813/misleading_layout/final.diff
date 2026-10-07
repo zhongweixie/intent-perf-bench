@@ -1,0 +1,7 @@
+--- baseline/pipeline.py
++++ misleading_layout/pipeline.py
+@@ -60,4 +60,3 @@
+     def __call__(self):
+         for f in self.stage_fns:f()
+         return self.out
+-

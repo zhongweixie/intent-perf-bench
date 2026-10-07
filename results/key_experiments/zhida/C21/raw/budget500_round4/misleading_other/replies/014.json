@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790589341-QE8hyz4PeyqMLt7ydW2x",
+  "object": "chat.completion",
+  "created": 1790589341,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": "Time is nearly up. Let me validate the current saved version immediately.\n\n",
+        "refusal": null,
+        "reasoning": "Time is very short (42s). Let me run the benchmark to validate the current version. If it fails correctness, I need to revert quickly.\n\nGiven only 42s, I may only get one benchmark run. Let me run it now.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-801a2d2274b2c1b8",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Time is very short (42s). Let me run the benchmark to validate the current version. If it fails correctness, I need to revert quickly.\n\nGiven only 42s, I may only get one benchmark run. Let me run it now.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 43741,
+    "completion_tokens": 88,
+    "total_tokens": 43829,
+    "cost": 0.000337596,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 42880,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000337596,
+      "upstream_inference_prompt_cost": 0.000300636,
+      "upstream_inference_completions_cost": 3.696e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 50,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

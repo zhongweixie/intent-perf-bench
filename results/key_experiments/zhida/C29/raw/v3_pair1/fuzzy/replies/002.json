@@ -1,0 +1,51 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RD7Q1D2exnOsVylvqvUfWpCu",
+  "object": "chat.completion",
+  "created": 1791042914,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": null,
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "read_file:0",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"local_pipeline.py\"}"
+            }
+          },
+          {
+            "id": "read_file:1",
+            "type": "function",
+            "function": {
+              "name": "read_file",
+              "arguments": "{\"path\":\"auto_ep_layer.py\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1838,
+    "total_tokens": 1922,
+    "completion_tokens": 84,
+    "estimated_cost": 0.006435300000000001,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0
+    }
+  }
+}

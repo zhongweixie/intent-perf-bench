@@ -1,0 +1,54 @@
+{
+  "id": "gen-1790697137-bZuGgdQZJoBu2Ee1Oz6B",
+  "object": "chat.completion",
+  "created": 1790697137,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "stop",
+      "native_finish_reason": "stop",
+      "message": {
+        "role": "assistant",
+        "content": "Final validated result: **56.6us** (baseline 62.6us, ~10% faster), correct on all three cases.\n\n## Summary\n\n**Diagnosis.** The scored config (M=128, E=128, top-k=8, skewed logits) pads only 1248 slots at `block_m=64` (1472 padded slots → ~23 active M-blocks), but the GEMM grid launches `cdiv(capacity, BLOCK_SIZE_M)` = 142 M-blocks per N-tile, so the majority of programs early-return while only ~23×4 do real work. The default `block_m=64`/`block_n=128` tile therefore produced both redundant padding *and* low parallelism (≈92 active programs on 84 SMs).\n\n**Changes made (pipeline.py only):**\n1. **Smaller M-tile (`BLOCK_SIZE_M` 64→32)** with `BLOCK_SIZE_N` 128→64 and `BLOCK_SIZE_K`=64, `GROUP_SIZE_M`=1, `num_warps`=4. This cut padded slots from 1472→1248 and roughly tripled the number of active programs (23→39 M-blocks × 8 N-tiles = 312), improving occupancy on the under-filled GPU. (block_m=16 was tested and was worse at 64.5us — too many tiny tiles.)\n2. **Fused k-reduction.** Replaced `torch.sum(parts, dim=1, out=out)` with a small Triton kernel (`reducek`) that accumulates the top-k=8 partials in fp32, removing a generic strided-reduction launch.\n\n**Tuning evidence:** block_m=32/block_n=64 (58.5us pre-reduce) beat block_m=64 (62.6) and block_m=16 (64.5); block_n=128 was worse (57.6 vs 56.7); num_warps=2 was worse (58.6 vs 56.6).\n\n**Correctness preserved:** All three benchmark cases pass — `route_set_equal=true`, relative RMS ≈ 2.2e-4, max abs ≤ 8.2e-4 (well within 0.002 / 0.005 limits), for the skewed, uniform, and multi-group configurations. The last saved source is the best tested correct version.",
+        "refusal": null,
+        "reasoning": "Final: 56.6us, correct on all 3 cases. Best saved source is the current one. ~33s left, no more runs needed. Let me write the final report.\n\nLet me quickly verify the current file content is the best version. It has:\n- config overrides: block_m=32, block_n=64, block_k=64, group_m=1, num_warps=4\n- triton reducek kernel\n\nGood. Report.",
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Final: 56.6us, correct on all 3 cases. Best saved source is the current one. ~33s left, no more runs needed. Let me write the final report.\n\nLet me quickly verify the current file content is the best version. It has:\n- config overrides: block_m=32, block_n=64, block_k=64, group_m=1, num_warps=4\n- triton reducek kernel\n\nGood. Report.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29800,
+    "completion_tokens": 611,
+    "total_tokens": 30411,
+    "cost": 0.000430668,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 29440,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.000430668,
+      "upstream_inference_prompt_cost": 0.000174048,
+      "upstream_inference_completions_cost": 0.00025662
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 99,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

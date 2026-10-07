@@ -1,0 +1,118 @@
+{
+  "task_id": "ipb_cuda_zhida_c29",
+  "positive_controls": {
+    "baseline": {
+      "correct": true,
+      "latency_ms": 24.73358182906179,
+      "raw_worker_result": {
+        "correct": true,
+        "latency_ms": 24.73358182906179,
+        "cases": [
+          {
+            "name": "local-4096-top8",
+            "latency_ms": 17.584215966053307,
+            "samples_ms": [
+              17.65031204558909,
+              17.58431550115347,
+              17.582588363438845,
+              17.58124539628625,
+              17.584116430953145,
+              17.59228715673089
+            ]
+          },
+          {
+            "name": "local-8192-top8",
+            "latency_ms": 34.78972683660686,
+            "samples_ms": [
+              34.78973940946162,
+              34.781359834596515,
+              34.7897142637521,
+              34.78589514270425,
+              34.795400220900774,
+              34.83156533911824
+            ]
+          }
+        ],
+        "checks": [
+          "48-upstream-combine-forward-and-both-gradients",
+          "24-empty-expert-and-hidden-shape-reorder-cases",
+          "cpu-strided-input-and-pre-legacy-fallbacks"
+        ],
+        "errors": [],
+        "gpu": "NVIDIA RTX A6000",
+        "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+        "worker_seconds": 16.149799540638924
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c29"
+    },
+    "reference": {
+      "correct": true,
+      "latency_ms": 14.443553360963486,
+      "raw_worker_result": {
+        "correct": true,
+        "latency_ms": 14.443553360963486,
+        "cases": [
+          {
+            "name": "local-4096-top8",
+            "latency_ms": 10.373361292295158,
+            "samples_ms": [
+              10.464486433193088,
+              10.429219342768192,
+              10.39888127706945,
+              10.347841307520866,
+              10.286189382895827,
+              10.241320822387934
+            ]
+          },
+          {
+            "name": "local-8192-top8",
+            "latency_ms": 20.110765239223838,
+            "samples_ms": [
+              20.102058071643114,
+              20.10655263438821,
+              20.114977844059467,
+              20.18798841163516,
+              20.115678198635578,
+              20.10533190332353
+            ]
+          }
+        ],
+        "checks": [
+          "48-upstream-combine-forward-and-both-gradients",
+          "24-empty-expert-and-hidden-shape-reorder-cases",
+          "cpu-strided-input-and-pre-legacy-fallbacks"
+        ],
+        "errors": [],
+        "gpu": "NVIDIA RTX A6000",
+        "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+        "worker_seconds": 44.32092965301126
+      },
+      "seed": 271828,
+      "final": true,
+      "task_id": "ipb_cuda_zhida_c29"
+    },
+    "wrong_answer": {
+      "correct": false,
+      "latency_ms": null,
+      "raw_worker_result": {
+        "correct": false,
+        "errors": [
+          "AssertionError: Tensor-likes are not close!\n\nMismatched elements: 3071 / 3072 (100.0%)\nGreatest absolute difference: 3.355268716812134 at index (0, 8, 69) (up to 1e-06 allowed)\nGreatest relative difference: 1.0 at index (0, 0, 0) (up to 1e-05 allowed)",
+          ""
+        ],
+        "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/publication-ready-zhida-20261007/tasks/ipb_cuda_zhida_c29/evaluation/runtime/workspaces/songcpu4/upload_69e6a6cd5186404f96d428dda816a1d9/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/publication-ready-zhida-20261007/tasks/ipb_cuda_zhida_c29/evaluation/runtime/workspaces/songcpu4/upload_69e6a6cd5186404f96d428dda816a1d9/_pilot_grade.py\", line 51, in main\n    torch.testing.assert_close(actual, expected, **tol)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 3071 / 3072 (100.0%)\nGreatest absolute difference: 3.355268716812134 at index (0, 8, 69) (up to 1e-06 allowed)\nGreatest relative difference: 1.0 at index (0, 0, 0) (up to 1e-05 allowed)\n",
+        "worker_seconds": 8.244020085781813
+      },
+      "seed": 271828,
+      "final": false,
+      "task_id": "ipb_cuda_zhida_c29"
+    }
+  },
+  "passed": true,
+  "note": "Packaging check only; negative control changes numeric output/gradient/state. This does not add independent agent trials or replace archived performance.",
+  "negative_control_rejected_numerically": true,
+  "verification_host": "songcpu4",
+  "verification_date": "2026-10-07"
+}

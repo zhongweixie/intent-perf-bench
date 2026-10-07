@@ -1,0 +1,724 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
+import os
+from typing import Union
+from enum import Enum
+
+import torch
+import json
+import hjson
+import copy
+import base64
+from pydantic import Field
+
+from .constants import *
+from .config_utils import (
+    get_scalar_param,
+    dict_raise_error_on_duplicate_keys,
+    ScientificNotationEncoder,
+)
+from .zero.config import get_zero_config, ZeroStageEnum
+from .activation_checkpointing.config import DeepSpeedActivationCheckpointingConfig
+from ..comm.config import DeepSpeedCommsConfig
+from ..monitor.config import get_monitor_config
+from ..inference.config import WeightQuantConfig
+from .precision_config import get_bfloat16_config, get_float16_config
+from ..compile.config import CompileConfig
+
+from deepspeed import comm as dist
+from deepspeed.runtime.config_utils import DeepSpeedConfigModel
+
+from ..utils import logger
+
+from ..profiling.config import DeepSpeedFlopsProfilerConfig
+from ..autotuning.config import DeepSpeedAutotuningConfig
+from ..datastates.config import DeepSpeedDataStatesConfig
+
+from .swap_tensor.aio_config import get_aio_config
+from .model_checkpointing.config import get_checkpoint_config
+
+from .tensor_parallel import get_tensor_parallel_config
+from .data_pipeline.config import get_data_efficiency_enabled, get_data_efficiency_config
+from .data_pipeline.constants import *
+
+from ..utils.config import get_timers_config
+
+TENSOR_CORE_ALIGN_SIZE = 8
+EXPERT_PARALLEL = "expert_parallel"
+
+ADAGRAD_OPTIMIZER = 'adagrad'
+ADAM_OPTIMIZER = 'adam'
+ADAMW_OPTIMIZER = 'adamw'
+LAMB_OPTIMIZER = 'lamb'
+
+MUADAM_OPTIMIZER = 'muadam'
+MUADAMW_OPTIMIZER = 'muadamw'
+MUSGD_OPTIMIZER = 'musgd'
+LION_OPTIMIZER = 'lion'
+MUON_OPTIMIZER = 'muon'
+
+DEEPSPEED_OPTIMIZERS = [
+    ADAGRAD_OPTIMIZER, ADAM_OPTIMIZER, ADAMW_OPTIMIZER, LAMB_OPTIMIZER, MUADAM_OPTIMIZER, MUADAMW_OPTIMIZER,
+    MUSGD_OPTIMIZER, LION_OPTIMIZER, MUON_OPTIMIZER
+]
+
+# extra optimizer parameters for adam/adamw
+TORCH_ADAM_PARAM = "torch_adam"
+
+# default to adamw logic for adam/adamw optimizers unless user explicitly opts out
+ADAM_W_MODE = "adam_w_mode"
+ADAM_W_MODE_DEFAULT = True
+
+
+class DeepSpeedConfigError(Exception):
+    pass
+
+
+_REMOVED_FEATURES_ISSUE = "https://github.com/deepspeedai/DeepSpeed/issues/8489"
+_REMOVED_TOP_LEVEL_CONFIG_KEYS = {
+    "nebula":
+    "Nebula checkpointing has been removed. A leftover 'nebula' block would be ignored and "
+    f"checkpoints would silently fall back to local torch.save. See {_REMOVED_FEATURES_ISSUE}.",
+    "compression_training":
+    "The DeepSpeed compression library has been removed. A leftover 'compression_training' "
+    f"block would be ignored and the model would train unquantized. See {_REMOVED_FEATURES_ISSUE}.",
+    "amp":
+    "NVIDIA Apex AMP integration has been removed. Use DeepSpeed 'fp16', 'bf16', or 'torch_autocast' "
+    f"instead. See {_REMOVED_FEATURES_ISSUE}.",
+    "quantize_training":
+    "Mixture-of-Quantization (MoQ) / 'quantize_training' has been removed. See "
+    f"{_REMOVED_FEATURES_ISSUE}.",
+    "sparse_gradients":
+    "Sparse compression of dense torch.nn.Embedding gradients has been removed. A leftover "
+    "'sparse_gradients' flag would be ignored and those gradients would be reduced dense. "
+    "Gradients from an embedding constructed with sparse=True are still reduced sparsely and "
+    f"need no config flag. See {_REMOVED_FEATURES_ISSUE}.",
+    "eigenvalue":
+    "Eigenvalue-based Mixture-of-Quantization (MoQ) has been removed; the standalone "
+    f"'eigenvalue' configuration block is no longer supported. See {_REMOVED_FEATURES_ISSUE}.",
+    "sparse_attention":
+    "DeepSpeed Sparse Attention has been removed; the 'sparse_attention' configuration block is no longer "
+    f"supported. See {_REMOVED_FEATURES_ISSUE}.",
+    "elasticity":
+    "Elastic training has been removed; the 'elasticity' configuration block is no longer supported. "
+    "Set train_batch_size / train_micro_batch_size_per_gpu / gradient_accumulation_steps directly. ",
+    "graph_harvesting":
+    "Graph harvesting has been removed; the 'graph_harvesting' configuration option is no longer supported. "
+    f"See {_REMOVED_FEATURES_ISSUE}.",
+    "curriculum_learning":
+    "Legacy top-level 'curriculum_learning' has been removed. Use "
+    "'data_efficiency.data_sampling.curriculum_learning' instead. "
+    f"See {_REMOVED_FEATURES_ISSUE}.",
+    "progressive_layer_drop":
+    "Progressive Layer Dropping has been removed; the 'progressive_layer_drop' configuration block is no longer "
+    f"supported. See {_REMOVED_FEATURES_ISSUE}.",
+}
+_REMOVED_ZERO_CONFIG_KEYS = {
+    "mics_shard_size":
+    "MiCS ZeRO-3 sharding has been removed; 'zero_optimization.mics_shard_size' is no longer "
+    f"supported. See {_REMOVED_FEATURES_ISSUE}.",
+    "mics_hierarchical_params_gather":
+    "MiCS ZeRO-3 sharding has been removed; 'zero_optimization.mics_hierarchical_params_gather' "
+    f"is no longer supported. See {_REMOVED_FEATURES_ISSUE}.",
+    "zeropp_loco_param":
+    "LoCo-Zero++ has been removed; 'zero_optimization.zeropp_loco_param' is no longer supported. "
+    "Remove this key to use standard ZeRO++ quantized gradients without LoCo error feedback. "
+    f"See {_REMOVED_FEATURES_ISSUE}.",
+}
+
+
+def _reject_removed_config_keys(param_dict):
+    for key, message in _REMOVED_TOP_LEVEL_CONFIG_KEYS.items():
+        if key in param_dict:
+            raise DeepSpeedConfigError(message)
+    zero_config = param_dict.get("zero_optimization")
+    if isinstance(zero_config, dict):
+        for key, message in _REMOVED_ZERO_CONFIG_KEYS.items():
+            if key in zero_config:
+                raise DeepSpeedConfigError(message)
+
+
+class DtypeEnum(Enum):
+    # The torch dtype must always be the first value (so we return torch.dtype)
+    fp16 = torch.float16, "torch.float16", "fp16", "float16", "half"
+    fp32 = torch.float32, "torch.float32", "fp32", "float32", "float"
+    int8 = torch.int8, "torch.int8", "int8"
+    bf16 = torch.bfloat16, "torch.bfloat16", "bf16", "bfloat16"
+
+    # Copied from https://stackoverflow.com/a/43210118
+    # Allows us to use multiple values for each Enum index and returns first
+    # listed value when Enum is called
+    def __new__(cls, *values):
+        obj = object.__new__(cls)
+        # first value is canonical value
+        obj._value_ = values[0]
+        for other_value in values[1:]:
+            cls._value2member_map_[other_value] = obj
+        obj._all_values = values
+        return obj
+
+    def __repr__(self):
+        return "<%s.%s: %s>" % (
+            self.__class__.__name__,
+            self._name_,
+            ", ".join([repr(v) for v in self._all_values]),
+        )
+
+
+def get_expert_parallel_config(param_dict):
+    if EXPERT_PARALLEL in param_dict:
+        from deepspeed.module_inject.auto_ep_config import parse_autoep_config
+        return parse_autoep_config(param_dict[EXPERT_PARALLEL])
+    from deepspeed.module_inject.auto_ep_config import AutoEPConfig
+    return AutoEPConfig()
+
+
+def get_torch_autocast_enabled(param_dict):
+    if TORCH_AUTOCAST in param_dict.keys():
+        return get_scalar_param(param_dict[TORCH_AUTOCAST], TORCH_AUTOCAST_ENABLED, TORCH_AUTOCAST_ENABLED_DEFAULT)
+    else:
+        return False
+
+
+def get_torch_autocast_dtype(param_dict):
+    if TORCH_AUTOCAST in param_dict:
+        if TORCH_AUTOCAST_DTYPE in param_dict[TORCH_AUTOCAST]:
+            try:
+                return DtypeEnum(param_dict[TORCH_AUTOCAST][TORCH_AUTOCAST_DTYPE]).value
+            except KeyError:
+                raise ValueError(
+                    f"Invalid dtype for torch autocast: {param_dict[TORCH_AUTOCAST][TORCH_AUTOCAST_DTYPE]}")
+    return None
+
+
+def get_lower_precision_safe_modules(param_dict):
+    if TORCH_AUTOCAST in param_dict:
+        if TORCH_AUTOCAST_LOWER_PRECISION_SAFE_MODULES in param_dict[TORCH_AUTOCAST]:
+            module_names_with_package = param_dict[TORCH_AUTOCAST][TORCH_AUTOCAST_LOWER_PRECISION_SAFE_MODULES]
+            if not all(isinstance(module_name, str) for module_name in module_names_with_package):
+                raise ValueError(
+                    f"Invalid module names for torch autocast: {module_names_with_package}. Expected list of strings.")
+            return module_names_with_package
+    return None
+
+
+def get_gradient_accumulation_steps(param_dict):
+    return get_scalar_param(param_dict, GRADIENT_ACCUMULATION_STEPS, GRADIENT_ACCUMULATION_STEPS_DEFAULT)
+
+
+def get_managed_gradient_accumulation(param_dict):
+    return get_scalar_param(param_dict, MANAGED_GRADIENT_ACCUMULATION, MANAGED_GRADIENT_ACCUMULATION_DEFAULT)
+
+
+def get_communication_data_type(param_dict,
+                                comm_type=COMMUNICATION_DATA_TYPE,
+                                comm_data_type_default=COMMUNICATION_DATA_TYPE_DEFAULT):
+    val = get_scalar_param(param_dict, comm_type, comm_data_type_default)
+    val = val.lower() if val is not None else val
+    if val is None:
+        return val  # we must determine it by other parameters
+    elif val == "fp32":
+        return torch.float32
+    elif val == "fp16":
+        return torch.float16
+    elif val == "bf16":
+        return torch.bfloat16
+
+    raise ValueError(f"Invalid communication_data_type. Supported data types: ['fp16', 'bf16', 'fp32']. Got: {val}")
+
+
+def get_prescale_gradients(param_dict):
+    return get_scalar_param(param_dict, PRESCALE_GRADIENTS, PRESCALE_GRADIENTS_DEFAULT)
+
+
+def get_gradient_predivide_factor(param_dict):
+    return get_scalar_param(param_dict, GRADIENT_PREDIVIDE_FACTOR, GRADIENT_PREDIVIDE_FACTOR_DEFAULT)
+
+
+def get_gradient_allreduce_op(param_dict):
+    value = get_scalar_param(param_dict, GRADIENT_ALLREDUCE_OP, GRADIENT_ALLREDUCE_OP_DEFAULT)
+    if isinstance(value, str):
+        value = value.lower()
+    if value not in GRADIENT_ALLREDUCE_OP_SUPPORTED:
+        raise ValueError(
+            f"Invalid {GRADIENT_ALLREDUCE_OP}. Supported operations: {list(GRADIENT_ALLREDUCE_OP_SUPPORTED)}. "
+            f"Got: {value!r}")
+    return value
+
+
+def get_steps_per_print(param_dict):
+    return get_scalar_param(param_dict, STEPS_PER_PRINT, STEPS_PER_PRINT_DEFAULT)
+
+
+def get_disable_allgather(param_dict):
+    return get_scalar_param(param_dict, DISABLE_ALLGATHER, DISABLE_ALLGATHER_DEFAULT)
+
+
+def get_dump_state(param_dict):
+    return get_scalar_param(param_dict, DUMP_STATE, DUMP_STATE_DEFAULT)
+
+
+def get_disable_python_gc(param_dict):
+    return get_scalar_param(param_dict, DISABLE_PYTHON_GC, DISABLE_PYTHON_GC_DEFAULT)
+
+
+def get_gradient_clipping(param_dict):
+    return get_scalar_param(param_dict, GRADIENT_CLIPPING, GRADIENT_CLIPPING_DEFAULT)
+
+
+def get_pipeline_config(param_dict):
+    """Parses pipeline engine configuration. """
+    default_pipeline = {
+        "stages": "auto",
+        "partition": "best",
+        "seed_layers": False,
+        "activation_checkpoint_interval": 0,
+        "pipe_partitioned": True,
+        "grad_partitioned": True,
+    }
+    config = default_pipeline
+    for key, val in param_dict.get("pipeline", {}).items():
+        config[key] = val
+    return config
+
+
+def get_optimizer_name(param_dict):
+    if OPTIMIZER in param_dict.keys() and TYPE in param_dict[OPTIMIZER].keys():
+        return param_dict[OPTIMIZER][TYPE]
+    else:
+        return OPTIMIZER_TYPE_DEFAULT
+
+
+def get_optimizer_params(param_dict):
+    if (get_optimizer_name(param_dict) is not None and OPTIMIZER_PARAMS in param_dict[OPTIMIZER].keys()):
+        return param_dict[OPTIMIZER][OPTIMIZER_PARAMS]
+    else:
+        return None
+
+
+def get_optimizer_gradient_clipping(param_dict):
+    optimizer_params = get_optimizer_params(param_dict)
+    if optimizer_params is not None and MAX_GRAD_NORM in optimizer_params.keys():
+        return optimizer_params[MAX_GRAD_NORM]
+    else:
+        return None
+
+
+def get_optimizer_legacy_fusion(param_dict):
+    if OPTIMIZER in param_dict.keys() and LEGACY_FUSION in param_dict[OPTIMIZER].keys():
+        return param_dict[OPTIMIZER][LEGACY_FUSION]
+    else:
+        return LEGACY_FUSION_DEFAULT
+
+
+def get_zero_allow_untested_optimizer(param_dict):
+    return get_scalar_param(param_dict, ZERO_ALLOW_UNTESTED_OPTIMIZER, ZERO_ALLOW_UNTESTED_OPTIMIZER_DEFAULT)
+
+
+def get_zero_force_ds_cpu_optimizer(param_dict):
+    return get_scalar_param(param_dict, ZERO_FORCE_DS_CPU_OPTIMIZER, ZERO_FORCE_DS_CPU_OPTIMIZER_DEFAULT)
+
+
+def get_scheduler_name(param_dict):
+    if SCHEDULER in param_dict.keys() and TYPE in param_dict[SCHEDULER].keys():
+        return param_dict[SCHEDULER][TYPE]
+    else:
+        return SCHEDULER_TYPE_DEFAULT
+
+
+def get_scheduler_params(param_dict):
+    if (get_scheduler_name(param_dict) is not None and SCHEDULER_PARAMS in param_dict[SCHEDULER].keys()):
+        return param_dict[SCHEDULER][SCHEDULER_PARAMS]
+    else:
+        return None
+
+
+def get_train_batch_size(param_dict):
+    return get_scalar_param(param_dict, TRAIN_BATCH_SIZE, TRAIN_BATCH_SIZE_DEFAULT)
+
+
+def get_train_micro_batch_size_per_gpu(param_dict):
+    return get_scalar_param(
+        param_dict,
+        TRAIN_MICRO_BATCH_SIZE_PER_GPU,
+        TRAIN_MICRO_BATCH_SIZE_PER_GPU_DEFAULT,
+    )
+
+
+def get_wall_clock_breakdown(param_dict):
+    return get_scalar_param(param_dict, WALL_CLOCK_BREAKDOWN, WALL_CLOCK_BREAKDOWN_DEFAULT)
+
+
+def get_memory_breakdown(param_dict):
+    return get_scalar_param(param_dict, MEMORY_BREAKDOWN, MEMORY_BREAKDOWN_DEFAULT)
+
+
+class HybridEngineConfig(DeepSpeedConfigModel):
+    enabled: bool = False
+    max_out_tokens: int = Field(512, gt=0)
+    inference_tp_size: int = 1
+    release_inference_cache: bool = False
+    pin_parameters: bool = True
+    tp_gather_partition_size: int = 8
+    enable_cuda_graph: bool = False
+
+
+def get_hybrid_engine_config(param_dict):
+    hybrid_engine_config_dict = param_dict.get("hybrid_engine", {})
+    hybrid_engine_config = HybridEngineConfig(**hybrid_engine_config_dict)
+    return hybrid_engine_config
+
+
+def get_expert_data_topo_config(param_dict):
+    return get_scalar_param(param_dict, USE_DATA_BEFORE_EXPERT_PARALLEL, USE_DATA_BEFORE_EXPERT_PARALLEL_DEFAULT)
+
+
+def get_checkpoint_params(param_dict):
+    return param_dict.get(CHECKPOINT, {})
+
+
+def get_data_types_params(param_dict):
+    return param_dict.get(DATA_TYPES, {})
+
+
+def get_checkpoint_tag_validation_mode(checkpoint_params):
+    tag_validation_mode = checkpoint_params.get(CHECKPOINT_TAG_VALIDATION, CHECKPOINT_TAG_VALIDATION_DEFAULT)
+    tag_validation_mode = tag_validation_mode.upper()
+    if tag_validation_mode in CHECKPOINT_TAG_VALIDATION_MODES:
+        return tag_validation_mode
+    else:
+        raise DeepSpeedConfigError(
+            "Checkpoint config contains invalid tag_validation "
+            f"value of {tag_validation_mode}, expecting one of {CHECKPOINT_TAG_VALIDATION_MODES}")
+
+
+def get_checkpoint_parallel_write_pipeline(checkpoint_params):
+    par_write_params = checkpoint_params.get(CHECKPOINT_PARALLEL_WRITE, {})
+    par_write_pipeline = par_write_params.get(CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE,
+                                              CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE_DEFAULT)
+    if par_write_pipeline in [True, False]:
+        return par_write_pipeline
+    else:
+        raise DeepSpeedConfigError("checkpoint::parallel_write::pipeline_stage "
+                                   f"value of '{par_write_pipeline}' is invalid, expecting: true or false")
+
+
+def get_dataloader_drop_last(param_dict):
+    return get_scalar_param(param_dict, DATALOADER_DROP_LAST, DATALOADER_DROP_LAST_DEFAULT)
+
+
+def get_log_level(param_dict):
+    return get_scalar_param(param_dict, LOG_LEVEL, LOG_LEVEL_DEFAULT)
+
+
+'''Write deepspeed config files by modifying basic templates.
+Can be used for quickly changing parameters via command line parameters.'''
+
+
+class DeepSpeedConfigWriter:
+
+    def __init__(self, data=None):
+        self.data = data if data is not None else {}
+
+    def add_config(self, key, value):
+        self.data[key] = value
+
+    def load_config(self, filename):
+        self.data = json.load(open(filename, "r"), object_pairs_hook=dict_raise_error_on_duplicate_keys)
+
+    def write_config(self, filename):
+        with open(filename, "w") as outfile:
+            json.dump(self.data, outfile)
+
+
+class DeepSpeedConfig(object):
+
+    def __init__(self, config: Union[str, dict], mpu=None, mesh_device=None):
+        super(DeepSpeedConfig, self).__init__()
+        if isinstance(config, dict):
+            self._param_dict = config
+        elif os.path.exists(config):
+            self._param_dict = hjson.load(open(config, "r"), object_pairs_hook=dict_raise_error_on_duplicate_keys)
+        else:
+            try:
+                config_decoded = base64.urlsafe_b64decode(config).decode('utf-8')
+                self._param_dict = hjson.loads(config_decoded)
+            except (UnicodeDecodeError, AttributeError):
+                raise ValueError(
+                    f"Expected a string path to an existing deepspeed config, or a dictionary or a valid base64. Received: {config}"
+                )
+
+        _reject_removed_config_keys(self._param_dict)
+
+        try:
+            self.global_rank = dist.get_rank()
+            if mpu is not None:
+                # Ulysses SP
+                if not hasattr(mpu, "get_data_parallel_world_size"):
+                    self.world_size = dist.get_world_size() / mpu.get_sequence_parallel_world_size()
+                else:
+                    self.world_size = mpu.get_data_parallel_world_size()
+            elif mesh_device is not None:
+                self.world_size = dist.get_world_size(mesh_device.get_group(mesh_dim="data_parallel"))
+            else:
+                # HF zero.init case where there is no mpu
+                if "sequence_parallel_size" in config:
+                    self.world_size = dist.get_world_size() / config["sequence_parallel_size"]
+                else:
+                    self.world_size = dist.get_world_size()
+        except (RuntimeError, AssertionError, AttributeError):
+            self.global_rank = 0
+            self.world_size = 1
+        logger.info(f"Config mesh_device {mesh_device} world_size = {self.world_size}")
+        # Pass a copy so that the user json is unmodified, e.g. for logging.
+        param_dict = copy.copy(self._param_dict)
+        self._initialize_params(param_dict)
+        self._configure_train_batch_size()
+        self._do_sanity_check()
+
+    def _initialize_params(self, param_dict):
+        self.train_batch_size = get_train_batch_size(param_dict)
+        self.train_micro_batch_size_per_gpu = get_train_micro_batch_size_per_gpu(param_dict)
+        self.gradient_accumulation_steps = get_gradient_accumulation_steps(param_dict)
+        self.managed_gradient_accumulation = get_managed_gradient_accumulation(param_dict)
+        self.steps_per_print = get_steps_per_print(param_dict)
+        self.dump_state = get_dump_state(param_dict)
+        self.disable_python_gc = get_disable_python_gc(param_dict)
+
+        self.disable_allgather = get_disable_allgather(param_dict)
+        self.communication_data_type = get_communication_data_type(param_dict)
+        self.seq_parallel_communication_data_type = get_communication_data_type(
+            param_dict, SEQ_PARALLEL_COMMUNICATION_DATA_TYPE, SEQ_PARALLEL_COMMUNICATION_DATA_TYPE_DEFAULT)
+        self.prescale_gradients = get_prescale_gradients(param_dict)
+        self.gradient_predivide_factor = get_gradient_predivide_factor(param_dict)
+        self.gradient_allreduce_op = get_gradient_allreduce_op(param_dict)
+
+        self.zero_config = get_zero_config(param_dict)
+        self.zero_optimization_stage = self.zero_config.stage
+        self.zero_enabled = self.zero_optimization_stage > 0
+
+        self.activation_checkpointing_config = DeepSpeedActivationCheckpointingConfig(param_dict)
+
+        self.comms_config = DeepSpeedCommsConfig(param_dict)
+        self.monitor_config = get_monitor_config(param_dict)
+
+        self.gradient_clipping = get_gradient_clipping(param_dict)
+        self.float16_config = get_float16_config(param_dict)
+        self.bfloat16_config = get_bfloat16_config(param_dict)
+        assert not (self.float16_config.enabled
+                    and self.bfloat16_config.enabled), 'bfloat16 and fp16 modes cannot be simultaneously enabled'
+
+        self.torch_autocast_enabled = get_torch_autocast_enabled(param_dict)
+        self.torch_autocast_dtype = get_torch_autocast_dtype(param_dict)
+        self.torch_autocast_lower_precision_safe_modules = get_lower_precision_safe_modules(param_dict)
+
+        self.optimizer_name = get_optimizer_name(param_dict)
+        if (self.optimizer_name is not None and self.optimizer_name.lower() in DEEPSPEED_OPTIMIZERS):
+            self.optimizer_name = self.optimizer_name.lower()
+
+        self.optimizer_params = get_optimizer_params(param_dict)
+        self.optimizer_legacy_fusion = get_optimizer_legacy_fusion(param_dict)
+
+        self.zero_allow_untested_optimizer = get_zero_allow_untested_optimizer(param_dict)
+
+        self.zero_force_ds_cpu_optimizer = get_zero_force_ds_cpu_optimizer(param_dict)
+
+        self.scheduler_name = get_scheduler_name(param_dict)
+        self.scheduler_params = get_scheduler_params(param_dict)
+
+        self.flops_profiler_config = DeepSpeedFlopsProfilerConfig(param_dict)
+        self.wall_clock_breakdown = (get_wall_clock_breakdown(param_dict) | self.flops_profiler_config.enabled)
+        self.memory_breakdown = get_memory_breakdown(param_dict)
+        self.autotuning_config = DeepSpeedAutotuningConfig(param_dict)
+
+        self.use_data_before_expert_parallel_ = get_expert_data_topo_config(param_dict)
+        self.hybrid_engine = get_hybrid_engine_config(param_dict)
+
+        self.pipeline = get_pipeline_config(param_dict)
+
+        self.data_efficiency_enabled = get_data_efficiency_enabled(param_dict)
+        self.data_efficiency_config = get_data_efficiency_config(param_dict)
+
+        checkpoint_params = get_checkpoint_params(param_dict)
+        validation_mode = get_checkpoint_tag_validation_mode(checkpoint_params)
+        self.checkpoint_tag_validation_enabled = (validation_mode != ValidationMode.IGNORE)
+        self.checkpoint_tag_validation_fail = validation_mode == ValidationMode.FAIL
+        self.load_universal_checkpoint = checkpoint_params.get(LOAD_UNIVERSAL_CHECKPOINT,
+                                                               LOAD_UNIVERSAL_CHECKPOINT_DEFAULT)
+
+        self.use_node_local_storage = checkpoint_params.get(USE_NODE_LOCAL_STORAGE_CHECKPOINT,
+                                                            USE_NODE_LOCAL_STORAGE_CHECKPOINT_DEFAULT)
+
+        data_types_params = get_data_types_params(param_dict)
+        self.grad_accum_dtype = data_types_params.get(GRAD_ACCUM_DTYPE, GRAD_ACCUM_DTYPE_DEFAULT)
+        # Raw strings ("bf16"/"fp16"/"fp32") or None; resolved via DtypeEnum at
+        # use-time.
+        self.param_dtype = data_types_params.get(PARAM_DTYPE, PARAM_DTYPE_DEFAULT)
+        # buffer_dtype=None keeps buffers at their loaded dtype.
+        self.buffer_dtype = data_types_params.get(BUFFER_DTYPE, BUFFER_DTYPE_DEFAULT)
+
+        par_write_pipe = get_checkpoint_parallel_write_pipeline(checkpoint_params)
+        self.checkpoint_parallel_write_pipeline = par_write_pipe
+
+        self.aio_config = get_aio_config(param_dict)
+
+        self.dataloader_drop_last = get_dataloader_drop_last(param_dict)
+
+        self.log_level = get_log_level(param_dict)
+
+        self.datastates_config = DeepSpeedDataStatesConfig(param_dict)
+        self.checkpoint_config = get_checkpoint_config(param_dict)
+
+        self.weight_quantization_config = WeightQuantConfig(
+            **param_dict['weight_quantization']) if 'weight_quantization' in param_dict else None
+
+        self.compile_config = CompileConfig(**param_dict.get('compile', {}))
+
+        self.timers_config = get_timers_config(param_dict)
+        self.tensor_parallel_config = get_tensor_parallel_config(param_dict)
+        self.expert_parallel_config = get_expert_parallel_config(param_dict)
+
+    def _batch_assertion(self):
+
+        train_batch = self.train_batch_size
+        micro_batch = self.train_micro_batch_size_per_gpu
+        grad_acc = self.gradient_accumulation_steps
+
+        assert (train_batch > 0), f"Train batch size: {train_batch} has to be greater than 0"
+
+        assert (micro_batch > 0), f"Micro batch size per gpu: {micro_batch} has to be greater than 0"
+
+        assert (grad_acc > 0), f"Gradient accumulation steps: {grad_acc} has to be greater than 0"
+
+        assert train_batch == micro_batch * grad_acc * self.world_size, (
+            f"Check batch related parameters. train_batch_size is not equal "
+            "to micro_batch_per_gpu * gradient_acc_step * world_size "
+            f"{train_batch} != {micro_batch} * {grad_acc} * {self.world_size}")
+
+    def _set_batch_related_parameters(self):
+
+        train_batch = self.train_batch_size
+        micro_batch = self.train_micro_batch_size_per_gpu
+        grad_acc = self.gradient_accumulation_steps
+
+        #print(f"in: train_batch = {train_batch}, micro_batch={micro_batch}")
+
+        # all values are provided nothing needs to be set
+        if train_batch is not None and micro_batch is not None and grad_acc is not None:
+            return
+
+        # global_accumulation_steps needs to be set
+        elif train_batch is not None and micro_batch is not None:
+            grad_acc = train_batch // micro_batch
+            grad_acc //= self.world_size
+            self.gradient_accumulation_steps = grad_acc
+
+        # micro_batch_per_gpu needs to be set
+        elif train_batch is not None and grad_acc is not None:
+            micro_batch = train_batch // self.world_size
+            micro_batch //= grad_acc
+            self.train_micro_batch_size_per_gpu = micro_batch
+
+        # train_batch_size needs to be set
+        elif micro_batch is not None and grad_acc is not None:
+            train_batch_size = micro_batch * grad_acc
+            train_batch_size *= self.world_size
+            self.train_batch_size = train_batch_size
+
+        # gradient_accumulation_steps and micro_batch_per_gpus is set
+        elif train_batch is not None:
+            self.gradient_accumulation_steps = 1
+            self.train_micro_batch_size_per_gpu = train_batch // self.world_size
+
+        # train_batch_size and gradient_accumulation_step is set
+        elif micro_batch is not None:
+            self.train_batch_size = micro_batch * self.world_size
+            self.gradient_accumulation_steps = 1
+
+        # either none of the three parameters are provided or just gradient_accumulation_step is provided
+        else:
+            assert False, \
+                'Either train_batch_size or train_micro_batch_size_per_gpu needs to be provided'
+
+        #print(f"final: {self.train_batch_size=} {self.train_micro_batch_size_per_gpu=} {self.gradient_accumulation_steps=}")
+
+    def _configure_train_batch_size(self):
+        self._set_batch_related_parameters()
+        self._batch_assertion()
+
+    def _do_sanity_check(self):
+        self._do_error_check()
+
+        self._do_warning_check()
+
+    def print_user_config(self):
+        logger.info("  json = {}".format(
+            json.dumps(
+                self._param_dict,
+                sort_keys=True,
+                indent=4,
+                cls=ScientificNotationEncoder,
+                separators=(",", ":"),
+            )))
+
+    def print(self, name):
+        logger.info("{}:".format(name))
+        for arg in sorted(vars(self)):
+            if arg != "_param_dict":
+                dots = "." * (29 - len(arg))
+                logger.info("  {} {} {}".format(arg, dots, getattr(self, arg)))
+
+        self.print_user_config()
+
+    def _do_error_check(self):
+        assert (self.train_micro_batch_size_per_gpu
+                ), "DeepSpeedConfig: {} is not defined".format(TRAIN_MICRO_BATCH_SIZE_PER_GPU)
+
+        assert (
+            self.gradient_accumulation_steps), "DeepSpeedConfig: {} is not defined".format(GRADIENT_ACCUMULATION_STEPS)
+
+        if self.zero_enabled:
+            assert (self.zero_optimization_stage
+                    <= ZeroStageEnum.max_stage), "DeepSpeedConfig: Maximum supported ZeRO stage is {}".format(
+                        ZeroStageEnum.max_stage)
+
+        if (self.gradient_allreduce_op == GRADIENT_ALLREDUCE_OP_SUM
+                and self.zero_optimization_stage == ZeroStageEnum.weights):
+            raise ValueError(f"{GRADIENT_ALLREDUCE_OP}='sum' is not supported with ZeRO stage 3")
+        if self.gradient_allreduce_op == GRADIENT_ALLREDUCE_OP_SUM and self.zero_config.zenflow is not None:
+            raise ValueError(f"{GRADIENT_ALLREDUCE_OP}='sum' is not supported with ZenFlow")
+        if self.gradient_allreduce_op == GRADIENT_ALLREDUCE_OP_SUM and self.compile_config.deepcompile:
+            raise ValueError(f"{GRADIENT_ALLREDUCE_OP}='sum' is not supported with DeepCompile")
+
+        if self.float16_config.fp16_master_weights_and_grads:
+            assert self.zero_enabled and self.zero_optimization_stage in (
+                ZeroStageEnum.optimizer_states, ZeroStageEnum.gradients,
+                ZeroStageEnum.weights), "Fp16_master_weights_and_grads is only supported with ZeRO Stage 1, 2, or 3."
+        if self.bfloat16_config.bf16_master_weights_and_grads:
+            assert self.zero_enabled and self.zero_optimization_stage in (
+                ZeroStageEnum.optimizer_states, ZeroStageEnum.gradients,
+                ZeroStageEnum.weights), "Bf16_master_weights_and_grads is only supported with ZeRO Stage 1, 2, or 3."
+        if self.bfloat16_config.bf16_optimizer_states:
+            assert self.zero_enabled and self.zero_optimization_stage in (
+                ZeroStageEnum.optimizer_states, ZeroStageEnum.gradients,
+                ZeroStageEnum.weights), "bf16_optimizer_states is only supported with ZeRO Stage 1, 2, or 3."
+            assert self.bfloat16_config.bf16_master_weights_and_grads, "bf16_optimizer_states requires bf16_master_weights_and_grads to be enabled."
+
+    def _do_warning_check(self):
+        vocabulary_size = self._param_dict.get(VOCABULARY_SIZE, VOCABULARY_SIZE_DEFAULT)
+        if vocabulary_size and vocabulary_size % TENSOR_CORE_ALIGN_SIZE != 0:
+            logger.warning(
+                "DeepSpeedConfig: vocabulary size {} is not aligned to {}, may import tensor core utilization.".format(
+                    vocabulary_size, TENSOR_CORE_ALIGN_SIZE))
+
+        if (self.optimizer_params is not None and MAX_GRAD_NORM in self.optimizer_params.keys()
+                and self.optimizer_params[MAX_GRAD_NORM] > 0):
+            if self.global_rank == 0:
+                logger.warning(
+                    "DeepSpeedConfig: {} ({}) is not supported as an optimizer parameter, please switch to using the "
+                    "deepspeed parameter 'gradient_clipping' see: "
+                    "https://www.deepspeed.ai/docs/config-json/#gradient-clipping for more details".format(
+                        MAX_GRAD_NORM, self.optimizer_params[MAX_GRAD_NORM]))

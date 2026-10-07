@@ -1,0 +1,13 @@
+[task]
+id = "ipb_cuda_zhida_c8673"
+title = "DeepSpeed full mixed-precision FusedAdam step"
+category = "cuda"
+
+[variants]
+fuzzy = "variants/fuzzy.md"
+misleading = "variants/misleading.md"
+
+[evaluation]
+entrypoint = "evaluation/evaluate.py"
+validation = "scripts/validate.py"
+metric = "correctness_gated_latency_ms"

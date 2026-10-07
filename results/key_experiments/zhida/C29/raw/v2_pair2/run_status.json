@@ -1,0 +1,9 @@
+{
+  "phase": "complete",
+  "at": "2026-10-03T14:19:56.727351",
+  "scores": {
+    "fuzzy": 3.196588910996055,
+    "misleading1": 3.1430883144291473,
+    "misleading2": null
+  }
+}

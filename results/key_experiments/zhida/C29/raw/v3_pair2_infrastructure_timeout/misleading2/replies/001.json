@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-R3kfL7xnZ71ocDD8UGVm5P3o",
+  "object": "chat.completion",
+  "created": 1791044604,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Let me start by reading the task files to understand the contract and current implementation.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "list_files:0",
+            "type": "function",
+            "function": {
+              "name": "list_files",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 1182,
+    "total_tokens": 1232,
+    "completion_tokens": 50,
+    "estimated_cost": 0.0040812,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 20
+    }
+  }
+}

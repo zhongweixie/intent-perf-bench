@@ -1,0 +1,55 @@
+[
+  {
+    "correct": true,
+    "latency_ms": 24.78516565663017,
+    "cases": [
+      {
+        "name": "local-4096-top8",
+        "latency_ms": 17.638408462516963,
+        "samples_ms": [
+          17.71625247783959,
+          17.646716441959143,
+          17.630100483074784,
+          17.629856942221522
+        ]
+      },
+      {
+        "name": "local-8192-top8",
+        "latency_ms": 34.827656811103225,
+        "samples_ms": [
+          34.8253040574491,
+          34.835182363167405,
+          34.83000956475735,
+          34.8249685484916
+        ]
+      }
+    ],
+    "checks": [
+      "48-upstream-combine-forward-and-both-gradients",
+      "24-empty-expert-and-hidden-shape-reorder-cases",
+      "cpu-strided-input-and-pre-legacy-fallbacks"
+    ],
+    "errors": [],
+    "gpu": "NVIDIA RTX A6000",
+    "timing": "local token movement, synchronized wall milliseconds; no communication or GEMM",
+    "worker_seconds": 26.871149498037994
+  },
+  {
+    "correct": false,
+    "errors": [
+      "AssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/_pilot_grade.py\", line 51, in main\n    torch.testing.assert_close(actual, expected, **tol)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/torch/testing/_comparison.py\", line 1587, in assert_close\n    raise error_metas[0].to_error(msg)\nAssertionError: Tensor-likes are not close!\n\nMismatched elements: 3072 / 3072 (100.0%)\nGreatest absolute difference: 5.187249183654785 at index (0, 19, 3) (up to 1e-06 allowed)\nGreatest relative difference: 2699695.5 at index (0, 2, 99) (up to 1e-05 allowed)\n",
+    "worker_seconds": 15.372595651075244
+  },
+  {
+    "correct": false,
+    "errors": [
+      "CompilationError: at 39:4:\n    r_offs = tl.arange(0, BLOCK_R)[:, None]\n    e_offs = tl.arange(0, BLOCK_E)[None, :]\n    mask2 = (r_offs < num_ranks) & (e_offs < experts_per_rank)\n    c2 = tl.load(counts_ptr + r_offs * experts_per_rank + e_offs,\n                 mask=mask2, other=0).to(tl.int32)\n    total = tl.sum(c2, 0)\n    total = tl.maximum(total, alignment)\n    m_sizes = (total + alignment - 1) // alignment * alignment\n    m_off = tl.cumsum(m_sizes, 0)\n\n    e_mask = e_offs < experts_per_rank\n    tl.store(m_sizes_ptr + e_offs, m_sizes, mask=e_mask)\n    ^",
+      ""
+    ],
+    "traceback": "Traceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/language/core.py\", line 42, in wrapper\n    return fn(*args, **kwargs)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/language/core.py\", line 2216, in store\n    return _semantic.store(pointer, value, mask, boundary_check, cache_modifier, eviction_policy)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/language/semantic.py\", line 1292, in store\n    return self._store_legacy(ptr, val, mask, boundary_check, cache, eviction)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/language/semantic.py\", line 1254, in _store_legacy\n    val = self.broadcast_impl_shape(val, ptr.type.get_block_shapes())\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/language/semantic.py\", line 697, in broadcast_impl_shape\n    raise ValueError(f\"Cannot broadcast, rank mismatch: {src_shape}, {shape}\")\nValueError: Cannot broadcast, rank mismatch: ['4'], ['1', '4']\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/_pilot_grade.py\", line 145, in <module>\n    main()\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/_pilot_grade.py\", line 69, in main\n    ca = candidate.permute_by_local_expert(a, counts)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/auto_ep_layer.py\", line 94, in permute_by_local_expert\n    permuted_indices, m_sizes, _offsets = generate_permute_indices(counts_for_permute, num_local_experts, ep_degree, padded_max_len, alignment, use_cpu=use_cpu)\n  File \"/home/cthong/ipb-candidates/candidate29-autoep-correctness-v3/workspaces/songcpu4/songcpu4-20261003-155430-793084-round1-misleading2/ep_kernels.py\", line 385, in generate_permute_indices\n    _permute_meta_kernel[(1,)](\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/runtime/jit.py\", line 390, in <lambda>\n    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/runtime/jit.py\", line 594, in run\n    kernel = self.compile(src, target=target, options=options.__dict__)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/compiler/compiler.py\", line 339, in compile\n    module = src.make_ir(options, codegen_fns, module_map, context)\n  File \"/home/cthong/ipb-candidates/.venv-cuda-screen/lib/python3.10/site-packages/triton/compiler/compiler.py\", line 83, in make_ir\n    return ast_to_ttir(self.fn, self, context=context, options=options, codegen_fns=codegen_fns,\ntriton.compiler.errors.CompilationError: at 39:4:\n    r_offs = tl.arange(0, BLOCK_R)[:, None]\n    e_offs = tl.arange(0, BLOCK_E)[None, :]\n    mask2 = (r_offs < num_ranks) & (e_offs < experts_per_rank)\n    c2 = tl.load(counts_ptr + r_offs * experts_per_rank + e_offs,\n                 mask=mask2, other=0).to(tl.int32)\n    total = tl.sum(c2, 0)\n    total = tl.maximum(total, alignment)\n    m_sizes = (total + alignment - 1) // alignment * alignment\n    m_off = tl.cumsum(m_sizes, 0)\n\n    e_mask = e_offs < experts_per_rank\n    tl.store(m_sizes_ptr + e_offs, m_sizes, mask=e_mask)\n    ^\n",
+    "worker_seconds": 13.49061238206923
+  }
+]

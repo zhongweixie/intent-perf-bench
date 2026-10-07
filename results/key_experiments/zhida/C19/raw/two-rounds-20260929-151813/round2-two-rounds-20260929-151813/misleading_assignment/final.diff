@@ -1,0 +1,40 @@
+--- baseline/pipeline.py
++++ misleading_assignment/pipeline.py
+@@ -14,12 +14,27 @@
+     b=tl.load(X+row*(2*N)+N+col,i<TOTAL,0).to(tl.float32)
+     tl.store(Y+i,(a/(1+tl.exp(-a)))*b,i<TOTAL)
+ 
++@triton.jit
++def reducek(P,O,NK,K:tl.constexpr,k:tl.constexpr,B:tl.constexpr):
++    i=tl.program_id(0)*B+tl.arange(0,B)
++    m=i<NK
++    acc=tl.zeros((B,),dtype=tl.float32)
++    base=(i//K)*(k*K)+(i%K)
++    for j in tl.static_range(k):
++        acc+=tl.load(P+base+j*K,mask=m,other=0.0).to(tl.float32)
++    tl.store(O+i,acc.to(tl.float16),mask=m)
++
+ class Pipeline:
+     def __init__(self,data):
+         self.x,self.logits,self.w1,self.w2,self.groups,self.group_topk=data
+         self.M,self.K=self.x.shape;self.E=self.w1.shape[0];self.N=self.w2.shape[-1];self.k=8
+         M,E,N,K,k=self.M,self.E,self.N,self.K,self.k
+         config=get_default_config(M,E,N,K,k,None)
++        config['BLOCK_SIZE_M']=32
++        config['BLOCK_SIZE_N']=64
++        config['BLOCK_SIZE_K']=64
++        config['GROUP_SIZE_M']=1
++        config['num_warps']=4
+         self.config=config; block=config['BLOCK_SIZE_M']
+         capacity=M*k+E*(block-1)
+         if M*k<E:capacity=min(M*k*block,capacity)
+@@ -56,7 +71,8 @@
+     def activation(self):activate[(triton.cdiv(self.M*self.k*self.N,256),)](self.h,self.act,self.N,self.M*self.k*self.N,256)
+     def gemm2(self):self.invoke(self.act,self.w2,self.parts,1,True)
+     def reduce(self):
+-        torch.sum(self.parts,dim=1,out=self.out)
++        NK=self.M*self.K
++        reducek[(triton.cdiv(NK,1024),)](self.parts,self.out,NK,self.K,self.k,1024)
+     def __call__(self):
+         for f in self.stage_fns:f()
+         return self.out

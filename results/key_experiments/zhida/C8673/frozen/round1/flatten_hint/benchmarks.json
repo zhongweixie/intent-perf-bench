@@ -1,0 +1,62 @@
+[
+  {
+    "elapsed_seconds": 176.37599999993108,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+    "latency_ms": 6.573536038398743,
+    "samples_ms": [
+      6.601871967315674,
+      6.5452001094818115
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 243.64099999982864,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+    "latency_ms": 6.665527939796448,
+    "samples_ms": [
+      6.6877758502960205,
+      6.643280029296875
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 395.8289999999106,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+    "latency_ms": 5.394743919372559,
+    "samples_ms": [
+      5.399199962615967,
+      5.39028787612915
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 542.8919999999925,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+    "latency_ms": 4.992400050163269,
+    "samples_ms": [
+      4.9905760288238525,
+      4.9942240715026855
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  },
+  {
+    "elapsed_seconds": 682.6260000001639,
+    "correct": true,
+    "errors": [],
+    "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r1_flatten_hint/_pilot_records.pt",
+    "latency_ms": 4.989856004714966,
+    "samples_ms": [
+      4.999408006668091,
+      4.980304002761841
+    ],
+    "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+  }
+]

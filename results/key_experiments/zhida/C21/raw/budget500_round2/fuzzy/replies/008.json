@@ -1,0 +1,74 @@
+{
+  "id": "gen-1790584876-rSThBXWBEjJfDL3E8dg2",
+  "object": "chat.completion",
+  "created": 1790584876,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": "Let me make focused edits: remove the fp32 temp in grad_weight accumulation and widen the chunk budget.\n\n",
+        "refusal": null,
+        "reasoning": "I have 200s and 18 API attempts. Let me make focused edits and test.\n\nLet me implement the grad_weight fix and chunk const change.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-a81bce53a291ae6f",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"fused_linear_cross_entropy.py\", \"old\": \"_CHUNK_MEM_CONST = 16\", \"new\": \"_CHUNK_MEM_CONST = 64\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-b545f911e122c407",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"fused_linear_cross_entropy.py\", \"old\": \"        if grad_weight is not None and input_requires_grad:\\n            grad_logits_t = grad_logits_chunk.t()\\n            if (\\n                _ADDMM_SUPPORTS_OUT_DTYPE\\n                and grad_weight.device.type == \\\"cuda\\\"\\n                and torch.cuda.get_device_capability(grad_weight.device)[0] >= 8\\n                and grad_weight.dtype == torch.float32\\n                and grad_logits_t.dtype in (torch.float16, torch.bfloat16)\\n            ):\\n                # Unlike torch.mm, torch.addmm's out_dtype path does not participate in\\n                # autocast operand casting, so under AMP (fp32 params, no bias) _input_chunk\\n                # can stay fp32 while grad_logits is the autocast dtype. addmm requires mat1\\n                # and mat2 to share a dtype, so align _input_chunk before accumulating.\\n                input_chunk = _input_chunk\\n                if input_chunk.dtype != grad_logits_t.dtype:\\n                    input_chunk = input_chunk.to(grad_logits_t.dtype)\\n                torch.addmm(\\n                    grad_weight,\\n                    grad_logits_t,\\n                    input_chunk,\\n                    out_dtype=torch.float32,\\n                    out=grad_weight,\\n                )\\n            else:\\n                grad_weight += torch.mm(grad_logits_chunk.t(), _input_chunk).float()\", \"new\": \"        if grad_weight is not None and input_requires_grad:\\n            grad_logits_t = grad_logits_chunk.t()\\n            # align operand dtypes (under AMP _input_chunk can be fp32 while grad_logits is bf16)\\n            input_chunk = _input_chunk\\n            if input_chunk.dtype != grad_logits_t.dtype:\\n                input_chunk = input_chunk.to(grad_logits_t.dtype)\\n            if (\\n                _ADDMM_SUPPORTS_OUT_DTYPE\\n                and grad_weight.device.type == \\\"cuda\\\"\\n                and torch.cuda.get_device_capability(grad_weight.device)[0] >= 8\\n                and grad_weight.dtype == torch.float32\\n                and grad_logits_t.dtype in (torch.float16, torch.bfloat16)\\n            ):\\n                torch.addmm(\\n                    grad_weight,\\n                    grad_logits_t,\\n                    input_chunk,\\n                    out_dtype=torch.float32,\\n                    out=grad_weight,\\n                )\\n            elif grad_weight.dtype == grad_logits_t.dtype:\\n                # accumulate straight into the (bf16/fp16) weight-gradient buffer with\\n                # fp32 compute: avoids materializing a full fp32 copy of the V x H tile\\n                # (a pure bandwidth tax) that the .float() form paid on every chunk.\\n                torch.addmm(grad_weight, grad_logits_t, input_chunk)\\n            else:\\n                grad_weight += torch.mm(grad_logits_t, input_chunk).float()\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "I have 200s and 18 API attempts. Let me make focused edits and test.\n\nLet me implement the grad_weight fix and chunk const change.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 29389,
+    "completion_tokens": 840,
+    "total_tokens": 30229,
+    "cost": 0.0005040728,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 29184,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0005040728,
+      "upstream_inference_prompt_cost": 0.0001512728,
+      "upstream_inference_completions_cost": 0.0003528
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 31,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

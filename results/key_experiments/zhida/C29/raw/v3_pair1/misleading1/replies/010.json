@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RJ2BKDKXfg893nwmGVbuh52q",
+  "object": "chat.completion",
+  "created": 1791043211,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Let me benchmark this change.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 19345,
+    "total_tokens": 19385,
+    "completion_tokens": 40,
+    "estimated_cost": 0.024184529999999996,
+    "prompt_tokens_details": {
+      "cached_tokens": 12288,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 10
+    }
+  }
+}

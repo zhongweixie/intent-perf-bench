@@ -1,0 +1,1 @@
+The mixed-precision wrapper also performs gradient validity, norm, and clipping work each step. Its synchronization and reduction costs may matter here; their contribution has not been established.

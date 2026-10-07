@@ -1,0 +1,22 @@
+{
+  "condition": "fuzzy",
+  "stop_reason": "time_limit",
+  "agent_seconds": 450.0173993902281,
+  "real_wall_seconds": 570.5439981240779,
+  "gpu_queue_wait_seconds": 120.47602868173271,
+  "api_calls": 23,
+  "tool_actions": 30,
+  "generated_tokens": 21135,
+  "prompt_tokens": 412614,
+  "total_tokens": 433749,
+  "reported_cost_usd": 0.01710282,
+  "failed_requests_usage_unknown": 1,
+  "final_source_sha256": "62cb67071015bb0a5c13165354858a1dd428664bad84720639501176aab85bb8",
+  "final_answer": "",
+  "namespace": "round2-two-rounds-20260929-151813-fuzzy",
+  "budget_notices": 23,
+  "api_seconds": 250.9657859839499,
+  "tool_seconds": 318.31162655632943,
+  "benchmark_seconds": 317.5943021317944,
+  "benchmark_active_seconds": 197.11827345006168
+}

@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790588263-rEeX4U28c8dB7IzWXKAy",
+  "object": "chat.completion",
+  "created": 1790588263,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": "Improvement across all cases. Let me try `num_warps=8`:\n\n",
+        "refusal": null,
+        "reasoning": "num_warps=16: small 1529 (was 1643), main 6505 (was 6585), wide 6035 (was 6170). All improved slightly (~5%). Keep.\n\nLet me try num_warps=8.\n\nAlso consider: the small case improved 7%. Let's try 8.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8369fb56930fa4c4",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"new\": \"                BLOCK_SIZE=block_size,\\n                num_warps=8 if not is_hip() else 16,\\n            )\", \"old\": \"                BLOCK_SIZE=block_size,\\n                num_warps=16 if not is_hip() else 16,\\n            )\", \"path\": \"fused_linear_cross_entropy.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "num_warps=16: small 1529 (was 1643), main 6505 (was 6585), wide 6035 (was 6170). All improved slightly (~5%). Keep.\n\nLet me try num_warps=8.\n\nAlso consider: the small case improved 7%. Let's try 8.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 20011,
+    "completion_tokens": 220,
+    "total_tokens": 20231,
+    "cost": 0.0002518152,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 19456,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0002518152,
+      "upstream_inference_prompt_cost": 0.0001594152,
+      "upstream_inference_completions_cost": 9.24e-05
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 71,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

@@ -1,0 +1,96 @@
+--- baseline/pipeline.py
++++ fuzzy/pipeline.py
+@@ -38,7 +38,10 @@
+         self.stage_fns=[self.routing,self.alignment,self.gemm1,self.activation,self.gemm2,self.reduce]
+ 
+     def routing(self):
+-        self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)
++        if self.groups<=1 and self.group_topk<=1:
++            check(lib.route(self.logits.data_ptr(),self.weights.data_ptr(),self.ids.data_ptr(),self.work.data_ptr(),self.token_ids.data_ptr(),self.M,self.E,self.k,torch.cuda.current_stream().cuda_stream))
++        else:
++            self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)
+ 
+     def alignment(self):
+         block=self.config['BLOCK_SIZE_M']
+@@ -56,7 +59,7 @@
+     def activation(self):activate[(triton.cdiv(self.M*self.k*self.N,256),)](self.h,self.act,self.N,self.M*self.k*self.N,256)
+     def gemm2(self):self.invoke(self.act,self.w2,self.parts,1,True)
+     def reduce(self):
+-        torch.sum(self.parts,dim=1,out=self.out)
++        check(lib.reduce8(self.parts.data_ptr(),self.out.data_ptr(),self.M,self.K,torch.cuda.current_stream().cuda_stream))
+     def __call__(self):
+         for f in self.stage_fns:f()
+         return self.out
+--- baseline/routing.py
++++ fuzzy/routing.py
+@@ -8,7 +8,27 @@
+ import triton.language as tl
+ envs=SimpleNamespace(VLLM_BATCH_INVARIANT=False, VLLM_USE_FUSED_MOE_GROUPED_TOPK=False)
+ current_platform=SimpleNamespace(is_rocm=lambda:False, is_cuda=lambda:True)
+-def grouped_topk(
++def _fast_softmax_topk(
++    gating_output: torch.Tensor,
++    topk: int,
++    renormalize: bool,
++    routed_scaling_factor: float,
++):
++    # num_expert_group <= 1 makes the group mask all-ones, so the grouped
++    # selection degenerates to a plain global top-k over the softmax scores.
++    # top-k of softmax(x) followed by renormalization is exactly
++    # softmax(top-k logits), which avoids materializing the full softmax.
++    vals, idx = torch.topk(gating_output, k=topk, dim=-1, sorted=False)
++    if renormalize:
++        weights = torch.softmax(vals, dim=-1)
++    else:
++        weights = torch.softmax(gating_output, dim=-1).gather(1, idx)
++    if routed_scaling_factor != 1.0:
++        weights = weights * routed_scaling_factor
++    return weights.to(torch.float32), idx.to(torch.int32)
++
++
++def _grouped_topk_impl(
+     hidden_states: torch.Tensor,
+     gating_output: torch.Tensor,
+     topk: int,
+@@ -92,4 +112,40 @@
+     return topk_weights.to(torch.float32), topk_ids.to(torch.int32)
+ 
+ # Same dynamic compile mode as upstream CUDA simple_compile_backend.
+-grouped_topk = torch.compile(grouped_topk, dynamic=True, backend="inductor")
++_grouped_topk_compiled = torch.compile(
++    _grouped_topk_impl, dynamic=True, backend="inductor"
++)
++
++
++def grouped_topk(
++    hidden_states: torch.Tensor,
++    gating_output: torch.Tensor,
++    topk: int,
++    renormalize: bool,
++    num_expert_group: int = 0,
++    topk_group: int = 0,
++    scoring_func: str = "softmax",
++    routed_scaling_factor: float = 1.0,
++    e_score_correction_bias: torch.Tensor | None = None,
++) -> tuple[torch.Tensor, torch.Tensor]:
++    assert hidden_states.size(0) == gating_output.size(0), "Number of tokens mismatch"
++    if (
++        e_score_correction_bias is None
++        and scoring_func == "softmax"
++        and num_expert_group <= 1
++        and not envs.VLLM_USE_FUSED_MOE_GROUPED_TOPK
++    ):
++        return _fast_softmax_topk(
++            gating_output, topk, renormalize, routed_scaling_factor
++        )
++    return _grouped_topk_compiled(
++        hidden_states,
++        gating_output,
++        topk,
++        renormalize,
++        num_expert_group,
++        topk_group,
++        scoring_func,
++        routed_scaling_factor,
++        e_score_correction_bias,
++    )

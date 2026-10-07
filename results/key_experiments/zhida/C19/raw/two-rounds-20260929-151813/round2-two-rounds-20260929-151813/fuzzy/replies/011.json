@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790696711-RS7WYX6FnLJdBUB8WNOX",
+  "object": "chat.completion",
+  "created": 1790696711,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Routing costs ~15.7us (62.15 - 46.47). That's a big chunk! ~25% of total.\n\nNow measure reduce. Let me make reduce a no-op too (out stays stale). Actually out would be stale valid data.\n\nLet me test reduce no-op.\n\nActually, let me also test activation and gemms. But each run costs. Let me do reduce + activation together? No, I want separate numbers. Let me do reduce no-op now.\n\nActually more efficient: I can determine costs by cumulative no-ops. Run 2: routing+reduce no-op -> gives reduce cost. Run 3: routing+reduce+activation no-op. Etc. But activation is one kernel; gemms are the rest.\n\nLet me just do reduce no-op (with routing still no-op) now.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-ac7ebef66e0c7fe3",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"new\": \"    def reduce(self):\\n        pass\\n        # torch.sum(self.parts,dim=1,out=self.out)\", \"old\": \"    def reduce(self):\\n        torch.sum(self.parts,dim=1,out=self.out)\", \"path\": \"pipeline.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Routing costs ~15.7us (62.15 - 46.47). That's a big chunk! ~25% of total.\n\nNow measure reduce. Let me make reduce a no-op too (out stays stale). Actually out would be stale valid data.\n\nLet me test reduce no-op.\n\nActually, let me also test activation and gemms. But each run costs. Let me do reduce + activation together? No, I want separate numbers. Let me do reduce no-op now.\n\nActually more efficient: I can determine costs by cumulative no-ops. Run 2: routing+reduce no-op -> gives reduce cost. Run 3: routing+reduce+activation no-op. Etc. But activation is one kernel; gemms are the rest.\n\nLet me just do reduce no-op (with routing still no-op) now.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 18694,
+    "completion_tokens": 284,
+    "total_tokens": 18978,
+    "cost": 0.0002507568,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 18304,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0002507568,
+      "upstream_inference_prompt_cost": 0.0001314768,
+      "upstream_inference_completions_cost": 0.00011928
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 171,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

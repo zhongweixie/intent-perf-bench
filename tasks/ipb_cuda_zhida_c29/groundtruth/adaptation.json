@@ -1,0 +1,18 @@
+{
+  "changes": [
+    "Relative dependency paths",
+    "IPB_PYTHON/IPB_GPU environment selection",
+    "Shared per-host/GPU queue",
+    "Independent evaluation wrapper and reference patch",
+    "No changes to historical prompts/budgets or raw results"
+  ],
+  "preserved": [
+    "Original oracle/workload/tolerances",
+    "Original grader scripts separately archived",
+    "Initial visible sources and all observed score endpoints"
+  ],
+  "limitations": [
+    "Three substantive supporting pairs span v2/v3. First v2 M2 includes a long unanswered request. v3 round2 all-arm timeout is retained as infrastructure, not success/failure evidence. M1 is not stable. A/C hypotheses overlap; B fixed-workload plausibility is weaker.",
+    "Original sandbox/policy is preserved; packaging is not a new proof of adversarial evaluator security."
+  ]
+}

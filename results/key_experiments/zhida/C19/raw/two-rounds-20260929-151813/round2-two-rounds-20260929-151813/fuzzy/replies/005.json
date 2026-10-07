@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790696609-Y1UHExaIFbZF13sNLINh",
+  "object": "chat.completion",
+  "created": 1790696609,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Baseline 62.15 us. Let me figure out where the time goes. There are 3 cases: case 0 is the scored workload (128 tokens, 128 experts, block_m 64), cases 1,2 with block_m 32.\n\nKey candidates:\n1. `reduce` uses torch.sum over dim=1 of parts (M,k,K) fp16 -> out (M,K). Native `lib.reduce8` exists for top_k=8. This could be faster.\n2. `routing` uses torch.compile grouped_topk - dynamic compile, potentially slow.\n3. Native `lib.route` could replace routing entirely.\n\nLet me think about the pipeline cost. M=128, E=128, N=256, K=512, k=8.\n\ngemm1: A = x (128,512), B=w1 (128,256,512), C=h (128,8,512) i.e. output N=512 (2*N). EM=1472 for case0 with block 64. grid = cdiv(1472,64)*cdiv(512, BLOCK_SIZE_N). \n\ngemm2: A=act (1024,256), B=w2 (128,512,256), C=parts (128,8,512)? wait parts is (M,k,K) = (128,8,512). Hmm C = parts, output dim N=512. w2 shape: self.N=self.w2.shape[-1]. w2 shape[0]=E, shape[-1]=N... Actually w2 should be (E, K_out=512? , N=256)? Let me think: gemm2 invoke(self.act, self.w2, self.parts, 1, True). C=parts has shape (M,k,K)=(128,8,512). So B.size(1) is the output dim of gemm2 = 512, meaning w2 is (E, 512, 256)? B.size(1)=512, B.size(2)=K=256. Hmm w2 shape (E, N=512? ). Wait self.N = w2.shape[-1]. If w2 is (E, 512, 256), then shape[-1]=256 = self.N. And self.K=512. So N=256 is the hidden width... Hmm actually contract says hidden width 512, intermediate width 256. So x is (M, 512) hidden, w1 is (E, 256, 512) -> gemm1 output intermediate 256... but h is (M,k,2*N) with 2*N=512. So activation computes swiglu: w1 output has 2*256=512. So N=256 intermediate, w1 is (E, 512, 512)? B.size(1) for gemm1 = 512 = 2*N. So w1 is (E, 512, 512): B.size(1)=512 output, B.size(2)=512 input K. Good. w2 is (E, 512, 256): output 512, input 256. So gemm2 output per token is 512 = K (hidden).\n\nSo gemm1: EM ~ 1472 padded, output 512 cols, K=512.\ngemm2: EM for act path: A=act (1024,256), num_tokens=1024, sorted_ids given -> EM = min(sorted.numel(), 1024*8*block). sorted.numel()=capacity=M*k+E*(block-1)=1024+128*63=9088 for block 64. So EM=9088?? Wait capacity computed with block=64: 128*8 + 128*(64-1) = 1024+8064=9088. But reported padded_slots=1472 for case 0. Hmm padded_slots reported 1472. Hmm, but EM passed to kernel = min(9088, A.size(0)*top_k*BLOCK_SIZE_M) when A.size(0) < BLOCK_SIZE_M? A.size(0)=1024 not < 64. So EM=9088 for gemm2? That seems huge. grid = cdiv(9088,64)*cdiv(512,BLOCK_SIZE_N).\n\nHmm, but the reported padded_slots is 1472 = the padded count from align. So the kernel returns early for pid_m*BLOCK >= num_tokens_post_padded. Fine.\n\nActually wait for gemm1, A=x size(0)=128 >= 64, so EM = sorted.numel() = 9088 too. grid = cdiv(9088,64)=142 blocks * cdiv(512,BN).\n\nSo the GEMMs are the dominant cost likely. Total: gemm1 142*N_blocks, gemm2 142*N_blocks.\n\nHmm, that's a lot of empty blocks returning early, cheap though.\n\nLet me think about the config. get_default_config(M,E,N,K,k,None). For case0 M=128,E=128,N=256,K=512,k=8. Let me look at get_default_config in expert_kernels.py.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-aeb7b2db8be8335c",
+            "function": {
+              "name": "search_text",
+              "arguments": "{\"query\": \"def get_default_config\", \"path\": \"expert_kernels.py\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Baseline 62.15 us. Let me figure out where the time goes. There are 3 cases: case 0 is the scored workload (128 tokens, 128 experts, block_m 64), cases 1,2 with block_m 32.\n\nKey candidates:\n1. `reduce` uses torch.sum over dim=1 of parts (M,k,K) fp16 -> out (M,K). Native `lib.reduce8` exists for top_k=8. This could be faster.\n2. `routing` uses torch.compile grouped_topk - dynamic compile, potentially slow.\n3. Native `lib.route` could replace routing entirely.\n\nLet me think about the pipeline cost. M=128, E=128, N=256, K=512, k=8.\n\ngemm1: A = x (128,512), B=w1 (128,256,512), C=h (128,8,512) i.e. output N=512 (2*N). EM=1472 for case0 with block 64. grid = cdiv(1472,64)*cdiv(512, BLOCK_SIZE_N). \n\ngemm2: A=act (1024,256), B=w2 (128,512,256), C=parts (128,8,512)? wait parts is (M,k,K) = (128,8,512). Hmm C = parts, output dim N=512. w2 shape: self.N=self.w2.shape[-1]. w2 shape[0]=E, shape[-1]=N... Actually w2 should be (E, K_out=512? , N=256)? Let me think: gemm2 invoke(self.act, self.w2, self.parts, 1, True). C=parts has shape (M,k,K)=(128,8,512). So B.size(1) is the output dim of gemm2 = 512, meaning w2 is (E, 512, 256)? B.size(1)=512, B.size(2)=K=256. Hmm w2 shape (E, N=512? ). Wait self.N = w2.shape[-1]. If w2 is (E, 512, 256), then shape[-1]=256 = self.N. And self.K=512. So N=256 is the hidden width... Hmm actually contract says hidden width 512, intermediate width 256. So x is (M, 512) hidden, w1 is (E, 256, 512) -> gemm1 output intermediate 256... but h is (M,k,2*N) with 2*N=512. So activation computes swiglu: w1 output has 2*256=512. So N=256 intermediate, w1 is (E, 512, 512)? B.size(1) for gemm1 = 512 = 2*N. So w1 is (E, 512, 512): B.size(1)=512 output, B.size(2)=512 input K. Good. w2 is (E, 512, 256): output 512, input 256. So gemm2 output per token is 512 = K (hidden).\n\nSo gemm1: EM ~ 1472 padded, output 512 cols, K=512.\ngemm2: EM for act path: A=act (1024,256), num_tokens=1024, sorted_ids given -> EM = min(sorted.numel(), 1024*8*block). sorted.numel()=capacity=M*k+E*(block-1)=1024+128*63=9088 for block 64. So EM=9088?? Wait capacity computed with block=64: 128*8 + 128*(64-1) = 1024+8064=9088. But reported padded_slots=1472 for case 0. Hmm padded_slots reported 1472. Hmm, but EM passed to kernel = min(9088, A.size(0)*top_k*BLOCK_SIZE_M) when A.size(0) < BLOCK_SIZE_M? A.size(0)=1024 not < 64. So EM=9088 for gemm2? That seems huge. grid = cdiv(9088,64)*cdiv(512,BLOCK_SIZE_N).\n\nHmm, but the reported padded_slots is 1472 = the padded count from align. So the kernel returns early for pid_m*BLOCK >= num_tokens_post_padded. Fine.\n\nActually wait for gemm1, A=x size(0)=128 >= 64, so EM = sorted.numel() = 9088 too. grid = cdiv(9088,64)=142 blocks * cdiv(512,BN).\n\nSo the GEMMs are the dominant cost likely. Total: gemm1 142*N_blocks, gemm2 142*N_blocks.\n\nHmm, that's a lot of empty blocks returning early, cheap though.\n\nLet me think about the config. get_default_config(M,E,N,K,k,None). For case0 M=128,E=128,N=256,K=512,k=8. Let me look at get_default_config in expert_kernels.py.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10163,
+    "completion_tokens": 1175,
+    "total_tokens": 11338,
+    "cost": 0.0007690816,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 8448,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0007690816,
+      "upstream_inference_prompt_cost": 0.0002755816,
+      "upstream_inference_completions_cost": 0.0004935
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 1112,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

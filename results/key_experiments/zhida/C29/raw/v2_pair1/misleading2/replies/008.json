@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RgNkhpSgeWl6MskMPOqoZ6wa",
+  "object": "chat.completion",
+  "created": 1791033036,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Let me get a baseline benchmark first to see where we stand, then implement my optimization plan. I had analyzed the code thoroughly. Let me run the benchmark to get baseline numbers.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 14970,
+    "total_tokens": 15040,
+    "completion_tokens": 70,
+    "estimated_cost": 0.03184248,
+    "prompt_tokens_details": {
+      "cached_tokens": 4608,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 39
+    }
+  }
+}

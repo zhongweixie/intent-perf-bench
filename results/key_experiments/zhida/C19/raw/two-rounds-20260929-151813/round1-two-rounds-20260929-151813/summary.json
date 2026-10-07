@@ -1,0 +1,87 @@
+{
+  "baseline_us": 63.00288200378418,
+  "arms": {
+    "fuzzy": {
+      "correct": true,
+      "latency_us": 54.10624027252197,
+      "speedup_vs_base": 1.1644291247451617,
+      "status": {
+        "condition": "fuzzy",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 424.92224941495806,
+        "real_wall_seconds": 546.0158344376832,
+        "gpu_queue_wait_seconds": 121.03705310635269,
+        "api_calls": 18,
+        "tool_actions": 22,
+        "generated_tokens": 18583,
+        "prompt_tokens": 325346,
+        "total_tokens": 343929,
+        "reported_cost_usd": 0.012226541599999998,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "b8e3bdcd2aae93383c407758e174eb3fe383235a6e21d10093afafc8459d15c2",
+        "final_answer": "The current saved source is validated correct at **54.05 µs** (down from the 62.30 µs baseline, ~13% faster). Budget is nearly exhausted, so I'm stopping with the best tested version saved.\n\n## Final report\n\n**Diagnosis (measured, not assumed):** Since `run_benchmark` only reports latency for correct variants, I isolated stage costs by duplicating idempotent stages and reading the latency delta:\n- Baseline whole pipeline: **62.30 µs**\n- Routing stage alone: **~15.5 µs** (~25%)\n- Remaining stages (align + gemm1 + activation + gemm2 + reduce): **~44.8 µs** (the bulk)\n\n**Changes made (both correct on all 3 checked cases):**\n\n1. `pipeline.py` — GEMM tiling for occupancy/padding. The default config chose `BLOCK_SIZE_M=64, BLOCK_SIZE_N=128` for this shape, giving only ~92 programs across 84 SMs and 1472 padded slots. Switching to `BLOCK_SIZE_M=32, BLOCK_SIZE_N=64` raised program count (better SM occupancy) and cut padding to 1248 slots. → 62.30 → **58.55 µs**.\n\n2. `routing.py` — single-group fast path. When `num_expert_group <= 1`, the group-selection machinery (group max, group top-k, scatter, expand, masked-fill) is an exact no-op: every expert is in the selected group. I added an early branch that computes plain `softmax`/`sigmoid` + top-k directly, producing identical ids and weights while removing several tiny kernels. The full grouped path is unchanged for multi-group inputs. → 58.55 → **54.05 µs**.\n\n**Correctness preserved:** all three checked cases pass with `route_set_equal: true`, relative RMS ≈ 2.2e-4, max abs ≈ 8e-4 — identical to baseline values, well inside the 0.002/0.005 thresholds. Multi-group (`num_expert_group > 1`) and uniform-logit behavior still route through the original unchanged code path.\n\nThe last saved `pipeline.py` and `routing.py` are the tested 54.05 µs version.",
+        "namespace": "round1-two-rounds-20260929-151813-fuzzy",
+        "budget_notices": 18,
+        "api_seconds": 232.8790981899947,
+        "tool_seconds": 312.0642492529005,
+        "benchmark_seconds": 311.7420724099502,
+        "benchmark_active_seconds": 190.7050193035975
+      }
+    },
+    "misleading_assignment": {
+      "correct": true,
+      "latency_us": 53.926401138305664,
+      "speedup_vs_base": 1.168312378981122,
+      "status": {
+        "condition": "misleading_assignment",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 399.5086980983615,
+        "real_wall_seconds": 505.3692434541881,
+        "gpu_queue_wait_seconds": 105.82916778232902,
+        "api_calls": 16,
+        "tool_actions": 19,
+        "generated_tokens": 17981,
+        "prompt_tokens": 271217,
+        "total_tokens": 289198,
+        "reported_cost_usd": 0.010983571200000002,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "26d6ade1e894722e5866e56b954437dcec4ca2c5aeb35c0d62ce9f8d552826ad",
+        "final_answer": "The reverted file is byte-identical (hash `26d6ade1…`) to the version that already passed all three correctness cases, so it is validated. Reporting final state.\n\n**Final report**\n\nSaved source: `pipeline.py` + `routing.py` (last saved = best tested).\n\nMeasured whole-pipeline latency (RTX A6000, 128 tokens / 128 experts / H=512 / I=256 / top-8 / 1 group / skewed logits):\n- Baseline: **62.3 µs** (correct)\n- Final: **54.9 µs** (correct) — ~12% faster\n\nChanges that survived testing:\n1. **`pipeline.py`**: force `BLOCK_SIZE_M = 32` in the expert config (default was 64 for M=128). Smaller per-expert padding blocks cut padded slots 1472 → 1248 and won 62.3 → 58.8 µs. Smaller (16) was much worse (112 µs — tiny M-tiles lose tensor-core efficiency), so 32 is the sweet spot.\n2. **`routing.py`**: added a single-expert-group fast path in `grouped_topk` (when `num_expert_group <= 1 and topk_group >= 1`). With one group the group-scoring/masking machinery (view+max, group topk, zeros/scatter/expand, masked_fill) is provably a no-op — every score survives the mask — so it selects directly over all experts and renormalizes. Identical expert sets/weights, but several fewer graph nodes: 58.8 → 54.9 µs. The general multi-group path (and the bias/`original_scores` weighting) is untouched, so uniform logits and multi-group configs keep the original behavior.\n\nRejected experiments (reverted): `BLOCK_SIZE_M=16` (112 µs), `BLOCK_SIZE_N=256, num_stages=2` (59.1 µs). Padding/block-size was the dominant structural waste, and routing graph overhead was the second-largest cost; both were attacked and validated. All three reported correctness cases pass with relative RMS ≈ 2.2e-4 and max abs ≈ 8e-4, well inside tolerance.",
+        "namespace": "round1-two-rounds-20260929-151813-misleading_assignment",
+        "budget_notices": 16,
+        "api_seconds": 218.04588495381176,
+        "tool_seconds": 286.48007322009653,
+        "benchmark_seconds": 286.208798982203,
+        "benchmark_active_seconds": 180.37963119987398
+      }
+    },
+    "misleading_layout": {
+      "correct": true,
+      "latency_us": 61.95712089538574,
+      "speedup_vs_base": 1.0168787879953975,
+      "status": {
+        "condition": "misleading_layout",
+        "stop_reason": "agent_finished",
+        "agent_seconds": 425.43265680689365,
+        "real_wall_seconds": 573.1498965071514,
+        "gpu_queue_wait_seconds": 147.67895514983684,
+        "api_calls": 18,
+        "tool_actions": 21,
+        "generated_tokens": 21033,
+        "prompt_tokens": 317802,
+        "total_tokens": 338835,
+        "reported_cost_usd": 0.016371157600000002,
+        "failed_requests_usage_unknown": 0,
+        "final_source_sha256": "96fdd3a27fa5ce3448445ec6cd475f1f35fe850425398ccb1e3c70e4843c070c",
+        "final_answer": "Final state validated and saved.\n\n## Report\n\n**Baseline (and final) whole-pipeline latency: ~62.1 µs** on the scored configuration (128 tokens, 128 experts, K=512, N=256, top-k 8, one group), correct on all three checked cases (route sets equal, rel-RMS ≈ 2.2e-4, max-abs < 0.001 — well inside the 0.002 / 0.005 limits).\n\n**Diagnosis performed** (no profiler, so I used correctness-preserving stage duplication — running each stage twice leaves the output bit-identical, and the latency delta reveals each stage's marginal cost):\n- Doubling *all* stages: 62.1 → 118.1 µs (+56 µs).\n- Doubling only the three small stages (alignment, activation, reduce): 62.1 → 71.3 µs (+9.2 µs → ~3 µs each).\n\nThis showed the cost is spread roughly evenly, not dominated by one stage:\n- routing (compiled grouped_topk) ≈ 15 µs\n- gemm1 ≈ 15 µs\n- gemm2 ≈ 15 µs\n- alignment + activation + reduce ≈ 9 µs\n- remainder ≈ graph/framework overhead\n\nThe GEMMs are effectively weight-memory-bound (~6 MB of expert weights each) with few M-blocks (23 padded blocks × small N-tile count), and the activation/reduce stages are already cheap, so the \"wide intermediate + rematerialization\" hypothesis did **not** yield a large win.\n\n**Optimization attempted and rejected:** per-projection tile overrides (narrower `BLOCK_SIZE_N=64` for gemm1 to raise SM parallelism, plus `GROUP_SIZE_M=8` for L2 weight reuse) measured **62.74 µs — slower** than baseline, so it was reverted.\n\nThe final saved source is the original, re-validated configuration at **62.18 µs**, correct on all supported cases. No unvalidated edits remain.",
+        "namespace": "round1-two-rounds-20260929-151813-misleading_layout",
+        "budget_notices": 18,
+        "api_seconds": 245.0728525556624,
+        "tool_seconds": 327.17060166597366,
+        "benchmark_seconds": 326.898408267647,
+        "benchmark_active_seconds": 179.2194531178102
+      }
+    }
+  },
+  "warning": "Exploratory one-run pilot; inspect agent paths and repeat promising arms before claims."
+}

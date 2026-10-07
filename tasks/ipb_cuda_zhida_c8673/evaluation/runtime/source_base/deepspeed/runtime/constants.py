@@ -1,0 +1,417 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
+from deepspeed.accelerator import get_accelerator
+
+#############################################
+# Routes
+#############################################
+ROUTE_TRAIN = "train"
+ROUTE_EVAL = "eval"
+ROUTE_PREDICT = "predict"
+ROUTE_ENCODE = "encode"
+
+#############################################
+# Batch size
+#############################################
+TRAIN_BATCH_SIZE = "train_batch_size"
+TRAIN_BATCH_SIZE_DEFAULT = None
+
+#############################################
+# Optimizer and lr scheduler
+#############################################
+OPTIMIZER = "optimizer"
+OPTIMIZER_TYPE_DEFAULT = None
+OPTIMIZER_PARAMS = "params"
+TYPE = "type"
+LEGACY_FUSION = "legacy_fusion"
+LEGACY_FUSION_DEFAULT = False
+SCHEDULER = "scheduler"
+SCHEDULER_TYPE_DEFAULT = None
+SCHEDULER_PARAMS = "params"
+MAX_GRAD_NORM = 'max_grad_norm'
+
+#############################################
+# Optimizer and lr scheduler
+#############################################
+ZERO_ALLOW_UNTESTED_OPTIMIZER = "zero_allow_untested_optimizer"
+ZERO_ALLOW_UNTESTED_OPTIMIZER_DEFAULT = False
+ZERO_FORCE_DS_CPU_OPTIMIZER = "zero_force_ds_cpu_optimizer"
+ZERO_FORCE_DS_CPU_OPTIMIZER_DEFAULT = True
+
+# Steps
+STEPS_PER_PRINT = "steps_per_print"
+STEPS_PER_PRINT_DEFAULT = None
+
+#########################################
+# Training micro batch size per GPU
+#########################################
+# Batch size for one training step. This is used when the
+# TRAIN_BATCH_SIZE cannot fit in GPU memory to determine
+# the number of gradient accumulation steps. By default, this
+# is set to None. Users can configure in ds_config.json as below example:
+TRAIN_MICRO_BATCH_SIZE_PER_GPU = '''
+TRAIN_MICRO_BATCH_SIZE_PER_GPU is defined in this format:
+"train_micro_batch_size_per_gpu": 1
+'''
+TRAIN_MICRO_BATCH_SIZE_PER_GPU = "train_micro_batch_size_per_gpu"
+TRAIN_MICRO_BATCH_SIZE_PER_GPU_DEFAULT = None
+
+#########################################
+# Gradient Accumulation
+#########################################
+# Gradient accumulation feature. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+GRADIENT_ACCUMULATION_FORMAT = '''
+Gradient Accumulation should be of the format:
+"gradient_accumulation_steps": 1
+'''
+GRADIENT_ACCUMULATION_STEPS = "gradient_accumulation_steps"
+GRADIENT_ACCUMULATION_STEPS_DEFAULT = None
+
+#########################################
+# Managed Gradient Accumulation
+#########################################
+# True (default): DeepSpeed tracks micro-steps and steps on the boundary. False: the client owns the boundary and each step() applies an optimizer update.
+MANAGED_GRADIENT_ACCUMULATION = "managed_gradient_accumulation"
+MANAGED_GRADIENT_ACCUMULATION_DEFAULT = True
+
+#########################################
+# BFLOAT16 support
+#########################################
+# BFLOAT16 feature. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+BFLOAT16_FORMAT = '''
+BFLOAT16 parameters should be of the format:
+"bf16": {
+  "enabled": true,
+  "immediate_grad_update": false,
+  "check_overflow": false
+}
+'''
+BFLOAT16 = "bf16"
+BFLOAT16_OLD = "bfloat16"  # keeping for backwards compatibility
+
+BFLOAT16_ENABLED = "enabled"
+BFLOAT16_ENABLED_DEFAULT = False
+
+CHECK_OVERFLOW = "check_overflow"
+BFLOAT16_CHECK_OVERFLOW_DEFAULT = False
+
+# BFLOAT16 optimizer immediate gradient update
+BFLOAT16_IMMEDIATE_GRAD_UPDATE = "immediate_grad_update"
+BFLOAT16_IMMEDIATE_GRAD_UPDATE_DEFAULT = True
+
+# BFLOAT16 master weights and optimizer states options
+BFLOAT16_MASTER_WEIGHTS_AND_GRADS = "bf16_master_weights_and_grads"
+BFLOAT16_MASTER_WEIGHTS_AND_GRADS_DEFAULT = False
+BFLOAT16_OPTIMIZER_STATES = "bf16_optimizer_states"
+BFLOAT16_OPTIMIZER_STATES_DEFAULT = False
+
+# DDP variant of BFLOAT16
+# DDP variant: bf16 model with bf16 grad accumulation (uses FP16_Optimizer in bf16 mode)
+# Must be different from BFLOAT16 to allow proper optimizer selection
+DDP_BFLOAT16 = "ddp_bf16"
+
+#########################################
+# FP16 support
+#########################################
+# FP16 feature. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+FP16_FORMAT = '''
+FP16 parameters should be of the format:
+"fp16": {
+  "enabled": true,
+  "auto_cast": false,
+  "loss_scale": 0,
+  "initial_scale_power": 16,
+  "loss_scale_window": 1000,
+  "hysteresis": 2,
+  "consecutive_hysteresis": false,
+  "min_loss_scale": 1
+}
+'''
+FP16 = "fp16"
+
+FP16_ENABLED = "enabled"
+FP16_ENABLED_DEFAULT = False
+
+# FP16 loss scale, zero means using dynamic scaling
+FP16_LOSS_SCALE = "loss_scale"
+FP16_LOSS_SCALE_DEFAULT = 0
+
+FP16_AUTO_CAST = "auto_cast"
+FP16_AUTO_CAST_DEFAULT = False
+
+# FP16 initial dynamic scale loss power
+FP16_INITIAL_SCALE_POWER = "initial_scale_power"
+FP16_INITIAL_SCALE_POWER_DEFAULT = 16
+
+# FP16 loss scale window
+FP16_LOSS_SCALE_WINDOW = "loss_scale_window"
+FP16_LOSS_SCALE_WINDOW_DEFAULT = 1000
+
+# FP16 hysteresis
+FP16_HYSTERESIS = "hysteresis"
+FP16_HYSTERESIS_DEFAULT = 2
+
+# FP16 consecutive hysteresis
+FP16_CONSECUTIVE_HYSTERESIS = "consecutive_hysteresis"
+FP16_CONSECUTIVE_HYSTERESIS_DEFAULT = False
+
+# FP16 min loss scale
+FP16_MIN_LOSS_SCALE = "min_loss_scale"
+FP16_MIN_LOSS_SCALE_DEFAULT = 1
+
+# FP16 master and grads
+FP16_MASTER_WEIGHTS_AND_GRADS = "fp16_master_weights_and_grads"
+FP16_MASTER_WEIGHTS_AND_GRADS_DEFAULT = False
+
+#########################################
+# Torch AMP support
+#########################################
+TORCH_AUTOCAST_FORMAT = '''
+PyTorch autocast config should be of the format:
+"torch_autocast": {
+  "enabled": true,
+  "dtype": "bfloat16",
+  "lower_precision_safe_modules": [
+    "torch.nn.modules.linear.Linear",
+    "torch.nn.modules.conv.Conv2d"
+  ]
+}
+'''
+TORCH_AUTOCAST = "torch_autocast"
+
+TORCH_AUTOCAST_ENABLED = "enabled"
+TORCH_AUTOCAST_ENABLED_DEFAULT = False
+TORCH_AUTOCAST_DTYPE = "dtype"
+TORCH_AUTOCAST_LOWER_PRECISION_SAFE_MODULES = "lower_precision_safe_modules"
+
+#########################################
+# Gradient clipping
+#########################################
+# Gradient clipping. By default, this feature is enabled with a value of 1.0.
+# Users can configure in ds_config.json as below example (set to 0.0 to disable):
+GRADIENT_CLIPPING_FORMAT = '''
+Gradient clipping should be enabled as:
+"gradient_clipping": 1.0
+'''
+GRADIENT_CLIPPING = 'gradient_clipping'
+GRADIENT_CLIPPING_DEFAULT = 1.0
+
+#########################################
+# Communication data type
+#########################################
+# Supported types: ['none', 'fp16', 'fp32']
+# By default, this feature is not enabled ('none' value)
+# Users can configure in ds_config.json as below example:
+COMMUNICATION_DATA_TYPE_FORMAT = '''
+Communication data type should be set as:
+"communication_data_type": "fp32"
+'''
+COMMUNICATION_DATA_TYPE = "communication_data_type"
+COMMUNICATION_DATA_TYPE_DEFAULT = None
+
+###########################################################
+# Gradient communication data type for sequence parallelism
+###########################################################
+# Supported types: ['fp16', 'bf16','fp32']
+# Default value is fp32
+# Users can configure in ds_config.json as below example:
+SEQ_PARALLEL_COMMUNICATION_DATA_TYPE_FORMAT = '''
+Optional comm data type for seq paralleism should be set as:
+"seq_parallel_communication_data_type": "fp32"
+'''
+SEQ_PARALLEL_COMMUNICATION_DATA_TYPE = "seq_parallel_communication_data_type"
+
+if get_accelerator().device_name == 'cuda' and get_accelerator().communication_backend_version() >= (2, 27, 3):
+    # nccl>=2.27.3 uses fp32 accumulation for half precision inputs, so there is no need to waste compute and memory to manually upcast to fp32 unless the user wants it and then override
+    SEQ_PARALLEL_COMMUNICATION_DATA_TYPE_DEFAULT = None
+else:
+    SEQ_PARALLEL_COMMUNICATION_DATA_TYPE_DEFAULT = "fp32"
+
+SEQ_PARALLEL_COMMUNICATION_DATA_TYPE_DEFAULT = "fp32"
+
+#########################################
+# Scale/predivide gradients before allreduce
+#########################################
+# Prescale gradients. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+PRESCALE_GRADIENTS_FORMAT = '''
+Gradient prescaling should be enabled as:
+"prescale_gradients": true
+'''
+PRESCALE_GRADIENTS = "prescale_gradients"
+PRESCALE_GRADIENTS_DEFAULT = False
+
+GRADIENT_PREDIVIDE_FACTOR_FORMAT = '''
+Gradient predivide factor should be enabled as:
+"gradient_predivide_factor": 1.0
+'''
+GRADIENT_PREDIVIDE_FACTOR = "gradient_predivide_factor"
+GRADIENT_PREDIVIDE_FACTOR_DEFAULT = 1.0
+
+GRADIENT_ALLREDUCE_OP_FORMAT = '''
+Gradient allreduce operation should be set as:
+"gradient_allreduce_op": "mean"
+'''
+GRADIENT_ALLREDUCE_OP = "gradient_allreduce_op"
+GRADIENT_ALLREDUCE_OP_MEAN = "mean"
+GRADIENT_ALLREDUCE_OP_SUM = "sum"
+GRADIENT_ALLREDUCE_OP_DEFAULT = GRADIENT_ALLREDUCE_OP_MEAN
+GRADIENT_ALLREDUCE_OP_SUPPORTED = (GRADIENT_ALLREDUCE_OP_MEAN, GRADIENT_ALLREDUCE_OP_SUM)
+
+#########################################
+# Disable AllGather
+#########################################
+# Disable AllGather. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+DISABLE_ALLGATHER_FORMAT = '''
+Disable AllGather should be enabled as:
+"disable_allgather": true
+'''
+DISABLE_ALLGATHER = "disable_allgather"
+DISABLE_ALLGATHER_DEFAULT = False
+
+#########################################
+# Dump DeepSpeed state
+#########################################
+# Dump State. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+DUMP_STATE_FORMAT = '''
+Dump state should be enabled as:
+"dump_state": true
+'''
+DUMP_STATE = 'dump_state'
+DUMP_STATE_DEFAULT = False
+
+#########################################
+# Disable automatic Python cyclic GC
+#########################################
+# Disable automatic Python cyclic GC. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+DISABLE_PYTHON_GC_FORMAT = '''
+Disable automatic Python cyclic GC should be enabled as:
+"disable_python_gc": true
+'''
+DISABLE_PYTHON_GC = "disable_python_gc"
+DISABLE_PYTHON_GC_DEFAULT = False
+
+#########################################
+# Vocabulary size
+#########################################
+# Vocabulary size.
+# Users can configure in ds_config.json as below example:
+VOCABULARY_SIZE_FORMAT = '''
+Vocabulary size can be specified as:
+"vocabulary_size": 1024
+'''
+VOCABULARY_SIZE = 'vocabulary_size'
+VOCABULARY_SIZE_DEFAULT = None
+
+#########################################
+# Wall block breakdown
+#########################################
+# Wall clock breakdown. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+WALL_CLOCK_BREAKDOWN_FORMAT = '''
+Wall block breakdown should be enabled as:
+"wall_clock_breakdown": true
+'''
+WALL_CLOCK_BREAKDOWN = 'wall_clock_breakdown'
+WALL_CLOCK_BREAKDOWN_DEFAULT = False
+
+MEMORY_BREAKDOWN = 'memory_breakdown'
+MEMORY_BREAKDOWN_DEFAULT = False
+
+
+#########################################
+# Validation modes
+#########################################
+class ValidationMode:
+    WARN = "WARN"
+    IGNORE = "IGNORE"
+    FAIL = "FAIL"
+
+
+#########################################
+# Checkpoint config params
+#########################################
+# "checkpoint": {
+#   tag_validation=["Ignore"|"Warn"|"Fail"]
+#   load_universal=false
+#   use_node_local_storage=false
+#   parallel_write: {
+#     pipeline_stage: [True|False]
+#   }
+# }
+CHECKPOINT = "checkpoint"
+CHECKPOINT_TAG_VALIDATION = "tag_validation"
+CHECKPOINT_TAG_VALIDATION_DEFAULT = ValidationMode.WARN
+CHECKPOINT_TAG_VALIDATION_MODES = [ValidationMode.WARN, ValidationMode.IGNORE, ValidationMode.FAIL]
+
+LOAD_UNIVERSAL_CHECKPOINT = "load_universal"
+LOAD_UNIVERSAL_CHECKPOINT_DEFAULT = False
+
+USE_NODE_LOCAL_STORAGE_CHECKPOINT = "use_node_local_storage"
+USE_NODE_LOCAL_STORAGE_CHECKPOINT_DEFAULT = False
+
+CHECKPOINT_PARALLEL_WRITE = "parallel_write"
+CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE = "pipeline_stage"
+CHECKPOINT_PARALLEL_WRITE_PIPELINE_STAGE_DEFAULT = False
+
+#########################################
+# Data types config params
+#########################################
+# "data_types": {
+#   grad_accum_dtype=["bf16"|"fp16"|"fp32"]
+#   param_dtype=["bf16"|"fp16"|"fp32"]
+#   buffer_dtype=["bf16"|"fp16"|"fp32"]
+#   }
+# }
+# param_dtype and buffer_dtype mirror FSDP's MixedPrecisionPolicy.
+#   - param_dtype: if None uses the specified mixed precision dtype, otherwise casts the params into the provided dtype
+#   - buffer_dtype: if None uses the buffers' dtype found when the model was loaded (e.g. fp32 rotary inv_freq), otherwise casts the buffers into the provided dtype (which is likely to lead to unintended consequences)
+
+DATA_TYPES = "data_types"
+GRAD_ACCUM_DTYPE = "grad_accum_dtype"
+GRAD_ACCUM_DTYPE_DEFAULT = None
+PARAM_DTYPE = "param_dtype"
+PARAM_DTYPE_DEFAULT = None
+BUFFER_DTYPE = "buffer_dtype"
+BUFFER_DTYPE_DEFAULT = None
+
+#########################################
+# Drop the last incomplete Batch
+# #########################################
+# dataloader_drop_last. By default, this feature is not enabled.
+# Users can configure in ds_config.json as below example:
+DATALOADER_DROP_LAST_FORMAT = '''
+The last incomplete batch can be dropped by setting:
+"dataloader_drop_last": True
+'''
+DATALOADER_DROP_LAST = "dataloader_drop_last"
+DATALOADER_DROP_LAST_DEFAULT = False
+
+#########################################
+# PIPELINE PARALLELISM
+#########################################
+PIPE_REPLICATED = 'ds_pipe_replicated'
+
+#########################################
+# DATA PARALLELISM
+#########################################
+DATA_PARALLEL_GROUP = "data_parallel_group"
+GLOBAL_RANK = "global_rank"
+
+#########################################
+# EXPERT-DATA PARALLELISM TOPO Config
+#########################################
+USE_DATA_BEFORE_EXPERT_PARALLEL = "use_data_before_expert_parallelism"
+USE_DATA_BEFORE_EXPERT_PARALLEL_DEFAULT = False
+
+LOG_LEVEL = "log_level"
+LOG_LEVEL_DEFAULT = None

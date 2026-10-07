@@ -1,0 +1,17 @@
+--- a/pipeline.py
++++ b/pipeline.py
+@@ -38,7 +38,13 @@
+         self.stage_fns=[self.routing,self.alignment,self.gemm1,self.activation,self.gemm2,self.reduce]
+ 
+     def routing(self):
+-        self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)
++        if self.groups == 1 and self.group_topk == 1:
++            check(lib.route(self.logits.data_ptr(), self.weights.data_ptr(),
++                            self.ids.data_ptr(), self.token_ids.data_ptr(),
++                            self.work.data_ptr(), self.M, self.E, self.k,
++                            torch.cuda.current_stream().cuda_stream))
++        else:
++            self.weights,self.ids=grouped_topk(self.x,self.logits,self.k,True,self.groups,self.group_topk)
+ 
+     def alignment(self):
+         block=self.config['BLOCK_SIZE_M']

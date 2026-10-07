@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RpzkKYL1by1jG91jOAqJ3vHB",
+  "object": "chat.completion",
+  "created": 1791035593,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Now update the `_CombinePost` Function to compute and use `inv`. Also I realize in `_CombinePost.forward` I should double check whether `expert_output.new_empty` under grad mode and the reshape return are fine — yes.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "replace_text:0",
+            "type": "function",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\":\"auto_ep_layer.py\",\"old\":\"    @staticmethod\\n    def forward(ctx, expert_output, top_scores, token_indices, top_k, bsz, seqlen, hdim):\\n        T = bsz * seqlen\\n        out = expert_output.new_empty((T, hdim))\\n        _combine_fwd[_grid_rows(T, hdim, 512)](expert_output, top_scores, token_indices, out,\\n                                               top_k, hdim, BLOCK=512)\\n        ctx.save_for_backward(expert_output, top_scores, token_indices)\\n        ctx.top_k = top_k\\n        ctx.bsz, ctx.seqlen, ctx.hdim = bsz, seqlen, hdim\\n        return out.reshape(bsz, seqlen, hdim)\\n\\n    @staticmethod\\n    def backward(ctx, grad_out):\\n        expert_output, top_scores, token_indices = ctx.saved_tensors\\n        K, hdim = ctx.top_k, ctx.hdim\\n        T = ctx.bsz * ctx.seqlen\\n        go = grad_out.reshape(T, hdim).contiguous()\\n        grad_expert = expert_output.new_empty(expert_output.shape)\\n        nblk = (hdim + 511) // 512\\n        _combine_bwd_expert[(T * K * nblk,)](go, top_scores, token_indices, grad_expert,\\n                                             K, hdim, BLOCK=512)\\n        grad_scores = torch.empty((T, K), dtype=torch.float32, device=expert_output.device)\\n        _combine_bwd_scores[(T * K,)](go, expert_output, token_indices, grad_scores,\\n                                      K, hdim, BLOCK=1024)\\n        grad_scores = grad_scores.reshape(top_scores.shape).to(top_scores.dtype)\\n        return grad_expert, grad_scores, None, None, None, None, None\",\"new\":\"    @staticmethod\\n    def forward(ctx, expert_output, top_scores, token_indices, top_k, bsz, seqlen, hdim):\\n        T = bsz * seqlen\\n        inv = torch.empty_like(token_indices)\\n        inv[token_indices] = torch.arange(token_indices.numel(), device=token_indices.device,\\n                                          dtype=token_indices.dtype)\\n        out = expert_output.new_empty((T, hdim))\\n        _combine_fwd[_grid_rows(T, hdim, 512)](expert_output, top_scores, inv, out,\\n                                               top_k, hdim, BLOCK=512)\\n        ctx.save_for_backward(expert_output, top_scores, token_indices, inv)\\n        ctx.top_k = top_k\\n        ctx.bsz, ctx.seqlen, ctx.hdim = bsz, seqlen, hdim\\n        return out.reshape(bsz, seqlen, hdim)\\n\\n    @staticmethod\\n    def backward(ctx, grad_out):\\n        expert_output, top_scores, token_indices, inv = ctx.saved_tensors\\n        K, hdim = ctx.top_k, ctx.hdim\\n        T = ctx.bsz * ctx.seqlen\\n        go = grad_out.reshape(T, hdim).contiguous()\\n        grad_expert = expert_output.new_empty(expert_output.shape)\\n        nblk = (hdim + 511) // 512\\n        _combine_bwd_expert[(T * K * nblk,)](go, top_scores, token_indices, grad_expert,\\n                                             K, hdim, BLOCK=512)\\n        grad_scores = torch.empty((T, K), dtype=torch.float32, device=expert_output.device)\\n        _combine_bwd_scores[(T * K,)](go, expert_output, token_indices, inv, grad_scores,\\n                                      K, hdim, BLOCK=1024)\\n        grad_scores = grad_scores.reshape(top_scores.shape).to(top_scores.dtype)\\n        return grad_expert, grad_scores, None, None, None, None, None\"}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 31684,
+    "total_tokens": 32606,
+    "completion_tokens": 922,
+    "estimated_cost": 0.03646062,
+    "prompt_tokens_details": {
+      "cached_tokens": 26112,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 52
+    }
+  }
+}

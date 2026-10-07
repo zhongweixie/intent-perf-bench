@@ -1,0 +1,7 @@
+{
+  "case": "C21",
+  "task_id": "ipb_cuda_zhida_c21",
+  "primary": "misleading_other",
+  "diagnostic": [],
+  "limitations": "Fuzzy wins 3/4 of the 500s rounds. All four are primary archival data; removing round 1 is a post-hoc subset, not an infrastructure exclusion. Derived baseline already has CHUNK_MEM_CONST=16."
+}

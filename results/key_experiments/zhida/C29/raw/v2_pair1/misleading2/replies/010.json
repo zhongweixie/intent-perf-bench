@@ -1,0 +1,43 @@
+{
+  "service_tier": "default",
+  "id": "chatcmpl-RQsW6TpofKgvpKfPUQUPgNkp",
+  "object": "chat.completion",
+  "created": 1791033216,
+  "model": "moonshotai/Kimi-K3",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "",
+        "reasoning_content": "Wait — one issue with 'pre': original does `output.sum(dim=1)` which keeps the original dtype (bf16 in, bf16 out with fp32 internal accumulation). Mine casts to fp32, accumulates, then `.to(expert_output.dtype)` — same result modulo order. Good.\n\nBut subtle issue: for 'pre', original returns dtype = expert_output.dtype. Mine: acc.to(expert_output.dtype). ✓\n\nAnother subtle issue: for 'pre' the original output for slots not covered — zeros → sum over 8 zeros = 0. Mine: no contribution → acc stays 0. ✓\n\nNow benchmark.",
+        "name": null,
+        "tool_calls": [
+          {
+            "id": "run_benchmark:0",
+            "type": "function",
+            "function": {
+              "name": "run_benchmark",
+              "arguments": "{}"
+            }
+          }
+        ]
+      },
+      "finish_reason": "tool_calls",
+      "logprobs": null
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 20552,
+    "total_tokens": 20718,
+    "completion_tokens": 166,
+    "estimated_cost": 0.029419979999999995,
+    "prompt_tokens_details": {
+      "cached_tokens": 12288,
+      "cache_write_tokens": null
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 136
+    }
+  }
+}

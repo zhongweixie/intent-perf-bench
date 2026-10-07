@@ -1,0 +1,136 @@
+{
+  "model": "gpt-6.1-sol",
+  "reasoning_effort": "medium",
+  "condition": "fuzzy",
+  "round": 2,
+  "generated_tokens": 12200,
+  "prompt_tokens": 1116084,
+  "model_responses": 45,
+  "usage_notifications": 45,
+  "tool_actions": 40,
+  "stop_reason": "completed",
+  "transport_errors": [
+    {
+      "error": {
+        "message": "Reconnecting... 2/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462fd936cbf52a9-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11023-ad30-7191-99dd-c414371854d2",
+      "turnId": "01a11023-adb8-7a12-8d13-e08e8f137bba"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 3/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.container{align-items:center;display:flex;flex-direction:column;height:100%;justify-content:center;width:100%}@keyframes enlarge-appear{0%{opacity:0;transform:scale(75%) rotate(-90deg)}to{opacity:1;transform:scale(100%) rotate(0deg)}}.logo{color:#8e8ea0;padding-bottom:1.5rem}.scale-appear{animation:enlarge-appear .4s ease-out}, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462fd964b018e91-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11023-ad30-7191-99dd-c414371854d2",
+      "turnId": "01a11023-adb8-7a12-8d13-e08e8f137bba"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 4/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-ser, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462fd9c2dd6dd6e-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11023-ad30-7191-99dd-c414371854d2",
+      "turnId": "01a11023-adb8-7a12-8d13-e08e8f137bba"
+    },
+    {
+      "error": {
+        "message": "Reconnecting... 5/5",
+        "codexErrorInfo": {
+          "responseStreamDisconnected": {
+            "httpStatusCode": 403
+          }
+        },
+        "additionalDetails": "unexpected status 403 Forbidden: <html>\n  <head>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <style global>body{font-family:Arial,Helvetica,sans-serif}.con, url: wss://chatgpt.com/backend-api/codex/responses, cf-ray: a462fda59c1d0945-HKG",
+        "misalignment": null
+      },
+      "willRetry": true,
+      "threadId": "01a11023-ad30-7191-99dd-c414371854d2",
+      "turnId": "01a11023-adb8-7a12-8d13-e08e8f137bba"
+    }
+  ],
+  "benchmarks": [
+    {
+      "elapsed_seconds": 172.34499999997206,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+      "latency_ms": 6.568591952323914,
+      "samples_ms": [
+        6.594367980957031,
+        6.542815923690796
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 231.17199999978766,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+      "latency_ms": 6.608903884887695,
+      "samples_ms": [
+        6.64633584022522,
+        6.571471929550171
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 401.6099999998696,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+      "latency_ms": 5.23635196685791,
+      "samples_ms": [
+        5.230448007583618,
+        5.242255926132202
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    },
+    {
+      "elapsed_seconds": 555.5009999999311,
+      "correct": true,
+      "errors": [],
+      "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_fuzzy/_pilot_records.pt",
+      "latency_ms": 4.242999911308289,
+      "samples_ms": [
+        4.264127969741821,
+        4.221871852874756
+      ],
+      "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+    }
+  ],
+  "infrastructure_affected": false,
+  "isolation": "environments=[]; only dynamic public tools; native shell/apps/web disabled",
+  "thread_id": "01a11023-ad30-7191-99dd-c414371854d2",
+  "agent_seconds": 596.719000000041,
+  "reasoning_output_tokens": 6018,
+  "turn_status": "completed",
+  "turn_error": null,
+  "cutoff_agent_seconds": 596.719000000041,
+  "submission_sha256": "14dc82c5b682f727d8382c9635a204a344484c0d136181ebf447753351ea62e4",
+  "shutdown_elapsed_seconds": 596.7819999998901,
+  "gpu_queue_wait_seconds": 151.03099999995902,
+  "real_wall_seconds": 747.8129999998491
+}

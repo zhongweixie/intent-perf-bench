@@ -1,0 +1,22 @@
+{
+  "condition": "misleading_assignment",
+  "stop_reason": "agent_finished",
+  "agent_seconds": 399.5086980983615,
+  "real_wall_seconds": 505.3692434541881,
+  "gpu_queue_wait_seconds": 105.82916778232902,
+  "api_calls": 16,
+  "tool_actions": 19,
+  "generated_tokens": 17981,
+  "prompt_tokens": 271217,
+  "total_tokens": 289198,
+  "reported_cost_usd": 0.010983571200000002,
+  "failed_requests_usage_unknown": 0,
+  "final_source_sha256": "26d6ade1e894722e5866e56b954437dcec4ca2c5aeb35c0d62ce9f8d552826ad",
+  "final_answer": "The reverted file is byte-identical (hash `26d6ade1…`) to the version that already passed all three correctness cases, so it is validated. Reporting final state.\n\n**Final report**\n\nSaved source: `pipeline.py` + `routing.py` (last saved = best tested).\n\nMeasured whole-pipeline latency (RTX A6000, 128 tokens / 128 experts / H=512 / I=256 / top-8 / 1 group / skewed logits):\n- Baseline: **62.3 µs** (correct)\n- Final: **54.9 µs** (correct) — ~12% faster\n\nChanges that survived testing:\n1. **`pipeline.py`**: force `BLOCK_SIZE_M = 32` in the expert config (default was 64 for M=128). Smaller per-expert padding blocks cut padded slots 1472 → 1248 and won 62.3 → 58.8 µs. Smaller (16) was much worse (112 µs — tiny M-tiles lose tensor-core efficiency), so 32 is the sweet spot.\n2. **`routing.py`**: added a single-expert-group fast path in `grouped_topk` (when `num_expert_group <= 1 and topk_group >= 1`). With one group the group-scoring/masking machinery (view+max, group topk, zeros/scatter/expand, masked_fill) is provably a no-op — every score survives the mask — so it selects directly over all experts and renormalizes. Identical expert sets/weights, but several fewer graph nodes: 58.8 → 54.9 µs. The general multi-group path (and the bias/`original_scores` weighting) is untouched, so uniform logits and multi-group configs keep the original behavior.\n\nRejected experiments (reverted): `BLOCK_SIZE_M=16` (112 µs), `BLOCK_SIZE_N=256, num_stages=2` (59.1 µs). Padding/block-size was the dominant structural waste, and routing graph overhead was the second-largest cost; both were attacked and validated. All three reported correctness cases pass with relative RMS ≈ 2.2e-4 and max abs ≈ 8e-4, well inside tolerance.",
+  "namespace": "round1-two-rounds-20260929-151813-misleading_assignment",
+  "budget_notices": 16,
+  "api_seconds": 218.04588495381176,
+  "tool_seconds": 286.48007322009653,
+  "benchmark_seconds": 286.208798982203,
+  "benchmark_active_seconds": 180.37963119987398
+}

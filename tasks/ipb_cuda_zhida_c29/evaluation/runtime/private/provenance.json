@@ -1,0 +1,14 @@
+{
+  "task": "C29",
+  "source": "https://github.com/deepspeedai/DeepSpeed/pull/8326",
+  "base": "8e09ed2acde363d5efcf3577f9586e9f4fcba672",
+  "head": "58694a7ea495f0961a23af157bbeb0d489e78754",
+  "merged_at": "2026-09-02T06:48:21Z",
+  "scope": "local token movement, not distributed/full model training",
+  "adapter": "exact base function bodies with local imports; fixed scalar expert driver; reference wrapper selects upstream weighted restore",
+  "misleading_evidence": "Upstream PR history reports the experimental expert-row reorder was tried and removed for no launch-amortized benefit on H100. This does not establish effect on agents or A6000.",
+  "search_space_limit": "Two substantial upstream source modules plus an optional kernel file; smaller than the preferred 8-20 related files. Natural strong-model difficulty remains unmeasured.",
+  "reference_precision": "Wide hidden FP32 score-gradient differences observed up to 3.0517578125e-05; small upstream tests keep original tolerances; wide check explicitly allows 1e-4 absolute.",
+  "model": "moonshotai/Kimi-K3",
+  "reasoning_effort": "max"
+}

@@ -1,0 +1,74 @@
+{
+  "id": "gen-1790696909-ujIpOI9C70PF581xB1r2",
+  "object": "chat.completion",
+  "created": 1790696909,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Now edit routing.py to add the fast path.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-8e5a930e4bbe201d",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"routing.py\", \"old\": \"def grouped_topk(\\n    hidden_states: torch.Tensor,\", \"new\": \"def _fast_softmax_topk(\\n    gating_output: torch.Tensor,\\n    topk: int,\\n    renormalize: bool,\\n    routed_scaling_factor: float,\\n):\\n    # num_expert_group <= 1 makes the group mask all-ones, so the grouped\\n    # selection degenerates to a plain global top-k over the softmax scores.\\n    # top-k of softmax(x) followed by renormalization is exactly\\n    # softmax(top-k logits), which avoids materializing the full softmax.\\n    vals, idx = torch.topk(gating_output, k=topk, dim=-1, sorted=False)\\n    if renormalize:\\n        weights = torch.softmax(vals, dim=-1)\\n    else:\\n        weights = torch.softmax(gating_output, dim=-1).gather(1, idx)\\n    if routed_scaling_factor != 1.0:\\n        weights = weights * routed_scaling_factor\\n    return weights.to(torch.float32), idx.to(torch.int32)\\n\\n\\ndef _grouped_topk_impl(\\n    hidden_states: torch.Tensor,\"}"
+            }
+          },
+          {
+            "type": "function",
+            "index": 1,
+            "id": "chatcmpl-tool-a4063d44761d69e8",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"routing.py\", \"old\": \"# Same dynamic compile mode as upstream CUDA simple_compile_backend.\\ngrouped_topk = torch.compile(grouped_topk, dynamic=True, backend=\\\"inductor\\\")\", \"new\": \"# Same dynamic compile mode as upstream CUDA simple_compile_backend.\\n_grouped_topk_compiled = torch.compile(\\n    _grouped_topk_impl, dynamic=True, backend=\\\"inductor\\\"\\n)\\n\\n\\ndef grouped_topk(\\n    hidden_states: torch.Tensor,\\n    gating_output: torch.Tensor,\\n    topk: int,\\n    renormalize: bool,\\n    num_expert_group: int = 0,\\n    topk_group: int = 0,\\n    scoring_func: str = \\\"softmax\\\",\\n    routed_scaling_factor: float = 1.0,\\n    e_score_correction_bias: torch.Tensor | None = None,\\n) -> tuple[torch.Tensor, torch.Tensor]:\\n    assert hidden_states.size(0) == gating_output.size(0), \\\"Number of tokens mismatch\\\"\\n    if (\\n        e_score_correction_bias is None\\n        and scoring_func == \\\"softmax\\\"\\n        and num_expert_group <= 1\\n        and not envs.VLLM_USE_FUSED_MOE_GROUPED_TOPK\\n    ):\\n        return _fast_softmax_topk(\\n            gating_output, topk, renormalize, routed_scaling_factor\\n        )\\n    return _grouped_topk_compiled(\\n        hidden_states,\\n        gating_output,\\n        topk,\\n        renormalize,\\n        num_expert_group,\\n        topk_group,\\n        scoring_func,\\n        routed_scaling_factor,\\n        e_score_correction_bias,\\n    )\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Now edit routing.py to add the fast path.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 27763,
+    "completion_tokens": 752,
+    "total_tokens": 28515,
+    "cost": 0.0005175912,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 27136,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0005175912,
+      "upstream_inference_prompt_cost": 0.0002017512,
+      "upstream_inference_completions_cost": 0.00031584
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 10,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

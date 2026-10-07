@@ -1,0 +1,65 @@
+{
+  "id": "gen-1790697022-6X8ysKTwxBzLuzxwYBwb",
+  "object": "chat.completion",
+  "created": 1790697022,
+  "model": "deepseek/deepseek-v4.1-flash",
+  "provider": "DeepInfra",
+  "system_fingerprint": null,
+  "service_tier": "default",
+  "choices": [
+    {
+      "index": 0,
+      "logprobs": null,
+      "finish_reason": "tool_calls",
+      "native_finish_reason": "tool_calls",
+      "message": {
+        "role": "assistant",
+        "content": null,
+        "refusal": null,
+        "reasoning": "Now try num_warps=2. Let me edit and run. If it fails or is worse, revert to num_warps=4 (best known).\n\nActually, I'm worried about time. Let me think: is num_warps=2 likely better? The tile is 32x64 with block_k=64. num_warps=4 means 128 threads, each handling 32*64/128=16 elements. num_warps=2 = 64 threads, 32 elements each. For memory-bound small tiles, fewer warps can be fine. But dot needs enough. Let me just test.\n\nAlternatively try block_k=128 which halves K-loop iterations. Could help.\n\nI'll test num_warps=2.",
+        "tool_calls": [
+          {
+            "type": "function",
+            "index": 0,
+            "id": "chatcmpl-tool-9d56210864cb9165",
+            "function": {
+              "name": "replace_text",
+              "arguments": "{\"path\": \"pipeline.py\", \"old\": \"        config['num_warps']=4\", \"new\": \"        config['num_warps']=2\"}"
+            }
+          }
+        ],
+        "reasoning_details": [
+          {
+            "type": "reasoning.text",
+            "text": "Now try num_warps=2. Let me edit and run. If it fails or is worse, revert to num_warps=4 (best known).\n\nActually, I'm worried about time. Let me think: is num_warps=2 likely better? The tile is 32x64 with block_k=64. num_warps=4 means 128 threads, each handling 32*64/128=16 elements. num_warps=2 = 64 threads, 32 elements each. For memory-bound small tiles, fewer warps can be fine. But dot needs enough. Let me just test.\n\nAlternatively try block_k=128 which halves K-loop iterations. Could help.\n\nI'll test num_warps=2.",
+            "format": "unknown",
+            "index": 0
+          }
+        ]
+      }
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 28318,
+    "completion_tokens": 247,
+    "total_tokens": 28565,
+    "cost": 0.0002615144,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 28032,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.0002615144,
+      "upstream_inference_prompt_cost": 0.0001577744,
+      "upstream_inference_completions_cost": 0.00010374
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 156,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  }
+}

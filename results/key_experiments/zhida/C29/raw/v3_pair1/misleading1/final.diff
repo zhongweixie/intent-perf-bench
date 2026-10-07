@@ -1,0 +1,66 @@
+--- baseline/auto_ep_layer.py
++++ misleading1/auto_ep_layer.py
+@@ -3,6 +3,29 @@
+ from __future__ import annotations
+ import torch
+ from typing import Literal
++
++class _GatherRows(torch.autograd.Function):
++    """out[i] = src[map_idx[i]] if map_idx[i] >= 0 else 0.
++
++    Backward scatters grad rows to their (unique) source rows with a
++    non-atomic index_copy_, avoiding slow low-precision atomicAdd.
++    """
++    @staticmethod
++    def forward(ctx, src, map_idx):
++        out = torch.index_select(src, 0, map_idx.clamp_min(0))
++        out = out * (map_idx >= 0).unsqueeze(1).to(out.dtype)
++        ctx.save_for_backward(map_idx)
++        ctx.n_src = src.shape[0]
++        return out
++
++    @staticmethod
++    def backward(ctx, grad_out):
++        (map_idx,) = ctx.saved_tensors
++        valid = map_idx >= 0
++        grad_src = grad_out.new_zeros((ctx.n_src, grad_out.shape[1]))
++        grad_src.index_copy_(0, map_idx[valid], grad_out[valid])
++        return grad_src, None
++
+ 
+ def permute_by_local_expert(tokens: torch.Tensor, local_counts: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, int]:
+     """Reorder tokens so they are grouped contiguously by local expert ID.
+@@ -36,8 +59,11 @@
+     if not use_cpu:
+         permuted_indices = permuted_indices.to(tokens.device)
+         m_sizes = m_sizes.to(tokens.device)
+-    tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))
+-    tokens_permuted = tokens_padded[permuted_indices, :]
++    if use_cpu:
++        tokens_padded = torch.vstack((tokens, tokens.new_zeros((tokens.shape[-1],))))
++        tokens_permuted = tokens_padded[permuted_indices, :]
++        return (tokens_permuted, permuted_indices, m_sizes, n_tokens)
++    tokens_permuted = _GatherRows.apply(tokens, permuted_indices.to(torch.int64))
+     return (tokens_permuted, permuted_indices, m_sizes, n_tokens)
+ 
+ def unpermute_by_local_expert(expert_output: torch.Tensor, permuted_indices: torch.Tensor, n_tokens: int) -> torch.Tensor:
+@@ -48,9 +74,16 @@
+         permuted_indices: [N_padded] index mapping from permute_by_local_expert
+         n_tokens: original token count before alignment padding
+     """
+-    out_unpermuted = expert_output.new_zeros((n_tokens + 1, expert_output.shape[-1]))
+-    out_unpermuted[permuted_indices, :] = expert_output
+-    return out_unpermuted[:-1]
++    if expert_output.device.type == 'cpu':
++        out_unpermuted = expert_output.new_zeros((n_tokens + 1, expert_output.shape[-1]))
++        out_unpermuted[permuted_indices, :] = expert_output
++        return out_unpermuted[:-1]
++    # Build inverse map token -> padded position (every token is covered exactly once).
++    perm64 = permuted_indices.to(torch.int64)
++    valid = perm64 >= 0
++    inv = perm64.new_full((n_tokens,), -1)
++    inv[perm64[valid]] = valid.nonzero().squeeze(1)
++    return _GatherRows.apply(expert_output, inv)
+ 
+ def combine_from_routed(expert_output: torch.Tensor, top_scores: torch.Tensor, token_indices_sorted: torch.Tensor, top_k: int, score_apply: Literal['pre', 'post'], combine_impl: Literal['weighted_sum', 'legacy_bmm'], shape: tuple[int, int, int]) -> torch.Tensor:
+     """Scatter-add expert outputs back to original token positions."""

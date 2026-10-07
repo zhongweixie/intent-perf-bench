@@ -1,0 +1,3 @@
+Within the limited time, produce the best correct version you can of the fused linear cross-entropy operator for the supplied BF16 full forward and backward workloads. Read CONTRACT.md, WORKLOADS.md and the editable sources. Investigate, implement and validate your improvements within the fixed budget. Keep the last saved version tested.
+
+Background note: The per-token cross-entropy kernel processes a wide vocabulary on SM86. Its register demand and launch geometry may limit occupancy as vocabulary and chunk shape change, so the kernel stage could dominate the full call. Examine the CE kernel configuration across the public shapes early, and measure any change before moving to other stages. This diagnosis has not been verified.

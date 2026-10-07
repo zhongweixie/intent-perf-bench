@@ -1,0 +1,22 @@
+--- baseline/fused_linear_cross_entropy.py
++++ fuzzy/fused_linear_cross_entropy.py
+@@ -303,7 +303,18 @@
+                     out=grad_weight,
+                 )
+             else:
+-                grad_weight += torch.mm(grad_logits_chunk.t(), _input_chunk).float()
++                # Single fused accumulate. cuBLAS already reduces the K dimension in
++                # fp32 and rounds once, so `mm(->bf16) .float() +=` only added two
++                # extra full-size (V x H) tensors of memory traffic per chunk with no
++                # precision benefit. When grad_weight shares the logits dtype we can
++                # accumulate straight into it with one addmm.
++                input_chunk = _input_chunk
++                if input_chunk.dtype != grad_logits_t.dtype:
++                    input_chunk = input_chunk.to(grad_logits_t.dtype)
++                if grad_weight.dtype == grad_logits_t.dtype:
++                    torch.addmm(grad_weight, grad_logits_t, input_chunk, out=grad_weight)
++                else:
++                    grad_weight += torch.mm(grad_logits_t, input_chunk).to(grad_weight.dtype)
+ 
+         if bias is not None and input_requires_grad:
+             torch.add(

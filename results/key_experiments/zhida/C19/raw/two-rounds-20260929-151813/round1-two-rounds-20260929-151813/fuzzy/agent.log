@@ -1,0 +1,18 @@
+fuzzy call 1 generated 62 elapsed 1 benchmarks 0
+fuzzy call 2 generated 204 elapsed 4 benchmarks 0
+fuzzy call 3 generated 311 elapsed 6 benchmarks 0
+fuzzy call 4 generated 387 elapsed 36 benchmarks 1
+fuzzy call 5 generated 2253 elapsed 60 benchmarks 1
+fuzzy call 6 generated 2337 elapsed 63 benchmarks 1
+fuzzy call 7 generated 5776 elapsed 103 benchmarks 1
+fuzzy call 8 generated 5801 elapsed 129 benchmarks 2
+fuzzy call 9 generated 10080 elapsed 182 benchmarks 2
+fuzzy call 10 generated 10105 elapsed 212 benchmarks 3
+fuzzy call 11 generated 11907 elapsed 237 benchmarks 3
+fuzzy call 12 generated 11932 elapsed 268 benchmarks 4
+fuzzy call 13 generated 14513 elapsed 296 benchmarks 4
+fuzzy call 14 generated 15287 elapsed 306 benchmarks 4
+fuzzy call 15 generated 15327 elapsed 341 benchmarks 5
+fuzzy call 16 generated 17977 elapsed 370 benchmarks 5
+fuzzy call 17 generated 18002 elapsed 418 benchmarks 6
+TRIAL_END {"condition": "fuzzy", "stop_reason": "agent_finished", "agent_seconds": 424.92224941495806, "real_wall_seconds": 546.0158344376832, "gpu_queue_wait_seconds": 121.03705310635269, "api_calls": 18, "tool_actions": 22, "generated_tokens": 18583, "prompt_tokens": 325346, "total_tokens": 343929, "reported_cost_usd": 0.012226541599999998, "failed_requests_usage_unknown": 0, "final_source_sha256": "b8e3bdcd2aae93383c407758e174eb3fe383235a6e21d10093afafc8459d15c2", "final_answer": "The current saved source is validated correct at **54.05 µs** (down from the 62.30 µs baseline, ~13% faster). Budget is nearly exhausted, so I'm stopping with the best tested version saved.\n\n## Final report\n\n**Diagnosis (measured, not assumed):** Since `run_benchmark` only reports latency for correct variants, I isolated stage costs by duplicating idempotent stages and reading the latency delta:\n- Baseline whole pipeline: **62.30 µs**\n- Routing stage alone: **~15.5 µs** (~25%)\n- Remaining stages (align + gemm1 + activation + gemm2 + reduce): **~44.8 µs** (the bulk)\n\n**Changes made (both correct on all 3 checked cases):**\n\n1. `pipeline.py` — GEMM tiling for occupancy/padding. The default config chose `BLOCK_SIZE_M=64, BLOCK_SIZE_N=128` for this shape, giving only ~92 programs across 84 SMs and 1472 padded slots. Switching to `BLOCK_SIZE_M=32, BLOCK_SIZE_N=64` raised program count (better SM occupancy) and cut padding to 1248 slots. → 62.30 → **58.55 µs**.\n\n2. `routing.py` — single-group fast path. When `num_expert_group <= 1`, the group-selection machinery (group max, group top-k, scatter, expand, masked-fill) is an exact no-op: every expert is in the selected group. I added an early branch that computes plain `softmax`/`sigmoid` + top-k directly, producing identical ids and weights while removing several tiny kernels. The full grouped path is unchanged for multi-group inputs. → 58.55 → **54.05 µs**.\n\n**Correctness preserved:** all three checked cases pass with `route_set_equal: true`, relative RMS ≈ 2.2e-4, max abs ≈ 8e-4 — identical to baseline values, well inside the 0.002/0.005 thresholds. Multi-group (`num_expert_group > 1`) and uniform-logit behavior still route through the original unchanged code path.\n\nThe last saved `pipeline.py` and `routing.py` are the tested 54.05 µs version.", "namespace": "round1-two-rounds-20260929-151813-fuzzy", "budget_notices": 18, "api_seconds": 232.8790981899947, "tool_seconds": 312.0642492529005, "benchmark_seconds": 311.7420724099502, "benchmark_active_seconds": 190.7050193035975}

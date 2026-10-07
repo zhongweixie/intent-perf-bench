@@ -1,0 +1,575 @@
+# Copyright (c) Microsoft Corporation.
+# SPDX-License-Identifier: Apache-2.0
+
+# DeepSpeed Team
+
+# A test on its own
+import os
+import pytest
+import json
+import hjson
+import argparse
+import torch
+
+from deepspeed.runtime.zero.config import DeepSpeedZeroConfig
+from deepspeed.accelerator import get_accelerator
+
+from unit.common import DistributedTest, get_test_path
+from unit.simple_model import SimpleModel, create_config_from_dict, random_dataloader
+import deepspeed.comm as dist
+
+# A test on its own
+import deepspeed
+from deepspeed.runtime.config import DeepSpeedConfig, DeepSpeedConfigError
+from deepspeed.runtime.precision_config import get_bfloat16_config
+
+
+class TestBasicConfig(DistributedTest):
+    world_size = 1
+
+    def test_accelerator(self):
+        assert (get_accelerator().is_available())
+
+    def test_check_version(self):
+        assert hasattr(deepspeed, "__git_hash__")
+        assert hasattr(deepspeed, "__git_branch__")
+        assert hasattr(deepspeed, "__version__")
+        assert hasattr(deepspeed, "__version_major__")
+        assert hasattr(deepspeed, "__version_minor__")
+        assert hasattr(deepspeed, "__version_patch__")
+
+
+@pytest.fixture
+def base_config():
+    config_dict = {
+        "train_batch_size": 1,
+        "optimizer": {
+            "type": "Adam",
+            "params": {
+                "lr": 0.00015
+            }
+        },
+    }
+    return config_dict
+
+
+def _run_batch_config(ds_config, train_batch=None, micro_batch=None, gas=None):
+    ds_config.train_batch_size = train_batch
+    ds_config.train_micro_batch_size_per_gpu = micro_batch
+    ds_config.gradient_accumulation_steps = gas
+    success = True
+    try:
+        ds_config._configure_train_batch_size()
+    except AssertionError:
+        success = False
+    return success
+
+
+def _batch_assert(status, ds_config, batch, micro_batch, gas, success):
+
+    if not success:
+        assert not status
+        return
+
+    assert ds_config.train_batch_size == batch
+    assert ds_config.train_micro_batch_size_per_gpu == micro_batch
+    assert ds_config.gradient_accumulation_steps == gas
+
+
+#Tests different batch config provided in deepspeed json file
+@pytest.mark.parametrize('num_ranks,batch,micro_batch,gas,success',
+                         [(2,32,16,1,True),
+                         (2,32,8,2,True),
+                         (2,33,17,2,False),
+                         (2,32,18,1,False)]) # yapf: disable
+class TestBatchConfig(DistributedTest):
+    world_size = 2
+
+    def test(self, num_ranks, batch, micro_batch, gas, success):
+        assert dist.get_world_size() == num_ranks, \
+        f'The test assumes a world size of {num_ranks}'
+
+        ds_batch_config = get_test_path('ds_batch_config.json')
+        ds_config = DeepSpeedConfig(ds_batch_config)
+
+        #test cases when all parameters are provided
+        status = _run_batch_config(ds_config, train_batch=batch, micro_batch=micro_batch, gas=gas)
+        _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+        #test cases when two out of three parameters are provided
+        status = _run_batch_config(ds_config, train_batch=batch, micro_batch=micro_batch)
+        _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+        if success:
+            #when gas is provided with one more parameter
+            status = _run_batch_config(ds_config, train_batch=batch, gas=gas)
+            _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+            status = _run_batch_config(ds_config, micro_batch=micro_batch, gas=gas)
+            _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+            #test the case when only micro_batch or train_batch is provided
+            if gas == 1:
+                status = _run_batch_config(ds_config, micro_batch=micro_batch)
+                _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+                status = _run_batch_config(ds_config, train_batch=batch)
+                _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+        else:
+            #when only gas is provided
+            status = _run_batch_config(ds_config, gas=gas)
+            _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+            #when gas is provided with something else and gas does not divide batch
+            if gas != 1:
+                status = _run_batch_config(ds_config, train_batch=batch, gas=gas)
+                _batch_assert(status, ds_config, batch, micro_batch, gas, success)
+
+
+def test_temp_config_json(tmpdir):
+    config_dict = {
+        "train_batch_size": 1,
+    }
+    config_path = create_config_from_dict(tmpdir, config_dict)
+    config_json = json.load(open(config_path, 'r'))
+    assert 'train_batch_size' in config_json
+
+
+@pytest.mark.parametrize("value,expected", [("mean", "mean"), ("SUM", "sum")])
+def test_gradient_allreduce_op(value, expected):
+    config = DeepSpeedConfig({
+        "train_batch_size": 1,
+        "gradient_allreduce_op": value,
+    })
+    assert config.gradient_allreduce_op == expected
+
+
+def test_gradient_allreduce_op_default():
+    config = DeepSpeedConfig({"train_batch_size": 1})
+    assert config.gradient_allreduce_op == "mean"
+
+
+def test_disable_python_gc_config_default():
+    config = DeepSpeedConfig({"train_batch_size": 1})
+    assert config.disable_python_gc is False
+
+
+@pytest.mark.parametrize("value", [False, True])
+def test_disable_python_gc_config(value):
+    config = DeepSpeedConfig({
+        "train_batch_size": 1,
+        "disable_python_gc": value,
+    })
+    assert config.disable_python_gc is value
+
+
+def test_invalid_gradient_allreduce_op():
+    with pytest.raises(ValueError, match="Invalid gradient_allreduce_op"):
+        DeepSpeedConfig({
+            "train_batch_size": 1,
+            "gradient_allreduce_op": "max",
+        })
+
+
+def test_sum_gradient_allreduce_rejects_zero3():
+    with pytest.raises(ValueError, match="not supported with ZeRO stage 3"):
+        DeepSpeedConfig({
+            "train_batch_size": 1,
+            "gradient_allreduce_op": "sum",
+            "zero_optimization": {
+                "stage": 3,
+            },
+        })
+
+
+def test_sum_gradient_allreduce_rejects_zenflow():
+    with pytest.raises(ValueError, match="not supported with ZenFlow"):
+        DeepSpeedConfig({
+            "train_batch_size": 1,
+            "gradient_allreduce_op": "sum",
+            "zero_optimization": {
+                "stage": 2,
+                "zenflow": {},
+            },
+        })
+
+
+@pytest.mark.parametrize("zero_stage", [1, 2])
+def test_sum_gradient_allreduce_rejects_deepcompile(zero_stage):
+    with pytest.raises(ValueError, match="not supported with DeepCompile"):
+        DeepSpeedConfig({
+            "train_batch_size": 1,
+            "gradient_allreduce_op": "sum",
+            "zero_optimization": {
+                "stage": zero_stage,
+            },
+            "compile": {
+                "deepcompile": True,
+            },
+        })
+
+
+@pytest.mark.parametrize("gather_weights_key",
+                         ["stage3_gather_16bit_weights_on_model_save", "stage3_gather_fp16_weights_on_model_save"])
+def test_gather_16bit_params_on_model_save(gather_weights_key):
+    config_dict = {
+        gather_weights_key: True,
+    }
+    config = DeepSpeedZeroConfig(**config_dict)
+
+    assert config.gather_16bit_weights_on_model_save == True
+
+
+@pytest.mark.parametrize("bf16_key", ["bf16", "bfloat16"])
+def test_get_bfloat16_enabled(bf16_key):
+    cfg = {
+        bf16_key: {
+            "enabled": True,
+        },
+    }
+    assert get_bfloat16_config(cfg).enabled == True
+
+
+@pytest.mark.parametrize("config_key", ["quantize_training", "eigenvalue", "progressive_layer_drop", "elasticity"])
+@pytest.mark.parametrize("value", [None, {}, False, "auto"])
+def test_moq_and_pld_config_is_rejected(config_key, value):
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        config_key: value,
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match=config_key):
+        DeepSpeedConfig(config_dict)
+
+
+@pytest.mark.parametrize("value", [None, {}, False, "auto"])
+def test_legacy_curriculum_learning_config_is_rejected(value):
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "curriculum_learning": value,
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="curriculum_learning"):
+        DeepSpeedConfig(config_dict)
+
+
+@pytest.mark.parametrize("value", [None, {}, False, True, "auto"])
+def test_graph_harvesting_config_is_rejected(value):
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "graph_harvesting": value,
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="graph_harvesting"):
+        DeepSpeedConfig(config_dict)
+
+
+def test_compression_training_config_is_rejected():
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "optimizer": {
+            "type": "Adam",
+            "params": {
+                "lr": 1e-4,
+            },
+        },
+        "compression_training": {
+            "weight_quantization": {
+                "shared_parameters": {
+                    "enabled": True,
+                },
+                "different_groups": {},
+            }
+        },
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="compression_training"):
+        DeepSpeedConfig(config_dict)
+
+
+def test_nebula_config_is_rejected():
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "nebula": {
+            "enabled": True,
+        },
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="Nebula"):
+        DeepSpeedConfig(config_dict)
+
+
+@pytest.mark.parametrize("amp_config",
+                         [None, {}, False, "auto", {
+                             "enabled": False
+                         }, {
+                             "enabled": True,
+                             "opt_level": "O1"
+                         }])
+def test_apex_amp_config_is_rejected(amp_config):
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "amp": amp_config,
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="Apex AMP"):
+        DeepSpeedConfig(config_dict)
+
+
+def test_sparse_attention_config_is_rejected():
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "sparse_attention": {
+            "mode": "fixed",
+        },
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="Sparse Attention"):
+        DeepSpeedConfig(config_dict)
+
+
+def test_mics_zero_config_is_rejected():
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "zero_optimization": {
+            "stage": 3,
+            "mics_shard_size": 2,
+        },
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="MiCS"):
+        DeepSpeedConfig(config_dict)
+
+
+def test_sparse_gradients_config_is_rejected():
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "sparse_gradients": True,
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="sparse_gradients"):
+        DeepSpeedConfig(config_dict)
+
+
+@pytest.mark.parametrize("zero_stage", [0, 3])
+@pytest.mark.parametrize("loco_config", [None, {}, {"err_beta": 0.8, "reset_T": 1024}, "auto"])
+def test_loco_zero_config_is_rejected(zero_stage, loco_config):
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "zero_optimization": {
+            "stage": zero_stage,
+            "zeropp_loco_param": loco_config,
+        },
+    }
+
+    with pytest.raises(DeepSpeedConfigError, match="zeropp_loco_param"):
+        DeepSpeedConfig(config_dict)
+
+
+class TestLoCoConfigRejected(DistributedTest):
+    world_size = 1
+
+    def test_initialize(self):
+        config_dict = {
+            "train_micro_batch_size_per_gpu": 1,
+            "zero_optimization": {
+                "stage": 3,
+                "zero_quantized_gradients": True,
+                "zeropp_loco_param": {
+                    "err_beta": 0.8,
+                    "reset_T": 1024,
+                },
+            },
+        }
+        model = SimpleModel(8).to(get_accelerator().current_device_name())
+
+        with pytest.raises(DeepSpeedConfigError, match="zeropp_loco_param"):
+            deepspeed.initialize(model=model, model_parameters=model.parameters(), config=config_dict)
+
+
+def test_compression_helper_shim_reexports_module_utils():
+    with pytest.warns(FutureWarning, match="deepspeed.compression.helper"):
+        from deepspeed.compression.helper import recursive_getattr, recursive_setattr
+    from deepspeed.utils.module_utils import recursive_getattr as rg
+    from deepspeed.utils.module_utils import recursive_setattr as rs
+
+    assert recursive_getattr is rg
+    assert recursive_setattr is rs
+
+
+def test_max_grad_norm_leaves_caller_config_untouched():
+    # The dict handed to DeepSpeedConfig belongs to the caller and may be reused after
+    # initialization, so parsing it must not write back into it.
+    config_dict = {
+        "train_micro_batch_size_per_gpu": 1,
+        "optimizer": {
+            "type": "AdamW",
+            "params": {
+                "lr": 1e-3,
+                "max_grad_norm": 1.0,
+            },
+        },
+    }
+
+    DeepSpeedConfig(config_dict)
+
+    assert config_dict["optimizer"]["params"]["max_grad_norm"] == 1.0
+
+
+class TestConfigLoad(DistributedTest):
+    world_size = 1
+
+    def test_dict(self, base_config):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        hidden_dim = 10
+        model = SimpleModel(hidden_dim)
+        model, _, _, _ = deepspeed.initialize(config=base_config, model=model, model_parameters=model.parameters())
+
+    def test_json(self, base_config, tmpdir):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        config_path = os.path.join(tmpdir, "config.json")
+        with open(config_path, 'w') as fp:
+            json.dump(base_config, fp)
+        hidden_dim = 10
+        model = SimpleModel(hidden_dim)
+        model, _, _, _ = deepspeed.initialize(config=config_path, model=model, model_parameters=model.parameters())
+
+    def test_hjson(self, base_config, tmpdir):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        config_path = os.path.join(tmpdir, "config.json")
+        with open(config_path, 'w') as fp:
+            hjson.dump(base_config, fp)
+        hidden_dim = 10
+        model = SimpleModel(hidden_dim)
+        model, _, _, _ = deepspeed.initialize(config=config_path, model=model, model_parameters=model.parameters())
+
+
+class TestDeprecatedDeepScaleConfig(DistributedTest):
+    world_size = 1
+
+    def test(self, base_config, tmpdir):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        config_path = create_config_from_dict(tmpdir, base_config)
+        parser = argparse.ArgumentParser()
+        args = parser.parse_args(args='')
+        args.deepscale_config = config_path
+        args.local_rank = 0
+
+        hidden_dim = 10
+
+        model = SimpleModel(hidden_dim)
+        model, _, _, _ = deepspeed.initialize(args=args, model=model, model_parameters=model.parameters())
+        data_loader = random_dataloader(model=model, total_samples=5, hidden_dim=hidden_dim, device=model.device)
+        for n, batch in enumerate(data_loader):
+            loss = model(batch[0], batch[1])
+            model.backward(loss)
+            model.step()
+
+
+class TestDistInit(DistributedTest):
+    world_size = 1
+
+    def test(self, base_config):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        hidden_dim = 10
+
+        model = SimpleModel(hidden_dim)
+        model, _, _, _ = deepspeed.initialize(config=base_config,
+                                              model=model,
+                                              model_parameters=model.parameters(),
+                                              dist_init_required=True)
+        data_loader = random_dataloader(model=model, total_samples=5, hidden_dim=hidden_dim, device=model.device)
+        for n, batch in enumerate(data_loader):
+            loss = model(batch[0], batch[1])
+            model.backward(loss)
+            model.step()
+
+
+class TestInitNoOptimizer(DistributedTest):
+    world_size = 1
+
+    def test(self, base_config):
+        if get_accelerator().device_name() == "cpu":
+            pytest.skip("This test timesout with CPU accelerator")
+
+        # XXX: the bf16 path w/ no optimizer needs to be fixed
+        # if get_accelerator().is_bf16_supported():
+        #     base_config["bf16"] = {"enabled": True}
+        dtype = torch.float
+        if get_accelerator().is_fp16_supported():
+            dtype = torch.float16
+            base_config["fp16"] = {"enabled": True}
+
+        del base_config["optimizer"]
+        hidden_dim = 10
+
+        model = SimpleModel(hidden_dim=hidden_dim)
+        model, _, _, _ = deepspeed.initialize(config=base_config, model=model)
+        data_loader = random_dataloader(model=model,
+                                        total_samples=5,
+                                        hidden_dim=hidden_dim,
+                                        device=model.device,
+                                        dtype=dtype)
+        for n, batch in enumerate(data_loader):
+            loss = model(batch[0], batch[1])
+            with pytest.raises(AssertionError):
+                model.backward(loss)
+            with pytest.raises(AssertionError):
+                model.step()
+
+
+class TestArgs(DistributedTest):
+    world_size = 1
+
+    def test_none_args(self, base_config):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        model = SimpleModel(hidden_dim=10)
+        model, _, _, _ = deepspeed.initialize(args=None, model=model, config=base_config)
+        data_loader = random_dataloader(model=model, total_samples=5, hidden_dim=10, device=model.device)
+        for n, batch in enumerate(data_loader):
+            loss = model(batch[0], batch[1])
+
+    def test_no_args(self, base_config):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        model = SimpleModel(hidden_dim=10)
+        model, _, _, _ = deepspeed.initialize(model=model, config=base_config)
+        data_loader = random_dataloader(model=model, total_samples=5, hidden_dim=10, device=model.device)
+        for n, batch in enumerate(data_loader):
+            loss = model(batch[0], batch[1])
+
+
+class TestNoModel(DistributedTest):
+    world_size = 1
+
+    def test(self, base_config):
+        if get_accelerator().is_bf16_supported():
+            base_config["bf16"] = {"enabled": True}
+        elif get_accelerator().is_fp16_supported():
+            base_config["fp16"] = {"enabled": True}
+        model = SimpleModel(hidden_dim=10)
+        with pytest.raises(AssertionError):
+            model, _, _, _ = deepspeed.initialize(model=None, config=base_config)
+
+        with pytest.raises(AssertionError):
+            model, _, _, _ = deepspeed.initialize(model, config=base_config)

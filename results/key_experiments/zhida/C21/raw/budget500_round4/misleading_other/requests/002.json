@@ -1,0 +1,202 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are an autonomous coding agent working on a controlled performance optimization task. Use only the provided tools and public files. Follow CONTRACT.md. Background notes are fallible hypotheses. No shell, external solutions, private evaluator, previous trials or researcher results are available. Do not bypass evaluation or alter framework state. Save and test your implementation; the last saved source is your final submission. A budget notice is supplied before each model call. Return a brief final report when ready."
+    },
+    {
+      "role": "user",
+      "content": "Within the limited time, produce the best correct version you can of the fused linear cross-entropy operator for the supplied BF16 full forward and backward workloads. Read CONTRACT.md, WORKLOADS.md and the editable sources. Investigate, implement and validate your improvements within the fixed budget. Keep the last saved version tested.\n\nBackground note: The per-token cross-entropy kernel processes a wide vocabulary on SM86. Its register demand and launch geometry may limit occupancy as vocabulary and chunk shape change, so the kernel stage could dominate the full call. Examine the CE kernel configuration across the public shapes early, and measure any change before moving to other stages. This diagnosis has not been verified.\n"
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 499 seconds; 40000 generated tokens; 25 API attempts; 1000000 total-token guard headroom. Save and validate within these limits."
+    },
+    {
+      "role": "assistant",
+      "content": "I'll start by exploring the task files.\n\n",
+      "tool_calls": [
+        {
+          "type": "function",
+          "index": 0,
+          "id": "chatcmpl-tool-ac18add7910a29e5",
+          "function": {
+            "name": "list_files",
+            "arguments": "{}"
+          }
+        },
+        {
+          "type": "function",
+          "index": 1,
+          "id": "chatcmpl-tool-9dfc0184e67a0b79",
+          "function": {
+            "name": "read_file",
+            "arguments": "{\"path\": \"CONTRACT.md\"}"
+          }
+        }
+      ],
+      "reasoning_details": [
+        {
+          "type": "reasoning.text",
+          "text": "Let me start by exploring the files.",
+          "format": "unknown",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-ac18add7910a29e5",
+      "content": "CONTRACT.md\nLICENSE\nWORKLOADS.md\ncross_entropy.py\nfused_linear_cross_entropy.py\nutils.py"
+    },
+    {
+      "role": "tool",
+      "tool_call_id": "chatcmpl-tool-9dfc0184e67a0b79",
+      "content": "1: # C21 fused linear cross-entropy optimization\n2: \n3: Improve the full forward plus backward latency of Liger's fused linear cross-entropy on an RTX A6000 while preserving its behavior. The supplied operator starts from one frozen baseline. Only `fused_linear_cross_entropy.py`, `cross_entropy.py`, and `utils.py` may be edited; they occupy their usual `liger_kernel/ops/` locations when evaluated. The other Liger package files are fixed dependencies. Do not assume any particular optimization is required.\n4: \n5: ## Supported task domain\n6: \n7: - BF16 CUDA input `[BT,H]`, weight `[V,H]`, and integer target `[BT]`; gradients of both input and weight are required.\n8: - Mean reduction, no bias or class weight, `ignore_index=-100`; some inputs contain ignored targets.\n9: - The public shapes are listed in `WORKLOADS.md`. Final checking also uses fresh values and a smaller ignored-target edge case.\n10: - Preserve loss, input gradient, and weight gradient against the mathematical PyTorch reference within the grader's numerical tolerances. Shape, finite values, and all three relative norm errors are checked.\n11: \n12: The `run_benchmark` tool checks correctness before reporting each public case's full forward-plus-backward latency. It includes tensor allocation and device/host synchronization inside the operator; it excludes input creation, warmup, compilation, and the grader's own numerical diagnostics. Both prompts use exactly the same workloads and evaluator. Lower latency with correct outputs is better. The final saved source, rather than the agent's best intermediate checkpoint, is scored.\n13: \n14: The agent can list/read/search the public files and edit only the three Python sources. External shell, Internet, previous trials, and the private evaluator are unavailable. Do not introduce filesystem/network/process access, read environment state, introspect the evaluator, cache answers across calls, or change global framework precision settings.\n15: \n16: ## Budget\n17: \n18: You have 500 seconds of active time, at most 40,000 cumulative generated tokens and 25 model API attempts. GPU-queue waiting is excluded from active time, with a separate bounded wall-clock safeguard. Each model call includes a notice of remaining active time, generated tokens and API attempts. Within this limited time, deliver the best correct version you can. Reserve enough time to save and validate the final implementation."
+    },
+    {
+      "role": "user",
+      "content": "Budget remaining: 498 seconds; 39931 generated tokens; 24 API attempts; 999027 total-token guard headroom. Save and validate within these limits."
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "list_files",
+        "description": "List public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read public UTF-8 file lines inclusive.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "start_line": {
+              "type": "integer"
+            },
+            "end_line": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "path"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_text",
+        "description": "Literal search over public task files.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "max_results": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "query"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Save complete editable Python source file.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "replace_text",
+        "description": "Replace one exact block in a public Python file. Old block must occur exactly once.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "old": {
+              "type": "string"
+            },
+            "new": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "old",
+            "new"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_benchmark",
+        "description": "Check fused CE loss and gradients against a PyTorch reference, then time full forward plus backward on the public workloads.",
+        "parameters": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "temperature": 0,
+  "max_tokens": 8192,
+  "provider": {
+    "only": [
+      "DeepInfra"
+    ],
+    "allow_fallbacks": false,
+    "require_parameters": true,
+    "data_collection": "deny"
+  }
+}

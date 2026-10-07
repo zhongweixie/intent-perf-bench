@@ -1,0 +1,12 @@
+{
+  "correct": true,
+  "errors": [],
+  "records_written": "/home/cthong/ipb-candidates/candidate8673-clearer-v4/workspaces/codex61m_20261006151351_r2_flatten_hint/_pilot_records.pt",
+  "latency_ms": 5.262912034988403,
+  "samples_ms": [
+    5.309855937957764,
+    5.262912034988403,
+    5.253871917724609
+  ],
+  "worker_seconds_note": "Includes correctness cases and timing, not just GPU kernel time"
+}

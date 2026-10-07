@@ -1,0 +1,16 @@
+misleading1 call 1 generated 80 elapsed 5 benchmarks 0
+misleading1 call 2 generated 171 elapsed 16 benchmarks 0
+misleading1 call 3 generated 270 elapsed 20 benchmarks 0
+misleading1 call 4 generated 8436 elapsed 235 benchmarks 1
+misleading1 call 6 generated 19732 elapsed 468 benchmarks 1
+misleading1 call 7 generated 20474 elapsed 507 benchmarks 2
+misleading1 call 8 generated 24322 elapsed 607 benchmarks 2
+misleading1 call 9 generated 25244 elapsed 624 benchmarks 2
+misleading1 call 10 generated 25408 elapsed 649 benchmarks 3
+misleading1 call 11 generated 25610 elapsed 655 benchmarks 3
+misleading1 call 12 generated 25644 elapsed 741 benchmarks 4
+misleading1 call 13 generated 29626 elapsed 832 benchmarks 4
+misleading1 call 14 generated 30499 elapsed 852 benchmarks 4
+misleading1 call 15 generated 31727 elapsed 877 benchmarks 4
+misleading1 call 16 generated 31972 elapsed 885 benchmarks 4
+TRIAL_END {"condition": "misleading1", "stop_reason": "time_limit", "agent_seconds": 900.0251935375854, "real_wall_seconds": 1315.7538291374221, "gpu_queue_wait_seconds": 415.6406067106873, "api_calls": 17, "tool_actions": 20, "generated_tokens": 31972, "prompt_tokens": 389440, "total_tokens": 421412, "reported_cost_usd": 0.74995812, "failed_requests_usage_unknown": 1, "final_source_sha256": "c37490faf5337a335348dcf134feee6c90b6edda6a8b12d82f80bdad32a3042d", "final_answer": "", "namespace": "songcpu4-20261003-134221-313000-round1-misleading1", "budget_notices": 17, "api_seconds": 755.9763989960775, "tool_seconds": 558.2924105785787, "benchmark_seconds": 557.8330778963864, "benchmark_active_seconds": 142.1924711856991}
